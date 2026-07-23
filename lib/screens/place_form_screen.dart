@@ -180,6 +180,37 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
     });
   }
 
+  Future<void> _pickMultiplePhotos() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickMultiImage(
+      maxWidth: 1600,
+      imageQuality: 85,
+    );
+    if (picked.isEmpty) return;
+    setState(() {
+      for (final file in picked) {
+        final draft = _PhotoDraft();
+        draft.bytes = null;
+        // load bytes async after the loop using futures
+        _attachBytes(draft, file);
+        _newPhotos.add(draft);
+      }
+    });
+  }
+
+  Future<void> _attachBytes(_PhotoDraft draft, XFile file) async {
+    final bytes = await file.readAsBytes();
+    final ext = file.name.contains('.')
+        ? file.name.split('.').last.toLowerCase()
+        : 'jpg';
+    if (mounted) {
+      setState(() {
+        draft.bytes = bytes;
+        draft.ext = ext;
+      });
+    }
+  }
+
   void _addPhotoDraft() {
     setState(() {
       _newPhotos.add(_PhotoDraft());
@@ -707,7 +738,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "Multiple photos per place. Each can have an Arabic & English caption.",
+                    "Primary image goes in the Image section above. Add multiple additional gallery photos here. Each can have an Arabic & English caption.",
                     style: TextStyle(
                       fontSize: 12,
                       color: AppTheme.textSecondary,
@@ -718,17 +749,38 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                   const SizedBox(height: 12),
                   _buildNewPhotos(),
                   const SizedBox(height: 8),
-                  OutlinedButton.icon(
-                    onPressed: _addPhotoDraft,
-                    icon: const Icon(Icons.add_photo_alternate_rounded, size: 18),
-                    label: const Text('Add new photo'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppTheme.warning,
-                      side: BorderSide(
-                        color: AppTheme.warning.withValues(alpha: 0.5),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: _pickMultiplePhotos,
+                          icon: const Icon(
+                            Icons.add_photo_alternate_rounded,
+                            size: 18,
+                          ),
+                          label: const Text('Upload multiple'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppTheme.warning,
+                            side: BorderSide(
+                              color:
+                                  AppTheme.warning.withValues(alpha: 0.5),
+                            ),
+                            minimumSize: const Size.fromHeight(44),
+                          ),
+                        ),
                       ),
-                      minimumSize: const Size(double.infinity, 44),
-                    ),
+                      const SizedBox(width: 8),
+                      OutlinedButton.icon(
+                        onPressed: _addPhotoDraft,
+                        icon: const Icon(Icons.add_rounded, size: 18),
+                        label: const Text('One'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppTheme.textSecondary,
+                          side: const BorderSide(color: AppTheme.border),
+                          minimumSize: const Size.fromHeight(44),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
