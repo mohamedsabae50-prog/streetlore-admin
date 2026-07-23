@@ -1,5 +1,5 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
@@ -77,7 +77,6 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
     _photoUserName = TextEditingController(text: 'Streetlore');
     _photoCaptionAr = TextEditingController();
     _photoCaptionEn = TextEditingController();
-    // typing coordinates manually also moves the map marker
     _lat.addListener(_onCoordFieldChanged);
     _lng.addListener(_onCoordFieldChanged);
   }
@@ -207,7 +206,6 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
         await AdminService.instance.createPlace(place);
       }
 
-      // Optional community photo -> place_photos table
       String? photoError;
       if (wantsPhoto) {
         try {
@@ -288,250 +286,371 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            _imagePreview(),
-            const SizedBox(height: 12),
-            ElevatedButton.icon(
-              onPressed: _pickImage,
-              icon: const Icon(Icons.add_a_photo_rounded, size: 18),
-              label: Text(
-                _pickedBytes == null
-                    ? 'Upload image (optional)'
-                    : 'Replace image',
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.surface,
-                foregroundColor: AppTheme.primary,
-                elevation: 0,
-                side: const BorderSide(color: AppTheme.border),
-              ),
-            ),
-            const SizedBox(height: 22),
-            _label('ID'),
-            TextFormField(
-              controller: _id,
-              enabled: !_isEditing,
-              decoration: const InputDecoration(hintText: 'p_unique_id'),
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'ID is required' : null,
-            ),
-            const SizedBox(height: 14),
-            _label('Name'),
-            TextFormField(
-              controller: _name,
-              decoration: const InputDecoration(hintText: 'Qaitbay Citadel'),
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Name is required' : null,
-            ),
-            const SizedBox(height: 14),
-            _label('Description'),
-            TextFormField(
-              controller: _description,
-              maxLines: 5,
-              decoration: const InputDecoration(
-                hintText: 'Full description in Arabic or English...',
-              ),
-              validator: (v) => (v == null || v.trim().isEmpty)
-                  ? 'Description is required'
-                  : null,
-            ),
-            const SizedBox(height: 14),
-            _label('Image URL (if not uploading)'),
-            TextFormField(
-              controller: _imageUrl,
-              decoration: const InputDecoration(
-                hintText: 'https://images.unsplash.com/...',
-              ),
-            ),
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                Expanded(child: _categoryDropdown()),
-                const SizedBox(width: 12),
-                Expanded(child: _priceLevelDropdown()),
-              ],
-            ),
-            const SizedBox(height: 14),
-            _mapPicker(),
-            const SizedBox(height: 14),
-            _label('Address'),
-            TextFormField(
-              controller: _address,
-              decoration: const InputDecoration(
-                hintText: 'Corniche, Anfushi, Alexandria',
-              ),
-            ),
-            const SizedBox(height: 14),
-            _label('Open Hours'),
-            TextFormField(
-              controller: _openHours,
-              decoration: const InputDecoration(hintText: '9:00 AM - 5:00 PM'),
-            ),
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _label('Rating (0-5)'),
-                      TextFormField(
-                        controller: _rating,
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                        ),
-                        validator: _validateNumber,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _label('Review count'),
-                      TextFormField(
-                        controller: _reviewCount,
-                        keyboardType: TextInputType.number,
-                        validator: _validateNumber,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            _label('Price note'),
-            TextFormField(
-              controller: _priceNote,
-              decoration: const InputDecoration(
-                hintText: 'EGP 100 adults, EGP 50 students',
-              ),
-            ),
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _label('Price — local (EGP)'),
-                      TextFormField(
-                        controller: _priceLocal,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(hintText: 'e.g. 10'),
-                        validator: _validateNumber,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _label('Price — foreigner (EGP)'),
-                      TextFormField(
-                        controller: _priceForeigner,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(hintText: 'e.g. 60'),
-                        validator: _validateNumber,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            const Divider(height: 32),
-            const Row(
-              children: [
-                Icon(
-                  Icons.photo_library_rounded,
-                  size: 18,
-                  color: AppTheme.warning,
-                ),
-                SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Community photo (optional)',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                      color: AppTheme.textPrimary,
+            _section(
+              icon: Icons.image_rounded,
+              title: 'Image',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _imagePreview(),
+                  const SizedBox(height: 12),
+                  ElevatedButton.icon(
+                    onPressed: _pickImage,
+                    icon: const Icon(Icons.add_a_photo_rounded, size: 18),
+                    label: Text(
+                      _pickedBytes == null
+                          ? 'Upload image (optional)'
+                          : 'Replace image',
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.surface,
+                      foregroundColor: AppTheme.primary,
+                      elevation: 0,
+                      side: const BorderSide(color: AppTheme.border),
                     ),
                   ),
+                ],
+              ),
+            ),
+
+            _section(
+              icon: Icons.fingerprint_rounded,
+              title: 'Identification',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _labelBilingual('ID', isEn: true),
+                  TextFormField(
+                    controller: _id,
+                    enabled: !_isEditing,
+                    decoration: const InputDecoration(hintText: 'p_unique_id'),
+                    validator: (v) => (v == null || v.trim().isEmpty)
+                        ? 'ID is required'
+                        : null,
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      Expanded(child: _categoryDropdown()),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _labelBilingual('Rating (0-5)', isEn: true),
+                            TextFormField(
+                              controller: _rating,
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                decimal: true,
+                              ),
+                              validator: _validateNumber,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _labelBilingual('Review count', isEn: true),
+                            TextFormField(
+                              controller: _reviewCount,
+                              keyboardType: TextInputType.number,
+                              validator: _validateNumber,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _labelBilingual('Featured', isEn: true),
+                            SwitchListTile.adaptive(
+                              value: _isFeatured,
+                              onChanged: (v) =>
+                                  setState(() => _isFeatured = v),
+                              contentPadding: EdgeInsets.zero,
+                              dense: true,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            _section(
+              icon: Icons.translate_rounded,
+              title: 'Basic Info (AR + EN)',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _labelBilingual('Name', isEn: false),
+                  TextFormField(
+                    controller: _name,
+                    decoration: const InputDecoration(
+                      hintText: 'Qaitbay Citadel / قلعة قايتباي',
+                      prefixIcon: Icon(Icons.title_rounded),
+                    ),
+                    validator: (v) => (v == null || v.trim().isEmpty)
+                        ? 'Name is required'
+                        : null,
+                  ),
+                  const SizedBox(height: 4),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 4),
+                    child: Text(
+                      'You can write in English, Arabic, or both separated by /',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  _labelBilingual('Description', isEn: false),
+                  TextFormField(
+                    controller: _description,
+                    maxLines: 5,
+                    decoration: const InputDecoration(
+                      hintText:
+                          'Full description in Arabic, English, or both...',
+                    ),
+                    validator: (v) => (v == null || v.trim().isEmpty)
+                        ? 'Description is required'
+                        : null,
+                  ),
+                ],
+              ),
+            ),
+
+            _section(
+              icon: Icons.location_on_rounded,
+              title: 'Location',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _labelBilingual('Address', isEn: false),
+                  TextFormField(
+                    controller: _address,
+                    decoration: const InputDecoration(
+                      hintText: 'Corniche, Anfushi, الإسكندرية',
+                      prefixIcon: Icon(Icons.place_rounded),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  _mapPicker(),
+                ],
+              ),
+            ),
+
+            _section(
+              icon: Icons.access_time_rounded,
+              title: 'Operating Hours',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _labelBilingual('Open Hours', isEn: false),
+                  TextFormField(
+                    controller: _openHours,
+                    decoration: const InputDecoration(
+                      hintText: '9:00 AM - 5:00 PM / 9 صباحاً - 5 مساءً',
+                      prefixIcon: Icon(Icons.schedule_rounded),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 4),
+                    child: Text(
+                      'Or "Open 24 hours" / "مفتوح 24 ساعة"',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            _section(
+              icon: Icons.confirmation_number_rounded,
+              title: 'Tickets (EGP)',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _priceLevelDropdown(),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _labelBilingual(
+                              'Egyptian (Local)',
+                              isEn: true,
+                              hint: '🇪🇬',
+                            ),
+                            TextFormField(
+                              controller: _priceLocal,
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(
+                                hintText: 'e.g. 10',
+                                prefixIcon: Icon(Icons.local_offer_rounded),
+                              ),
+                              validator: _validateNumber,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _labelBilingual(
+                              'Tourist (Foreigner)',
+                              isEn: true,
+                              hint: '🌍',
+                            ),
+                            TextFormField(
+                              controller: _priceForeigner,
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(
+                                hintText: 'e.g. 60',
+                                prefixIcon: Icon(Icons.local_offer_rounded),
+                              ),
+                              validator: _validateNumber,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 4),
+                    child: Text(
+                      'Leave empty for free entry. Local price applies to Egyptian/resident ID holders.',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  _labelBilingual('Price note', isEn: false),
+                  TextFormField(
+                    controller: _priceNote,
+                    decoration: const InputDecoration(
+                      hintText:
+                          'EGP 100 adults, EGP 50 students / 100 جنيه للكبار، 50 للطلاب',
+                      prefixIcon: Icon(Icons.notes_rounded),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            _section(
+              icon: Icons.local_offer_rounded,
+              title: 'Tags',
+              child: SwitchListTile.adaptive(
+                value: _isHiddenGem,
+                onChanged: (v) => setState(() => _isHiddenGem = v),
+                title: const Text('Hidden gem'),
+                subtitle: const Text(
+                  'Show only when filtering "Hidden Gems"',
                 ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              "Saved to the place's gallery (place_photos) with Arabic & English captions.",
-              style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
-            ),
-            const SizedBox(height: 12),
-            _photoPreview(),
-            const SizedBox(height: 10),
-            ElevatedButton.icon(
-              onPressed: _pickCommunityPhoto,
-              icon: const Icon(Icons.add_a_photo_rounded, size: 18),
-              label: Text(
-                _photoBytes == null ? 'Upload photo' : 'Replace photo',
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.surface,
-                foregroundColor: AppTheme.warning,
-                elevation: 0,
-                side: const BorderSide(color: AppTheme.border),
+                contentPadding: EdgeInsets.zero,
               ),
             ),
-            const SizedBox(height: 14),
-            _label('Username'),
-            TextFormField(
-              controller: _photoUserName,
-              decoration: const InputDecoration(
-                hintText: 'e.g. Sara the Cartographer',
-                prefixIcon: Icon(Icons.person_outline_rounded),
+
+            _section(
+              icon: Icons.photo_library_rounded,
+              title: 'Community Photo (optional)',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Saved to the place's gallery (place_photos) with Arabic & English captions.",
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _photoPreview(),
+                  const SizedBox(height: 10),
+                  ElevatedButton.icon(
+                    onPressed: _pickCommunityPhoto,
+                    icon: const Icon(Icons.add_a_photo_rounded, size: 18),
+                    label: Text(
+                      _photoBytes == null
+                          ? 'Upload photo'
+                          : 'Replace photo',
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.surface,
+                      foregroundColor: AppTheme.warning,
+                      elevation: 0,
+                      side: const BorderSide(color: AppTheme.border),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  _labelBilingual('Username', isEn: true),
+                  TextFormField(
+                    controller: _photoUserName,
+                    decoration: const InputDecoration(
+                      hintText: 'e.g. Sara the Cartographer',
+                      prefixIcon: Icon(Icons.person_outline_rounded),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  _labelBilingual('Caption', isEn: false),
+                  TextFormField(
+                    controller: _photoCaptionAr,
+                    maxLines: 2,
+                    textDirection: TextDirection.rtl,
+                    textAlign: TextAlign.right,
+                    decoration: const InputDecoration(
+                      hintText: 'اكتب الكابشن بالعربي...',
+                      prefixIcon: Icon(Icons.text_fields_rounded),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  _labelBilingual('Caption (EN)', isEn: true),
+                  TextFormField(
+                    controller: _photoCaptionEn,
+                    maxLines: 2,
+                    decoration: const InputDecoration(
+                      hintText: 'Write the caption in English...',
+                      prefixIcon: Icon(Icons.text_fields_rounded),
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 14),
-            _label('Caption — Arabic'),
-            TextFormField(
-              controller: _photoCaptionAr,
-              maxLines: 2,
-              textDirection: TextDirection.rtl,
-              textAlign: TextAlign.right,
-              decoration: const InputDecoration(
-                hintText: 'اكتب الكابشن بالعربي...',
-              ),
-            ),
-            const SizedBox(height: 14),
-            _label('Caption — English'),
-            TextFormField(
-              controller: _photoCaptionEn,
-              maxLines: 2,
-              decoration: const InputDecoration(
-                hintText: 'Write the caption in English...',
-              ),
-            ),
-            const SizedBox(height: 14),
-            SwitchListTile.adaptive(
-              value: _isHiddenGem,
-              onChanged: (v) => setState(() => _isHiddenGem = v),
-              title: const Text('Hidden gem'),
-              subtitle: const Text('Show only when filtering "Hidden Gems"'),
-              contentPadding: EdgeInsets.zero,
-            ),
-            SwitchListTile.adaptive(
-              value: _isFeatured,
-              onChanged: (v) => setState(() => _isFeatured = v),
-              title: const Text('Featured'),
-              subtitle: const Text('Show on the home carousel'),
-              contentPadding: EdgeInsets.zero,
-            ),
+
             const SizedBox(height: 22),
             ElevatedButton(
               onPressed: _saving ? null : _save,
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                backgroundColor: AppTheme.primary,
+                foregroundColor: Colors.white,
+              ),
               child: _saving
                   ? const SizedBox(
                       height: 18,
@@ -541,11 +660,112 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                         color: Colors.white,
                       ),
                     )
-                  : Text(_isEditing ? 'Update Place' : 'Create Place'),
+                  : Text(
+                      _isEditing ? 'Update Place' : 'Create Place',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                      ),
+                    ),
             ),
             const SizedBox(height: 32),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _section({
+    required IconData icon,
+    required String title,
+    required Widget child,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 18),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTheme.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: AppTheme.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, size: 18, color: AppTheme.primary),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          child,
+        ],
+      ),
+    );
+  }
+
+  Widget _labelBilingual(String text, {required bool isEn, String? hint}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        children: [
+          Text(
+            text,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              color: AppTheme.textPrimary,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: isEn
+                  ? const Color(0xFF3B82F6).withValues(alpha: 0.12)
+                  : const Color(0xFF22C55E).withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              isEn ? 'EN' : 'AR/EN',
+              style: TextStyle(
+                fontSize: 9,
+                fontWeight: FontWeight.w900,
+                color: isEn
+                    ? const Color(0xFF3B82F6)
+                    : const Color(0xFF22C55E),
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+          if (hint != null) ...[
+            const SizedBox(width: 6),
+            Text(hint, style: const TextStyle(fontSize: 14)),
+          ],
+        ],
       ),
     );
   }
@@ -579,7 +799,10 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                 color: AppTheme.textSecondary,
               ),
               SizedBox(height: 6),
-              Text('No image', style: TextStyle(color: AppTheme.textSecondary)),
+              Text(
+                'No image',
+                style: TextStyle(color: AppTheme.textSecondary),
+              ),
             ],
           ),
         ),
@@ -648,10 +871,20 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
       children: [
         Row(
           children: [
-            _label('Pick location on map'),
+            const Text(
+              'Pick location on map',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                color: AppTheme.textPrimary,
+              ),
+            ),
             const Spacer(),
-            const Icon(Icons.touch_app_rounded,
-                size: 14, color: AppTheme.textSecondary),
+            const Icon(
+              Icons.touch_app_rounded,
+              size: 14,
+              color: AppTheme.textSecondary,
+            ),
             const SizedBox(width: 4),
             const Text(
               'tap to set coordinates',
@@ -659,10 +892,11 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
             ),
           ],
         ),
+        const SizedBox(height: 6),
         ClipRRect(
           borderRadius: BorderRadius.circular(12),
           child: Container(
-            height: 280,
+            height: 260,
             decoration: BoxDecoration(
               border: Border.all(color: AppTheme.border),
               borderRadius: BorderRadius.circular(12),
@@ -705,8 +939,11 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
         const SizedBox(height: 8),
         Row(
           children: [
-            const Icon(Icons.my_location_rounded,
-                size: 13, color: AppTheme.textSecondary),
+            const Icon(
+              Icons.my_location_rounded,
+              size: 13,
+              color: AppTheme.textSecondary,
+            ),
             const SizedBox(width: 6),
             Text(
               '${lat.toStringAsFixed(6)}, ${lng.toStringAsFixed(6)}',
@@ -723,64 +960,59 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
     );
   }
 
-  Widget _label(String text) => Padding(
-    padding: const EdgeInsets.only(bottom: 6),
-    child: Text(
-      text,
-      style: const TextStyle(
-        fontSize: 12,
-        fontWeight: FontWeight.w800,
-        color: AppTheme.textPrimary,
-      ),
-    ),
-  );
-
   Widget _categoryDropdown() => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      _label('Category'),
-      DropdownButtonFormField<String>(
-        value: _category.text,
-        items: const [
-          DropdownMenuItem(value: 'Historical', child: Text('Historical')),
-          DropdownMenuItem(value: 'Culture', child: Text('Culture')),
-          DropdownMenuItem(value: 'Nature', child: Text('Nature')),
-          DropdownMenuItem(value: 'Food', child: Text('Food')),
-        ],
-        onChanged: (v) {
-          if (v != null) {
-            setState(() => _category.text = v);
-          }
-        },
-        decoration: const InputDecoration(),
-      ),
-    ],
-  );
-
-  Widget _priceLevelDropdown() => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      _label('Price level'),
-      DropdownButtonFormField<PriceLevel>(
-        value: _priceLevel,
-        items: const [
-          DropdownMenuItem(value: PriceLevel.free, child: Text('Free')),
-          DropdownMenuItem(value: PriceLevel.cheap, child: Text('Cheap')),
-          DropdownMenuItem(value: PriceLevel.moderate, child: Text('Moderate')),
-          DropdownMenuItem(
-            value: PriceLevel.expensive,
-            child: Text('Expensive'),
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _labelBilingual('Category', isEn: true),
+          DropdownButtonFormField<String>(
+            value: _category.text,
+            items: const [
+              DropdownMenuItem(value: 'Historical', child: Text('Historical')),
+              DropdownMenuItem(value: 'Culture', child: Text('Culture')),
+              DropdownMenuItem(value: 'Nature', child: Text('Nature')),
+              DropdownMenuItem(value: 'Food', child: Text('Food')),
+              DropdownMenuItem(value: 'Shopping', child: Text('Shopping')),
+              DropdownMenuItem(value: 'Mosques', child: Text('Mosques')),
+              DropdownMenuItem(value: 'Churches', child: Text('Churches')),
+              DropdownMenuItem(value: 'Streets', child: Text('Streets')),
+            ],
+            onChanged: (v) {
+              if (v != null) {
+                setState(() => _category.text = v);
+              }
+            },
+            decoration: const InputDecoration(),
           ),
         ],
-        onChanged: (v) {
-          if (v != null) {
-            setState(() => _priceLevel = v);
-          }
-        },
-        decoration: const InputDecoration(),
-      ),
-    ],
-  );
+      );
+
+  Widget _priceLevelDropdown() => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _labelBilingual('Price level', isEn: true),
+          DropdownButtonFormField<PriceLevel>(
+            value: _priceLevel,
+            items: const [
+              DropdownMenuItem(value: PriceLevel.free, child: Text('Free')),
+              DropdownMenuItem(value: PriceLevel.cheap, child: Text('Cheap')),
+              DropdownMenuItem(
+                value: PriceLevel.moderate,
+                child: Text('Moderate'),
+              ),
+              DropdownMenuItem(
+                value: PriceLevel.expensive,
+                child: Text('Expensive'),
+              ),
+            ],
+            onChanged: (v) {
+              if (v != null) {
+                setState(() => _priceLevel = v);
+              }
+            },
+            decoration: const InputDecoration(),
+          ),
+        ],
+      );
 
   String? _validateNumber(String? v) {
     if (v == null || v.trim().isEmpty) return null;
