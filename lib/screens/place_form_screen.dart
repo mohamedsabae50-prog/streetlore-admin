@@ -14,6 +14,14 @@ class PlaceFormScreen extends StatefulWidget {
   State<PlaceFormScreen> createState() => _PlaceFormScreenState();
 }
 
+class _PhotoDraft {
+  Uint8List? bytes;
+  String ext = 'jpg';
+  String captionAr = '';
+  String captionEn = '';
+  String userName = 'Streetlore';
+}
+
 class _PlaceFormScreenState extends State<PlaceFormScreen> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _id;
@@ -34,14 +42,13 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
   bool _isHiddenGem = false;
   bool _isFeatured = false;
   bool _saving = false;
+  bool _loadingPhotos = false;
   Uint8List? _pickedBytes;
   String _pickedExt = 'jpg';
 
-  Uint8List? _photoBytes;
-  String _photoExt = 'jpg';
-  late TextEditingController _photoUserName;
-  late TextEditingController _photoCaptionAr;
-  late TextEditingController _photoCaptionEn;
+  final List<PlacePhoto> _existingPhotos = [];
+  final List<_PhotoDraft> _newPhotos = [];
+  final Set<String> _removedPhotoIds = {};
 
   bool get _isEditing => widget.place != null;
 
@@ -74,15 +81,33 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
     _priceLevel = p?.priceLevel ?? PriceLevel.free;
     _isHiddenGem = p?.isHiddenGem ?? false;
     _isFeatured = p?.isFeatured ?? false;
-    _photoUserName = TextEditingController(text: 'Streetlore');
-    _photoCaptionAr = TextEditingController();
-    _photoCaptionEn = TextEditingController();
     _lat.addListener(_onCoordFieldChanged);
     _lng.addListener(_onCoordFieldChanged);
+    if (_isEditing) {
+      _loadPhotos();
+    }
   }
 
   void _onCoordFieldChanged() {
     if (mounted) setState(() {});
+  }
+
+  Future<void> _loadPhotos() async {
+    setState(() => _loadingPhotos = true);
+    try {
+      final photos =
+          await AdminService.instance.fetchPhotos(placeId: widget.place!.id);
+      if (mounted) {
+        setState(() {
+          _existingPhotos
+            ..clear()
+            ..addAll(photos);
+        });
+      }
+    } catch (_) {
+    } finally {
+      if (mounted) setState(() => _loadingPhotos = false);
+    }
   }
 
   String _suggestId() {
@@ -138,7 +163,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
     });
   }
 
-  Future<void> _pickCommunityPhoto() async {
+  Future<void> _pickPhotoForDraft(_PhotoDraft draft) async {
     final picker = ImagePicker();
     final picked = await picker.pickImage(
       source: ImageSource.gallery,
@@ -150,25 +175,120 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
         ? picked.name.split('.').last.toLowerCase()
         : 'jpg';
     setState(() {
-      _photoBytes = bytes;
-      _photoExt = ext;
+      draft.bytes = bytes;
+      draft.ext = ext;
     });
+  }
+
+  void _addPhotoDraft() {
+    setState(() {
+      _newPhotos.add(_PhotoDraft());
+    });
+  }
+
+  void _removePhotoDraft(int index) {
+    setState(() {
+      _newPhotos.removeAt(index);
+    });
+  }
+
+  void _markExistingPhotoRemoved(String id) {
+    setState(() {
+      _removedPhotoIds.add(id);
+      _existingPhotos.removeWhere((p) => p.id == id);
+    });
+  }
+
+  void _showEditExistingPhoto(PlacePhoto photo) async {
+    final captionArCtrl = TextEditingController(text: photo.captionAr);
+    final captionEnCtrl = TextEditingController(text: photo.captionEn);
+    final userNameCtrl = TextEditingController(text: photo.userName);
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Edit photo details'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.network(
+                  photo.imageUrl,
+                  height: 140,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    height: 140,
+                    color: AppTheme.bg,
+                    child: const Center(child: Icon(Icons.broken_image)),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: userNameCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Username',
+                  prefixIcon: Icon(Icons.person_outline_rounded),
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: captionArCtrl,
+                maxLines: 2,
+                textDirection: TextDirection.rtl,
+                textAlign: TextAlign.right,
+                decoration: const InputDecoration(
+                  labelText: 'Caption (AR)',
+                  hintText: 'اكتب الكابشن بالعربي...',
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: captionEnCtrl,
+                maxLines: 2,
+                decoration: const InputDecoration(
+                  labelText: 'Caption (EN)',
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    if (result == true) {
+      setState(() {
+        final idx = _existingPhotos.indexWhere((p) => p.id == photo.id);
+        if (idx >= 0) {
+          _existingPhotos[idx] = PlacePhoto(
+            id: photo.id,
+            placeId: photo.placeId,
+            userName: userNameCtrl.text.trim().isEmpty
+                ? 'Streetlore'
+                : userNameCtrl.text.trim(),
+            imageUrl: photo.imageUrl,
+            captionAr: captionArCtrl.text.trim(),
+            captionEn: captionEnCtrl.text.trim(),
+            likes: photo.likes,
+            createdAt: photo.createdAt,
+          );
+        }
+      });
+    }
   }
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
-    final wantsPhoto =
-        _photoBytes != null ||
-        _photoCaptionAr.text.trim().isNotEmpty ||
-        _photoCaptionEn.text.trim().isNotEmpty;
-    if (wantsPhoto && _photoBytes == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Upload the community photo from your device first'),
-        ),
-      );
-      return;
-    }
     setState(() => _saving = true);
     try {
       String imageUrl = _imageUrl.text.trim();
@@ -206,41 +326,44 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
         await AdminService.instance.createPlace(place);
       }
 
-      String? photoError;
-      if (wantsPhoto) {
+      for (final id in _removedPhotoIds) {
         try {
-          final photoId = 'ph_${DateTime.now().millisecondsSinceEpoch}';
+          await AdminService.instance.deletePhoto(id);
+        } catch (_) {}
+      }
+
+      for (final updated in _existingPhotos) {
+        try {
+          await AdminService.instance.updatePhoto(updated);
+        } catch (_) {}
+      }
+
+      for (final draft in _newPhotos) {
+        if (draft.bytes == null) continue;
+        try {
+          final photoId = 'ph_${DateTime.now().millisecondsSinceEpoch}_${_newPhotos.indexOf(draft)}';
           final photoImageUrl = await AdminService.instance.uploadImageBytes(
-            _photoBytes!,
+            draft.bytes!,
             'place-photos',
-            '$photoId.$_photoExt',
-            contentType: _photoExt == 'png' ? 'image/png' : 'image/jpeg',
+            '$photoId.${draft.ext}',
+            contentType: draft.ext == 'png' ? 'image/png' : 'image/jpeg',
           );
           await AdminService.instance.createPhoto(
             PlacePhoto(
               id: photoId,
               placeId: place.id,
-              userName: _photoUserName.text.trim().isEmpty
+              userName: draft.userName.trim().isEmpty
                   ? 'Streetlore'
-                  : _photoUserName.text.trim(),
+                  : draft.userName.trim(),
               imageUrl: photoImageUrl,
-              captionAr: _photoCaptionAr.text.trim(),
-              captionEn: _photoCaptionEn.text.trim(),
+              captionAr: draft.captionAr.trim(),
+              captionEn: draft.captionEn.trim(),
             ),
           );
-        } catch (e) {
-          photoError = '$e';
-        }
+        } catch (_) {}
       }
 
       if (!mounted) return;
-      if (photoError != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Place saved, but the photo failed: $photoError'),
-          ),
-        );
-      }
       Navigator.pop(context, place);
     } catch (e) {
       if (!mounted) return;
@@ -579,64 +702,32 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
 
             _section(
               icon: Icons.photo_library_rounded,
-              title: 'Community Photo (optional)',
+              title: 'Photo Gallery',
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "Saved to the place's gallery (place_photos) with Arabic & English captions.",
+                    "Multiple photos per place. Each can have an Arabic & English caption.",
                     style: TextStyle(
                       fontSize: 12,
                       color: AppTheme.textSecondary,
                     ),
                   ),
                   const SizedBox(height: 12),
-                  _photoPreview(),
-                  const SizedBox(height: 10),
-                  ElevatedButton.icon(
-                    onPressed: _pickCommunityPhoto,
-                    icon: const Icon(Icons.add_a_photo_rounded, size: 18),
-                    label: Text(
-                      _photoBytes == null
-                          ? 'Upload photo'
-                          : 'Replace photo',
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.surface,
+                  if (_isEditing) _buildExistingPhotos(),
+                  const SizedBox(height: 12),
+                  _buildNewPhotos(),
+                  const SizedBox(height: 8),
+                  OutlinedButton.icon(
+                    onPressed: _addPhotoDraft,
+                    icon: const Icon(Icons.add_photo_alternate_rounded, size: 18),
+                    label: const Text('Add new photo'),
+                    style: OutlinedButton.styleFrom(
                       foregroundColor: AppTheme.warning,
-                      elevation: 0,
-                      side: const BorderSide(color: AppTheme.border),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  _labelBilingual('Username', isEn: true),
-                  TextFormField(
-                    controller: _photoUserName,
-                    decoration: const InputDecoration(
-                      hintText: 'e.g. Sara the Cartographer',
-                      prefixIcon: Icon(Icons.person_outline_rounded),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  _labelBilingual('Caption', isEn: false),
-                  TextFormField(
-                    controller: _photoCaptionAr,
-                    maxLines: 2,
-                    textDirection: TextDirection.rtl,
-                    textAlign: TextAlign.right,
-                    decoration: const InputDecoration(
-                      hintText: 'اكتب الكابشن بالعربي...',
-                      prefixIcon: Icon(Icons.text_fields_rounded),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  _labelBilingual('Caption (EN)', isEn: true),
-                  TextFormField(
-                    controller: _photoCaptionEn,
-                    maxLines: 2,
-                    decoration: const InputDecoration(
-                      hintText: 'Write the caption in English...',
-                      prefixIcon: Icon(Icons.text_fields_rounded),
+                      side: BorderSide(
+                        color: AppTheme.warning.withValues(alpha: 0.5),
+                      ),
+                      minimumSize: const Size(double.infinity, 44),
                     ),
                   ),
                 ],
@@ -671,6 +762,247 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
             const SizedBox(height: 32),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildExistingPhotos() {
+    if (_loadingPhotos) {
+      return const Padding(
+        padding: EdgeInsets.all(20),
+        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+      );
+    }
+    if (_existingPhotos.isEmpty && !_isEditing) {
+      return Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: AppTheme.bg,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppTheme.border),
+        ),
+        child: const Center(
+          child: Text(
+            'No photos yet. Add the first one below.',
+            style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+          ),
+        ),
+      );
+    }
+    if (_existingPhotos.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8, left: 4),
+          child: Text(
+            'Existing photos (${_existingPhotos.length})',
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              color: AppTheme.textPrimary,
+            ),
+          ),
+        ),
+        ..._existingPhotos.map(_buildExistingPhotoCard),
+      ],
+    );
+  }
+
+  Widget _buildExistingPhotoCard(PlacePhoto photo) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: AppTheme.bg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.border),
+      ),
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.network(
+              photo.imageUrl,
+              width: 70,
+              height: 70,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Container(
+                width: 70,
+                height: 70,
+                color: AppTheme.bg,
+                child: const Icon(Icons.broken_image),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  photo.userName,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                if (photo.captionAr.isNotEmpty)
+                  Text(
+                    photo.captionAr,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: AppTheme.textSecondary,
+                    ),
+                  ),
+                if (photo.captionEn.isNotEmpty)
+                  Text(
+                    photo.captionEn,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: AppTheme.textSecondary,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.edit_rounded, size: 18),
+            color: AppTheme.primary,
+            onPressed: () => _showEditExistingPhoto(photo),
+            tooltip: 'Edit captions',
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete_outline_rounded, size: 18),
+            color: AppTheme.danger,
+            onPressed: () => _markExistingPhotoRemoved(photo.id),
+            tooltip: 'Remove',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNewPhotos() {
+    if (_newPhotos.isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8, left: 4),
+          child: Text(
+            'New photos (${_newPhotos.length}) — saved on Submit',
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              color: AppTheme.warning,
+            ),
+          ),
+        ),
+        for (var i = 0; i < _newPhotos.length; i++)
+          _buildNewPhotoCard(i, _newPhotos[i]),
+      ],
+    );
+  }
+
+  Widget _buildNewPhotoCard(int index, _PhotoDraft draft) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppTheme.warning.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: AppTheme.warning.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: draft.bytes != null
+                    ? Image.memory(
+                        draft.bytes!,
+                        width: 70,
+                        height: 70,
+                        fit: BoxFit.cover,
+                      )
+                    : Container(
+                        width: 70,
+                        height: 70,
+                        color: AppTheme.bg,
+                        child: const Icon(
+                          Icons.add_photo_alternate_outlined,
+                          color: AppTheme.textSecondary,
+                        ),
+                      ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => _pickPhotoForDraft(draft),
+                  icon: const Icon(Icons.upload_rounded, size: 16),
+                  label: Text(
+                    draft.bytes == null ? 'Pick image' : 'Replace image',
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.surface,
+                    foregroundColor: AppTheme.primary,
+                    elevation: 0,
+                    side: const BorderSide(color: AppTheme.border),
+                  ),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close_rounded),
+                color: AppTheme.danger,
+                onPressed: () => _removePhotoDraft(index),
+                tooltip: 'Remove from new list',
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            onChanged: (v) => draft.userName = v,
+            controller: TextEditingController(text: draft.userName),
+            decoration: const InputDecoration(
+              labelText: 'Username',
+              prefixIcon: Icon(Icons.person_outline_rounded),
+              isDense: true,
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            onChanged: (v) => draft.captionAr = v,
+            maxLines: 2,
+            textDirection: TextDirection.rtl,
+            textAlign: TextAlign.right,
+            decoration: const InputDecoration(
+              labelText: 'Caption (AR)',
+              hintText: 'اكتب الكابشن بالعربي...',
+              isDense: true,
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            onChanged: (v) => draft.captionEn = v,
+            maxLines: 2,
+            decoration: const InputDecoration(
+              labelText: 'Caption (EN)',
+              isDense: true,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -799,10 +1131,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                 color: AppTheme.textSecondary,
               ),
               SizedBox(height: 6),
-              Text(
-                'No image',
-                style: TextStyle(color: AppTheme.textSecondary),
-              ),
+              Text('No image', style: TextStyle(color: AppTheme.textSecondary)),
             ],
           ),
         ),
@@ -823,40 +1152,6 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
               style: TextStyle(color: AppTheme.textSecondary),
             ),
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _photoPreview() {
-    if (_photoBytes != null) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: Image.memory(_photoBytes!, height: 140, fit: BoxFit.cover),
-      );
-    }
-    return Container(
-      height: 140,
-      decoration: BoxDecoration(
-        color: AppTheme.bg,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.border),
-      ),
-      child: const Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.add_photo_alternate_outlined,
-              size: 40,
-              color: AppTheme.textSecondary,
-            ),
-            SizedBox(height: 6),
-            Text(
-              'No photo selected',
-              style: TextStyle(color: AppTheme.textSecondary),
-            ),
-          ],
         ),
       ),
     );
