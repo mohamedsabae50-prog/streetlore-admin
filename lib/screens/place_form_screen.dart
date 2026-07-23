@@ -22,6 +22,29 @@ class _PhotoDraft {
   String userName = 'Streetlore';
 }
 
+class _CoverBadge extends StatelessWidget {
+  const _CoverBadge();
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: AppTheme.primary,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: const Text(
+        'Cover',
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 10,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 0.5,
+        ),
+      ),
+    );
+  }
+}
+
 class _PlaceFormScreenState extends State<PlaceFormScreen> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _id;
@@ -49,6 +72,9 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
   final List<PlacePhoto> _existingPhotos = [];
   final List<_PhotoDraft> _newPhotos = [];
   final Set<String> _removedPhotoIds = {};
+
+  final List<_PhotoDraft> _primaryImageDrafts = [];
+  bool _primaryImageRemoved = false;
 
   bool get _isEditing => widget.place != null;
 
@@ -217,6 +243,53 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
     });
   }
 
+  void _addPrimaryImage() {
+    setState(() {
+      _primaryImageDrafts.add(_PhotoDraft());
+    });
+  }
+
+  Future<void> _addMultiplePrimaryImages() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickMultiImage(
+      maxWidth: 1600,
+      imageQuality: 85,
+    );
+    if (picked.isEmpty) return;
+    setState(() {
+      for (final file in picked) {
+        final draft = _PhotoDraft();
+        _attachPrimaryBytes(draft, file);
+        _primaryImageDrafts.add(draft);
+      }
+    });
+  }
+
+  Future<void> _attachPrimaryBytes(_PhotoDraft draft, XFile file) async {
+    final bytes = await file.readAsBytes();
+    final ext = file.name.contains('.')
+        ? file.name.split('.').last.toLowerCase()
+        : 'jpg';
+    if (mounted) {
+      setState(() {
+        draft.bytes = bytes;
+        draft.ext = ext;
+      });
+    }
+  }
+
+  void _removePrimaryImage(int index) {
+    setState(() {
+      _primaryImageDrafts.removeAt(index);
+    });
+  }
+
+  void _removeExistingCover() {
+    setState(() {
+      _primaryImageRemoved = true;
+    });
+  }
+
   void _removePhotoDraft(int index) {
     setState(() {
       _newPhotos.removeAt(index);
@@ -323,14 +396,8 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
     setState(() => _saving = true);
     try {
       String imageUrl = _imageUrl.text.trim();
-      if (_pickedBytes != null) {
-        final fileName = '${_id.text.trim()}.$_pickedExt';
-        imageUrl = await AdminService.instance.uploadImageBytes(
-          _pickedBytes!,
-          'places',
-          fileName,
-          contentType: _pickedExt == 'png' ? 'image/png' : 'image/jpeg',
-        );
+      if (_primaryImageRemoved) {
+        imageUrl = '';
       }
       final place = Place(
         id: _id.text.trim(),
@@ -369,10 +436,44 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
         } catch (_) {}
       }
 
+      final ts = DateTime.now().millisecondsSinceEpoch;
+      var imgIdx = 0;
+      var usedFirstNewAsCover = false;
+      for (final draft in _primaryImageDrafts) {
+        if (draft.bytes == null) continue;
+        try {
+          final photoId = 'ph_${ts}_p${imgIdx}';
+          final photoImageUrl = await AdminService.instance.uploadImageBytes(
+            draft.bytes!,
+            'place-photos',
+            '$photoId.${draft.ext}',
+            contentType: draft.ext == 'png' ? 'image/png' : 'image/jpeg',
+          );
+          if (!usedFirstNewAsCover && imageUrl.isEmpty) {
+            await AdminService.instance.updatePlace(place.copyWith(
+              imageUrl: photoImageUrl,
+            ));
+            usedFirstNewAsCover = true;
+          } else {
+            await AdminService.instance.createPhoto(
+              PlacePhoto(
+                id: photoId,
+                placeId: place.id,
+                userName: 'Streetlore',
+                imageUrl: photoImageUrl,
+                captionAr: '',
+                captionEn: '',
+              ),
+            );
+          }
+          imgIdx++;
+        } catch (_) {}
+      }
+
       for (final draft in _newPhotos) {
         if (draft.bytes == null) continue;
         try {
-          final photoId = 'ph_${DateTime.now().millisecondsSinceEpoch}_${_newPhotos.indexOf(draft)}';
+          final photoId = 'ph_${ts}_g${_newPhotos.indexOf(draft)}';
           final photoImageUrl = await AdminService.instance.uploadImageBytes(
             draft.bytes!,
             'place-photos',
@@ -442,26 +543,58 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
           children: [
             _section(
               icon: Icons.image_rounded,
-              title: 'Image',
+              title: 'Images',
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _imagePreview(),
+                  Text(
+                    'Add one or more images. The first one is the cover.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.textSecondary,
+                    ),
+                  ),
                   const SizedBox(height: 12),
-                  ElevatedButton.icon(
-                    onPressed: _pickImage,
-                    icon: const Icon(Icons.add_a_photo_rounded, size: 18),
-                    label: Text(
-                      _pickedBytes == null
-                          ? 'Upload image (optional)'
-                          : 'Replace image',
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.surface,
-                      foregroundColor: AppTheme.primary,
-                      elevation: 0,
-                      side: const BorderSide(color: AppTheme.border),
-                    ),
+                  _buildImageGrid(),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: _addPrimaryImage,
+                          icon: const Icon(
+                            Icons.add_a_photo_rounded,
+                            size: 18,
+                          ),
+                          label: const Text('Add image'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppTheme.primary,
+                            side: BorderSide(
+                              color:
+                                  AppTheme.primary.withValues(alpha: 0.5),
+                            ),
+                            minimumSize: const Size.fromHeight(42),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      OutlinedButton.icon(
+                        onPressed: _addMultiplePrimaryImages,
+                        icon: const Icon(
+                          Icons.add_photo_alternate_rounded,
+                          size: 18,
+                        ),
+                        label: const Text('Multiple'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppTheme.success,
+                          side: BorderSide(
+                            color:
+                                  AppTheme.success.withValues(alpha: 0.5),
+                          ),
+                          minimumSize: const Size.fromHeight(42),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -1155,16 +1288,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
   }
 
   Widget _imagePreview() {
-    String? url;
-    if (_pickedBytes != null) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: Image.memory(_pickedBytes!, height: 180, fit: BoxFit.cover),
-      );
-    }
-    if (_imageUrl.text.isNotEmpty) {
-      url = _imageUrl.text;
-    }
+    final url = _imageUrl.text.isNotEmpty ? _imageUrl.text : null;
     if (url == null) {
       return Container(
         height: 180,
@@ -1206,6 +1330,158 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildImageGrid() {
+    final hasCover = _imageUrl.text.isNotEmpty && !_primaryImageRemoved;
+    final children = <Widget>[];
+
+    if (hasCover) {
+      children.add(_buildCoverTile());
+    } else if (_primaryImageDrafts.isEmpty) {
+      children.add(
+        Container(
+          height: 160,
+          decoration: BoxDecoration(
+            color: AppTheme.bg,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppTheme.border),
+          ),
+          child: const Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.image_outlined,
+                  size: 48,
+                  color: AppTheme.textSecondary,
+                ),
+                SizedBox(height: 6),
+                Text(
+                  'Add at least one image',
+                  style: TextStyle(color: AppTheme.textSecondary),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    for (var i = 0; i < _primaryImageDrafts.length; i++) {
+      final isFirst =
+          !hasCover && i == 0;
+      children.add(_buildPrimaryDraftTile(i, isFirst));
+    }
+
+    if (children.length == 1) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: children,
+      );
+    }
+    return GridView.count(
+      crossAxisCount: 2,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      mainAxisSpacing: 8,
+      crossAxisSpacing: 8,
+      childAspectRatio: 1.4,
+      children: children,
+    );
+  }
+
+  Widget _buildCoverTile() {
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Image.network(
+              _imageUrl.text,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Container(
+                color: AppTheme.bg,
+                child: const Icon(Icons.broken_image),
+              ),
+            ),
+          ),
+        ),
+        Positioned(
+          top: 6,
+          left: 6,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: AppTheme.primary,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Text(
+              'Cover',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 10,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+        ),
+        Positioned(
+          top: 4,
+          right: 4,
+          child: IconButton(
+            icon: const Icon(Icons.close_rounded, color: Colors.white),
+            style: IconButton.styleFrom(
+              backgroundColor: Colors.black.withValues(alpha: 0.5),
+              padding: const EdgeInsets.all(4),
+            ),
+            onPressed: _removeExistingCover,
+            tooltip: 'Remove cover',
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPrimaryDraftTile(int index, bool isCover) {
+    final draft = _primaryImageDrafts[index];
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: draft.bytes != null
+                ? Image.memory(draft.bytes!, fit: BoxFit.cover)
+                : Container(
+                    color: AppTheme.bg,
+                    child: const Center(
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  ),
+          ),
+        ),
+        if (isCover)
+          const Positioned(
+            top: 6,
+            left: 6,
+            child: _CoverBadge(),
+          ),
+        Positioned(
+          top: 4,
+          right: 4,
+          child: IconButton(
+            icon: const Icon(Icons.close_rounded, color: Colors.white),
+            style: IconButton.styleFrom(
+              backgroundColor: Colors.black.withValues(alpha: 0.5),
+              padding: const EdgeInsets.all(4),
+            ),
+            onPressed: () => _removePrimaryImage(index),
+            tooltip: 'Remove',
+          ),
+        ),
+      ],
     );
   }
 
