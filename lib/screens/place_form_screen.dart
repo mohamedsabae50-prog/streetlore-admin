@@ -555,47 +555,45 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  _buildImageGrid(),
-                  const SizedBox(height: 12),
                   Row(
                     children: [
                       Expanded(
-                        child: OutlinedButton.icon(
+                        child: ElevatedButton.icon(
                           onPressed: _addPrimaryImage,
                           icon: const Icon(
                             Icons.add_a_photo_rounded,
                             size: 18,
                           ),
                           label: const Text('Add image'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppTheme.primary,
-                            side: BorderSide(
-                              color:
-                                  AppTheme.primary.withValues(alpha: 0.5),
-                            ),
-                            minimumSize: const Size.fromHeight(42),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primary,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            minimumSize: const Size.fromHeight(44),
                           ),
                         ),
                       ),
                       const SizedBox(width: 8),
-                      OutlinedButton.icon(
-                        onPressed: _addMultiplePrimaryImages,
-                        icon: const Icon(
-                          Icons.add_photo_alternate_rounded,
-                          size: 18,
-                        ),
-                        label: const Text('Multiple'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppTheme.success,
-                          side: BorderSide(
-                            color:
-                                  AppTheme.success.withValues(alpha: 0.5),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: _addMultiplePrimaryImages,
+                          icon: const Icon(
+                            Icons.add_photo_alternate_rounded,
+                            size: 18,
                           ),
-                          minimumSize: const Size.fromHeight(42),
+                          label: const Text('Upload multiple'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.success,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            minimumSize: const Size.fromHeight(44),
+                          ),
                         ),
                       ),
                     ],
                   ),
+                  const SizedBox(height: 12),
+                  _buildImageGrid(),
                 ],
               ),
             ),
