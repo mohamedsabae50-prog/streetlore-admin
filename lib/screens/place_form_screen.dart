@@ -49,15 +49,20 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _id;
   late TextEditingController _name;
+  late TextEditingController _nameAr;
   late TextEditingController _description;
+  late TextEditingController _descriptionAr;
   late TextEditingController _imageUrl;
   late TextEditingController _category;
+  late TextEditingController _categoryAr;
   late TextEditingController _lat;
   late TextEditingController _lng;
   late TextEditingController _address;
+  late TextEditingController _addressAr;
   late TextEditingController _openHours;
   late TextEditingController _reviewCount;
   late TextEditingController _priceNote;
+  late TextEditingController _priceNoteAr;
   late TextEditingController _priceLocal;
   late TextEditingController _priceForeigner;
   late TextEditingController _rating;
@@ -84,12 +89,16 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
     final p = widget.place;
     _id = TextEditingController(text: p?.id ?? _suggestId());
     _name = TextEditingController(text: p?.name ?? '');
+    _nameAr = TextEditingController(text: p?.nameAr ?? '');
     _description = TextEditingController(text: p?.description ?? '');
+    _descriptionAr = TextEditingController(text: p?.descriptionAr ?? '');
     _imageUrl = TextEditingController(text: p?.imageUrl ?? '');
     _category = TextEditingController(text: p?.category ?? 'Historical');
+    _categoryAr = TextEditingController(text: p?.categoryAr ?? '');
     _lat = TextEditingController(text: (p?.lat ?? 31.2).toString());
     _lng = TextEditingController(text: (p?.lng ?? 29.9).toString());
     _address = TextEditingController(text: p?.address ?? 'Alexandria, Egypt');
+    _addressAr = TextEditingController(text: p?.addressAr ?? '');
     _openHours = TextEditingController(
       text: p?.openHours ?? '9:00 AM - 6:00 PM',
     );
@@ -97,6 +106,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
       text: (p?.reviewCount ?? 0).toString(),
     );
     _priceNote = TextEditingController(text: p?.priceNote ?? '');
+    _priceNoteAr = TextEditingController(text: p?.priceNoteAr ?? '');
     _priceLocal = TextEditingController(
       text: p?.priceLocalEgp?.toString() ?? '',
     );
@@ -139,6 +149,12 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
   String _suggestId() {
     final ts = DateTime.now().millisecondsSinceEpoch.toString();
     return 'p_$ts';
+  }
+
+  /// Returns the trimmed text or null if empty (for nullable AR fields).
+  String? _nullable(TextEditingController c) {
+    final t = c.text.trim();
+    return t.isEmpty ? null : t;
   }
 
   Future<void> _pickImage() async {
@@ -402,17 +418,22 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
       final place = Place(
         id: _id.text.trim(),
         name: _name.text.trim(),
+        nameAr: _nullable(_nameAr),
         description: _description.text.trim(),
+        descriptionAr: _nullable(_descriptionAr),
         imageUrl: imageUrl,
         rating: double.tryParse(_rating.text) ?? 0,
         category: _category.text.trim(),
+        categoryAr: _nullable(_categoryAr),
         lat: double.tryParse(_lat.text) ?? 0,
         lng: double.tryParse(_lng.text) ?? 0,
         address: _address.text.trim(),
+        addressAr: _nullable(_addressAr),
         openHours: _openHours.text.trim(),
         reviewCount: int.tryParse(_reviewCount.text) ?? 0,
         priceLevel: _priceLevel,
         priceNote: _priceNote.text.trim(),
+        priceNoteAr: _nullable(_priceNoteAr),
         priceLocalEgp: int.tryParse(_priceLocal.text.trim()),
         priceForeignerEgp: int.tryParse(_priceForeigner.text.trim()),
         isHiddenGem: _isHiddenGem,
@@ -680,40 +701,50 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _labelBilingual('Name', isEn: false),
+                  _labelBilingual('Name', isEn: true),
                   TextFormField(
                     controller: _name,
                     decoration: const InputDecoration(
-                      hintText: 'Qaitbay Citadel / قلعة قايتباي',
+                      hintText: 'Qaitbay Citadel',
                       prefixIcon: Icon(Icons.title_rounded),
                     ),
                     validator: (v) => (v == null || v.trim().isEmpty)
-                        ? 'Name is required'
+                        ? 'Name (English) is required'
                         : null,
                   ),
-                  const SizedBox(height: 4),
-                  Padding(
-                    padding: const EdgeInsets.only(left: 4),
-                    child: Text(
-                      'You can write in English, Arabic, or both separated by /',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: AppTheme.textSecondary,
-                      ),
+                  const SizedBox(height: 8),
+                  _labelBilingual('Name (AR)', isEn: false),
+                  TextFormField(
+                    controller: _nameAr,
+                    textDirection: TextDirection.rtl,
+                    textAlign: TextAlign.right,
+                    decoration: const InputDecoration(
+                      hintText: 'قلعة قايتباي',
+                      prefixIcon: Icon(Icons.translate_rounded),
                     ),
                   ),
                   const SizedBox(height: 14),
-                  _labelBilingual('Description', isEn: false),
+                  _labelBilingual('Description', isEn: true),
                   TextFormField(
                     controller: _description,
                     maxLines: 5,
                     decoration: const InputDecoration(
-                      hintText:
-                          'Full description in Arabic, English, or both...',
+                      hintText: 'Full description in English...',
                     ),
                     validator: (v) => (v == null || v.trim().isEmpty)
-                        ? 'Description is required'
+                        ? 'Description (English) is required'
                         : null,
+                  ),
+                  const SizedBox(height: 8),
+                  _labelBilingual('Description (AR)', isEn: false),
+                  TextFormField(
+                    controller: _descriptionAr,
+                    maxLines: 5,
+                    textDirection: TextDirection.rtl,
+                    textAlign: TextAlign.right,
+                    decoration: const InputDecoration(
+                      hintText: 'الوصف بالعربي...',
+                    ),
                   ),
                 ],
               ),
@@ -725,12 +756,22 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _labelBilingual('Address', isEn: false),
+                  _labelBilingual('Address', isEn: true),
                   TextFormField(
                     controller: _address,
                     decoration: const InputDecoration(
-                      hintText: 'Corniche, Anfushi, الإسكندرية',
+                      hintText: 'Corniche, Anfushi, Alexandria',
                       prefixIcon: Icon(Icons.place_rounded),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  _labelBilingual('Address (AR)', isEn: false),
+                  TextFormField(
+                    controller: _addressAr,
+                    textDirection: TextDirection.rtl,
+                    textAlign: TextAlign.right,
+                    decoration: const InputDecoration(
+                      hintText: 'الكورنيش، الأنفوشي، الإسكندرية',
                     ),
                   ),
                   const SizedBox(height: 14),
@@ -835,13 +876,22 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                     ),
                   ),
                   const SizedBox(height: 14),
-                  _labelBilingual('Price note', isEn: false),
+                  _labelBilingual('Price note', isEn: true),
                   TextFormField(
                     controller: _priceNote,
                     decoration: const InputDecoration(
-                      hintText:
-                          'EGP 100 adults, EGP 50 students / 100 جنيه للكبار، 50 للطلاب',
+                      hintText: 'EGP 100 adults, EGP 50 students',
                       prefixIcon: Icon(Icons.notes_rounded),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  _labelBilingual('Price note (AR)', isEn: false),
+                  TextFormField(
+                    controller: _priceNoteAr,
+                    textDirection: TextDirection.rtl,
+                    textAlign: TextAlign.right,
+                    decoration: const InputDecoration(
+                      hintText: '100 جنيه للكبار، 50 للطلاب',
                     ),
                   ),
                 ],
@@ -1693,6 +1743,16 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
               }
             },
             decoration: const InputDecoration(),
+          ),
+          const SizedBox(height: 8),
+          _labelBilingual('Category (AR)', isEn: false),
+          TextFormField(
+            controller: _categoryAr,
+            textDirection: TextDirection.rtl,
+            textAlign: TextAlign.right,
+            decoration: const InputDecoration(
+              hintText: 'تاريخي، ثقافي، طبيعي...',
+            ),
           ),
         ],
       );

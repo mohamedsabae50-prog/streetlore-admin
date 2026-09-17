@@ -18,17 +18,22 @@ String priceLevelToString(PriceLevel p) => p.name;
 class Place {
   final String id;
   final String name;
+  final String? nameAr;
   final String description;
+  final String? descriptionAr;
   final String imageUrl;
   final double rating;
   final String category;
+  final String? categoryAr;
   final double lat;
   final double lng;
   final String address;
+  final String? addressAr;
   final String openHours;
   final int reviewCount;
   final PriceLevel priceLevel;
   final String priceNote;
+  final String? priceNoteAr;
   final bool isHiddenGem;
   final bool isFeatured;
   final int? priceLocalEgp;
@@ -37,17 +42,22 @@ class Place {
   const Place({
     required this.id,
     required this.name,
+    this.nameAr,
     required this.description,
+    this.descriptionAr,
     required this.imageUrl,
     required this.rating,
     required this.category,
+    this.categoryAr,
     required this.lat,
     required this.lng,
     this.address = 'Alexandria, Egypt',
+    this.addressAr,
     this.openHours = '9:00 AM - 6:00 PM',
     this.reviewCount = 0,
     this.priceLevel = PriceLevel.free,
     this.priceNote = '',
+    this.priceNoteAr,
     this.isHiddenGem = false,
     this.isFeatured = false,
     this.priceLocalEgp,
@@ -57,18 +67,23 @@ class Place {
   factory Place.fromJson(Map<String, dynamic> json) => Place(
         id: (json['id'] as String?) ?? '',
         name: (json['name'] as String?) ?? '',
+        nameAr: json['name_ar'] as String?,
         description: (json['description'] as String?) ?? '',
+        descriptionAr: json['description_ar'] as String?,
         imageUrl: (json['image_url'] as String?) ?? '',
         rating: (json['rating'] as num?)?.toDouble() ?? 0,
         category: (json['category'] as String?) ?? 'General',
+        categoryAr: json['category_ar'] as String?,
         lat: (json['lat'] as num?)?.toDouble() ?? 0,
         lng: (json['lng'] as num?)?.toDouble() ?? 0,
         address: (json['address'] as String?) ?? 'Alexandria, Egypt',
+        addressAr: json['address_ar'] as String?,
         openHours:
             (json['open_hours'] as String?) ?? '9:00 AM - 6:00 PM',
         reviewCount: (json['review_count'] as int?) ?? 0,
         priceLevel: priceLevelFromString(json['price_level'] as String?),
         priceNote: (json['price_note'] as String?) ?? '',
+        priceNoteAr: json['price_note_ar'] as String?,
         isHiddenGem: (json['is_hidden_gem'] as bool?) ?? false,
         isFeatured: (json['is_featured'] as bool?) ?? false,
         priceLocalEgp: (json['price_local_egp'] as num?)?.toInt(),
@@ -78,17 +93,22 @@ class Place {
   Map<String, dynamic> toJson() => {
         'id': id,
         'name': name,
+        'name_ar': nameAr,
         'description': description,
+        'description_ar': descriptionAr,
         'image_url': imageUrl,
         'rating': rating,
         'category': category,
+        'category_ar': categoryAr,
         'lat': lat,
         'lng': lng,
         'address': address,
+        'address_ar': addressAr,
         'open_hours': openHours,
         'review_count': reviewCount,
         'price_level': priceLevelToString(priceLevel),
         'price_note': priceNote,
+        'price_note_ar': priceNoteAr,
         'is_hidden_gem': isHiddenGem,
         'is_featured': isFeatured,
         'price_local_egp': priceLocalEgp,
@@ -97,17 +117,22 @@ class Place {
 
   Map<String, dynamic> toSupabaseUpdate() => {
         'name': name,
+        'name_ar': nameAr,
         'description': description,
+        'description_ar': descriptionAr,
         'image_url': imageUrl,
         'rating': rating,
         'category': category,
+        'category_ar': categoryAr,
         'lat': lat,
         'lng': lng,
         'address': address,
+        'address_ar': addressAr,
         'open_hours': openHours,
         'review_count': reviewCount,
         'price_level': priceLevelToString(priceLevel),
         'price_note': priceNote,
+        'price_note_ar': priceNoteAr,
         'is_hidden_gem': isHiddenGem,
         'is_featured': isFeatured,
         'price_local_egp': priceLocalEgp,
@@ -117,17 +142,22 @@ class Place {
   Place copyWith({
     String? id,
     String? name,
+    String? nameAr,
     String? description,
+    String? descriptionAr,
     String? imageUrl,
     double? rating,
     String? category,
+    String? categoryAr,
     double? lat,
     double? lng,
     String? address,
+    String? addressAr,
     String? openHours,
     int? reviewCount,
     PriceLevel? priceLevel,
     String? priceNote,
+    String? priceNoteAr,
     bool? isHiddenGem,
     bool? isFeatured,
     int? priceLocalEgp,
@@ -136,17 +166,22 @@ class Place {
       Place(
         id: id ?? this.id,
         name: name ?? this.name,
+        nameAr: nameAr ?? this.nameAr,
         description: description ?? this.description,
+        descriptionAr: descriptionAr ?? this.descriptionAr,
         imageUrl: imageUrl ?? this.imageUrl,
         rating: rating ?? this.rating,
         category: category ?? this.category,
+        categoryAr: categoryAr ?? this.categoryAr,
         lat: lat ?? this.lat,
         lng: lng ?? this.lng,
         address: address ?? this.address,
+        addressAr: addressAr ?? this.addressAr,
         openHours: openHours ?? this.openHours,
         reviewCount: reviewCount ?? this.reviewCount,
         priceLevel: priceLevel ?? this.priceLevel,
         priceNote: priceNote ?? this.priceNote,
+        priceNoteAr: priceNoteAr ?? this.priceNoteAr,
         isHiddenGem: isHiddenGem ?? this.isHiddenGem,
         isFeatured: isFeatured ?? this.isFeatured,
         priceLocalEgp: priceLocalEgp ?? this.priceLocalEgp,
