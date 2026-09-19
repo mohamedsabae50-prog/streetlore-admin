@@ -637,8 +637,6 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                   const SizedBox(height: 14),
                   Row(
                     children: [
-                      Expanded(child: _categoryDropdown()),
-                      const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -697,7 +695,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
 
             _section(
               icon: Icons.translate_rounded,
-              title: 'Basic Info (AR + EN)',
+              title: 'English Content',
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -712,17 +710,6 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                         ? 'Name (English) is required'
                         : null,
                   ),
-                  const SizedBox(height: 8),
-                  _labelBilingual('Name (AR)', isEn: false),
-                  TextFormField(
-                    controller: _nameAr,
-                    textDirection: TextDirection.rtl,
-                    textAlign: TextAlign.right,
-                    decoration: const InputDecoration(
-                      hintText: 'قلعة قايتباي',
-                      prefixIcon: Icon(Icons.translate_rounded),
-                    ),
-                  ),
                   const SizedBox(height: 14),
                   _labelBilingual('Description', isEn: true),
                   TextFormField(
@@ -735,7 +722,41 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                         ? 'Description (English) is required'
                         : null,
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 14),
+                  _labelBilingual('Address', isEn: true),
+                  TextFormField(
+                    controller: _address,
+                    decoration: const InputDecoration(
+                      hintText: 'Corniche, Anfushi, Alexandria',
+                      prefixIcon: Icon(Icons.place_rounded),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  _labelBilingual('Category', isEn: true),
+                  _categoryDropdown(),
+                  const SizedBox(height: 14),
+                  _mapPicker(),
+                ],
+              ),
+            ),
+
+            _section(
+              icon: Icons.translate_rounded,
+              title: 'Arabic Content',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _labelBilingual('Name (AR)', isEn: false),
+                  TextFormField(
+                    controller: _nameAr,
+                    textDirection: TextDirection.rtl,
+                    textAlign: TextAlign.right,
+                    decoration: const InputDecoration(
+                      hintText: 'قلعة قايتباي',
+                      prefixIcon: Icon(Icons.translate_rounded),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
                   _labelBilingual('Description (AR)', isEn: false),
                   TextFormField(
                     controller: _descriptionAr,
@@ -746,25 +767,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                       hintText: 'الوصف بالعربي...',
                     ),
                   ),
-                ],
-              ),
-            ),
-
-            _section(
-              icon: Icons.location_on_rounded,
-              title: 'Location',
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _labelBilingual('Address', isEn: true),
-                  TextFormField(
-                    controller: _address,
-                    decoration: const InputDecoration(
-                      hintText: 'Corniche, Anfushi, Alexandria',
-                      prefixIcon: Icon(Icons.place_rounded),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 14),
                   _labelBilingual('Address (AR)', isEn: false),
                   TextFormField(
                     controller: _addressAr,
@@ -775,7 +778,15 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                     ),
                   ),
                   const SizedBox(height: 14),
-                  _mapPicker(),
+                  _labelBilingual('Category (AR)', isEn: false),
+                  TextFormField(
+                    controller: _categoryAr,
+                    textDirection: TextDirection.rtl,
+                    textAlign: TextAlign.right,
+                    decoration: const InputDecoration(
+                      hintText: 'الفئة بالعربي...',
+                    ),
+                  ),
                 ],
               ),
             ),
