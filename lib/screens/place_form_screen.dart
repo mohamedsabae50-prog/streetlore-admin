@@ -695,17 +695,87 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                       ),
                     ],
                   ),
+                  const SizedBox(height: 14),
+                  _labelBilingual('Best Time', isEn: true),
+                  TextFormField(
+                    controller: _bestTimeToVisit,
+                    decoration: const InputDecoration(
+                      hintText: 'Morning / Sunset / Late Night',
+                      prefixIcon: Icon(Icons.access_time_rounded),
+                      helperText:
+                          'Optional. Shown verbatim on the Best Time screen.',
+                    ),
+                  ),
                 ],
               ),
             ),
 
-            _section(
-              icon: Icons.translate_rounded,
-              title: 'English Content',
+            // ===== ENGLISH CONTENT =====
+            Container(
+              margin: const EdgeInsets.only(bottom: 18),
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFFFFF),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: const Color(0xFF3B82F6).withValues(alpha: 0.45),
+                  width: 2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF3B82F6).withValues(alpha: 0.06),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _labelBilingual('Name', isEn: true),
+                  Row(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color:
+                              const Color(0xFF3B82F6).withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        alignment: Alignment.center,
+                        child: const Text(
+                          'EN',
+                          style: TextStyle(
+                            color: Color(0xFF3B82F6),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Text(
+                          'English Content',
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF0F172A),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Required fields shown in blue. Both English fields are mandatory.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _labelBilingual('Name (English)', isEn: true),
                   TextFormField(
                     controller: _name,
                     decoration: const InputDecoration(
@@ -717,7 +787,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                         : null,
                   ),
                   const SizedBox(height: 14),
-                  _labelBilingual('Description', isEn: true),
+                  _labelBilingual('Description (English)', isEn: true),
                   TextFormField(
                     controller: _description,
                     maxLines: 5,
@@ -729,7 +799,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                         : null,
                   ),
                   const SizedBox(height: 14),
-                  _labelBilingual('Address', isEn: true),
+                  _labelBilingual('Address (English)', isEn: true),
                   TextFormField(
                     controller: _address,
                     decoration: const InputDecoration(
@@ -737,11 +807,6 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                       prefixIcon: Icon(Icons.place_rounded),
                     ),
                   ),
-                  const SizedBox(height: 14),
-                  _labelBilingual('Category', isEn: true),
-                  _categoryDropdown(),
-                  const SizedBox(height: 14),
-                  _mapPicker(),
                 ],
               ),
             ),
@@ -910,56 +975,6 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                     decoration: const InputDecoration(
                       hintText: '100 جنيه للكبار، 50 للطلاب',
                     ),
-                  ),
-                ],
-              ),
-            ),
-
-            _section(
-              icon: Icons.wb_sunny_rounded,
-              title: 'Best Time to Visit',
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Override the auto-computed recommendation. When non-empty, '
-                    'the app shows this exact label (e.g. "Morning", "Sunset", '
-                    '"Late Night") on the Best Time screen.',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: AppTheme.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _bestTimeToVisit,
-                    decoration: const InputDecoration(
-                      hintText: 'Morning / Sunset / Late Night / ...',
-                      prefixIcon: Icon(Icons.access_time_rounded),
-                    ),
-                    validator: (v) => null,
-                  ),
-                  const SizedBox(height: 10),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: [
-                      'Early Morning',
-                      'Morning',
-                      'Midday',
-                      'Afternoon',
-                      'Sunset',
-                      'Evening',
-                      'Night',
-                      'Late Night',
-                    ].map((label) {
-                      return ActionChip(
-                        label: Text(label),
-                        onPressed: () => setState(
-                          () => _bestTimeToVisit.text = label,
-                        ),
-                      );
-                    }).toList(),
                   ),
                 ],
               ),
