@@ -38,6 +38,10 @@ class Place {
   final bool isFeatured;
   final int? priceLocalEgp;
   final int? priceForeignerEgp;
+  /// Admin-supplied "best time to visit" label (e.g. "Morning",
+  /// "Sunset", "Late Night"). When non-empty, the Best Time screen
+  /// surfaces this label verbatim instead of computing one.
+  final String? bestTimeToVisit;
 
   const Place({
     required this.id,
@@ -62,6 +66,7 @@ class Place {
     this.isFeatured = false,
     this.priceLocalEgp,
     this.priceForeignerEgp,
+    this.bestTimeToVisit,
   });
 
   factory Place.fromJson(Map<String, dynamic> json) => Place(
@@ -88,6 +93,7 @@ class Place {
         isFeatured: (json['is_featured'] as bool?) ?? false,
         priceLocalEgp: (json['price_local_egp'] as num?)?.toInt(),
         priceForeignerEgp: (json['price_foreigner_egp'] as num?)?.toInt(),
+        bestTimeToVisit: json['best_time_to_visit'] as String?,
       );
 
   Map<String, dynamic> toJson() => {
@@ -113,6 +119,7 @@ class Place {
         'is_featured': isFeatured,
         'price_local_egp': priceLocalEgp,
         'price_foreigner_egp': priceForeignerEgp,
+        'best_time_to_visit': bestTimeToVisit,
       };
 
   Map<String, dynamic> toSupabaseUpdate() => {
@@ -137,6 +144,7 @@ class Place {
         'is_featured': isFeatured,
         'price_local_egp': priceLocalEgp,
         'price_foreigner_egp': priceForeignerEgp,
+        'best_time_to_visit': bestTimeToVisit,
       };
 
   Place copyWith({
@@ -162,6 +170,7 @@ class Place {
     bool? isFeatured,
     int? priceLocalEgp,
     int? priceForeignerEgp,
+    String? bestTimeToVisit,
   }) =>
       Place(
         id: id ?? this.id,
@@ -186,6 +195,7 @@ class Place {
         isFeatured: isFeatured ?? this.isFeatured,
         priceLocalEgp: priceLocalEgp ?? this.priceLocalEgp,
         priceForeignerEgp: priceForeignerEgp ?? this.priceForeignerEgp,
+        bestTimeToVisit: bestTimeToVisit ?? this.bestTimeToVisit,
       );
 }
 

@@ -66,6 +66,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
   late TextEditingController _priceLocal;
   late TextEditingController _priceForeigner;
   late TextEditingController _rating;
+  late TextEditingController _bestTimeToVisit;
   PriceLevel _priceLevel = PriceLevel.free;
   bool _isHiddenGem = false;
   bool _isFeatured = false;
@@ -114,6 +115,8 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
       text: p?.priceForeignerEgp?.toString() ?? '',
     );
     _rating = TextEditingController(text: (p?.rating ?? 0).toString());
+    _bestTimeToVisit =
+        TextEditingController(text: p?.bestTimeToVisit ?? '');
     _priceLevel = p?.priceLevel ?? PriceLevel.free;
     _isHiddenGem = p?.isHiddenGem ?? false;
     _isFeatured = p?.isFeatured ?? false;
@@ -438,6 +441,9 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
         priceForeignerEgp: int.tryParse(_priceForeigner.text.trim()),
         isHiddenGem: _isHiddenGem,
         isFeatured: _isFeatured,
+        bestTimeToVisit: _bestTimeToVisit.text.trim().isEmpty
+            ? null
+            : _bestTimeToVisit.text.trim(),
       );
       if (_isEditing) {
         await AdminService.instance.updatePlace(place);
@@ -904,6 +910,56 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                     decoration: const InputDecoration(
                       hintText: '100 جنيه للكبار، 50 للطلاب',
                     ),
+                  ),
+                ],
+              ),
+            ),
+
+            _section(
+              icon: Icons.wb_sunny_rounded,
+              title: 'Best Time to Visit',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Override the auto-computed recommendation. When non-empty, '
+                    'the app shows this exact label (e.g. "Morning", "Sunset", '
+                    '"Late Night") on the Best Time screen.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _bestTimeToVisit,
+                    decoration: const InputDecoration(
+                      hintText: 'Morning / Sunset / Late Night / ...',
+                      prefixIcon: Icon(Icons.access_time_rounded),
+                    ),
+                    validator: (v) => null,
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      'Early Morning',
+                      'Morning',
+                      'Midday',
+                      'Afternoon',
+                      'Sunset',
+                      'Evening',
+                      'Night',
+                      'Late Night',
+                    ].map((label) {
+                      return ActionChip(
+                        label: Text(label),
+                        onPressed: () => setState(
+                          () => _bestTimeToVisit.text = label,
+                        ),
+                      );
+                    }).toList(),
                   ),
                 ],
               ),
