@@ -9,7 +9,7 @@ import 'theme.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Supabase — real project credentials (see lib/config/supabase_config.dart)
+  
   await Supabase.initialize(
     url: SupabaseConfig.url,
     anonKey: SupabaseConfig.anonKey,
@@ -26,6 +26,19 @@ class StreetloreAdminApp extends StatelessWidget {
       title: 'Streetlore Admin',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
+      
+      
+      
+      
+      
+      
+      locale: const Locale('en'),
+      supportedLocales: const [
+        Locale('en'),
+        Locale('ar'),
+        Locale('en', 'US'),
+        Locale('ar', 'EG'),
+      ],
       home: AdminService.instance.isLoggedIn
           ? const DashboardScreen()
           : const LoginScreen(),

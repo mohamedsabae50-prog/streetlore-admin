@@ -38,9 +38,9 @@ class Place {
   final bool isFeatured;
   final int? priceLocalEgp;
   final int? priceForeignerEgp;
-  /// Admin-supplied "best time to visit" label (e.g. "Morning",
-  /// "Sunset", "Late Night"). When non-empty, the Best Time screen
-  /// surfaces this label verbatim instead of computing one.
+  
+  
+  
   final String? bestTimeToVisit;
 
   const Place({

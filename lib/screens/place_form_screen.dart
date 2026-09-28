@@ -154,7 +154,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
     return 'p_$ts';
   }
 
-  /// Returns the trimmed text or null if empty (for nullable AR fields).
+  
   String? _nullable(TextEditingController c) {
     final t = c.text.trim();
     return t.isEmpty ? null : t;
@@ -236,7 +236,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
       for (final file in picked) {
         final draft = _PhotoDraft();
         draft.bytes = null;
-        // load bytes async after the loop using futures
+        
         _attachBytes(draft, file);
         _newPhotos.add(draft);
       }
@@ -748,7 +748,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
               ),
             ),
 
-            // ===== ENGLISH CONTENT =====
+            
             Container(
               margin: const EdgeInsets.only(bottom: 18),
               padding: const EdgeInsets.all(18),
@@ -900,9 +900,9 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
               ),
             ),
 
-            // v1.0.44: interactive Map Picker. Tap anywhere on the map
-            // to drop the Pin; lat/lng are bound to _lat/_lng
-            // controllers and saved to Supabase on submit.
+            
+            
+            
             _section(
               icon: Icons.map_rounded,
               title: 'Location (lat / lng)',
@@ -1814,15 +1814,15 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                       point: point,
                       width: 44,
                       height: 44,
-                      // v1.0.44: the Pin is rendered as a colored
-                      // pin icon. Tap anywhere on the map (onTap on
-                      // MapOptions above) moves the marker AND
-                      // updates _lat/_lng in one step. The drag math
-                      // would require a custom GestureDetector
-                      // wrapping the icon with screen-to-latLng
-                      // projection; the existing tap-to-place UX is
-                      // already precise enough for hand-correction
-                      // and is used for the actual save.
+                      
+                      
+                      
+                      
+                      
+                      
+                      
+                      
+                      
                       child: const Icon(
                         Icons.location_on_rounded,
                         color: AppTheme.danger,
