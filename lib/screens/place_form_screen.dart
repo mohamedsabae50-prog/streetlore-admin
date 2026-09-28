@@ -706,6 +706,44 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                           'Optional. Shown verbatim on the Best Time screen.',
                     ),
                   ),
+                  const SizedBox(height: 14),
+                  _labelBilingual('Category', isEn: true),
+                  DropdownButtonFormField<String>(
+                    initialValue: _category.text.isEmpty
+                        ? null
+                        : _category.text,
+                    items: const [
+                      DropdownMenuItem(
+                          value: 'Historical', child: Text('Historical')),
+                      DropdownMenuItem(
+                          value: 'Culture', child: Text('Culture')),
+                      DropdownMenuItem(
+                          value: 'Nature', child: Text('Nature')),
+                      DropdownMenuItem(
+                          value: 'Food', child: Text('Food')),
+                      DropdownMenuItem(
+                          value: 'Shopping', child: Text('Shopping')),
+                      DropdownMenuItem(
+                          value: 'Mosques', child: Text('Mosques')),
+                      DropdownMenuItem(
+                          value: 'Churches', child: Text('Churches')),
+                      DropdownMenuItem(
+                          value: 'Streets', child: Text('Streets')),
+                      DropdownMenuItem(
+                          value: 'ATM', child: Text('ATM')),
+                      DropdownMenuItem(
+                          value: 'Hotel', child: Text('Hotel')),
+                    ],
+                    onChanged: (v) {
+                      if (v != null) {
+                        setState(() => _category.text = v);
+                      }
+                    },
+                    decoration: const InputDecoration(
+                      prefixIcon: Icon(Icons.category_rounded),
+                      hintText: 'Pick a category',
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -860,6 +898,15 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                   ),
                 ],
               ),
+            ),
+
+            // v1.0.44: interactive Map Picker. Tap anywhere on the map
+            // to drop the Pin; lat/lng are bound to _lat/_lng
+            // controllers and saved to Supabase on submit.
+            _section(
+              icon: Icons.map_rounded,
+              title: 'Location (lat / lng)',
+              child: _mapPicker(),
             ),
 
             _section(
@@ -1765,12 +1812,21 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                   markers: [
                     Marker(
                       point: point,
-                      width: 40,
-                      height: 40,
+                      width: 44,
+                      height: 44,
+                      // v1.0.44: the Pin is rendered as a colored
+                      // pin icon. Tap anywhere on the map (onTap on
+                      // MapOptions above) moves the marker AND
+                      // updates _lat/_lng in one step. The drag math
+                      // would require a custom GestureDetector
+                      // wrapping the icon with screen-to-latLng
+                      // projection; the existing tap-to-place UX is
+                      // already precise enough for hand-correction
+                      // and is used for the actual save.
                       child: const Icon(
                         Icons.location_on_rounded,
                         color: AppTheme.danger,
-                        size: 36,
+                        size: 40,
                       ),
                     ),
                   ],
