@@ -22,6 +22,7 @@ class Place {
   final String description;
   final String? descriptionAr;
   final String imageUrl;
+  final List<String> imageUrls;
   final double rating;
   final String category;
   final String? categoryAr;
@@ -38,9 +39,9 @@ class Place {
   final bool isFeatured;
   final int? priceLocalEgp;
   final int? priceForeignerEgp;
-  
-  
-  
+
+
+
   final String? bestTimeToVisit;
 
   const Place({
@@ -50,6 +51,7 @@ class Place {
     required this.description,
     this.descriptionAr,
     required this.imageUrl,
+    this.imageUrls = const <String>[],
     required this.rating,
     required this.category,
     this.categoryAr,
@@ -69,32 +71,43 @@ class Place {
     this.bestTimeToVisit,
   });
 
-  factory Place.fromJson(Map<String, dynamic> json) => Place(
-        id: (json['id'] as String?) ?? '',
-        name: (json['name'] as String?) ?? '',
-        nameAr: json['name_ar'] as String?,
-        description: (json['description'] as String?) ?? '',
-        descriptionAr: json['description_ar'] as String?,
-        imageUrl: (json['image_url'] as String?) ?? '',
-        rating: (json['rating'] as num?)?.toDouble() ?? 0,
-        category: (json['category'] as String?) ?? 'General',
-        categoryAr: json['category_ar'] as String?,
-        lat: (json['lat'] as num?)?.toDouble() ?? 0,
-        lng: (json['lng'] as num?)?.toDouble() ?? 0,
-        address: (json['address'] as String?) ?? 'Alexandria, Egypt',
-        addressAr: json['address_ar'] as String?,
-        openHours:
-            (json['open_hours'] as String?) ?? '9:00 AM - 6:00 PM',
-        reviewCount: (json['review_count'] as int?) ?? 0,
-        priceLevel: priceLevelFromString(json['price_level'] as String?),
-        priceNote: (json['price_note'] as String?) ?? '',
-        priceNoteAr: json['price_note_ar'] as String?,
-        isHiddenGem: (json['is_hidden_gem'] as bool?) ?? false,
-        isFeatured: (json['is_featured'] as bool?) ?? false,
-        priceLocalEgp: (json['price_local_egp'] as num?)?.toInt(),
-        priceForeignerEgp: (json['price_foreigner_egp'] as num?)?.toInt(),
-        bestTimeToVisit: json['best_time_to_visit'] as String?,
-      );
+  factory Place.fromJson(Map<String, dynamic> json) {
+    final urlsRaw = json['image_urls'] ?? json['imageUrls'];
+    List<String> urls = const <String>[];
+    if (urlsRaw is List) {
+      urls = urlsRaw
+          .map((e) => e?.toString() ?? '')
+          .where((s) => s.isNotEmpty)
+          .toList(growable: false);
+    }
+    return Place(
+      id: (json['id'] as String?) ?? '',
+      name: (json['name'] as String?) ?? '',
+      nameAr: json['name_ar'] as String?,
+      description: (json['description'] as String?) ?? '',
+      descriptionAr: json['description_ar'] as String?,
+      imageUrl: (json['image_url'] as String?) ?? '',
+      imageUrls: urls,
+      rating: (json['rating'] as num?)?.toDouble() ?? 0,
+      category: (json['category'] as String?) ?? 'General',
+      categoryAr: json['category_ar'] as String?,
+      lat: (json['lat'] as num?)?.toDouble() ?? 0,
+      lng: (json['lng'] as num?)?.toDouble() ?? 0,
+      address: (json['address'] as String?) ?? 'Alexandria, Egypt',
+      addressAr: json['address_ar'] as String?,
+      openHours:
+          (json['open_hours'] as String?) ?? '9:00 AM - 6:00 PM',
+      reviewCount: (json['review_count'] as int?) ?? 0,
+      priceLevel: priceLevelFromString(json['price_level'] as String?),
+      priceNote: (json['price_note'] as String?) ?? '',
+      priceNoteAr: json['price_note_ar'] as String?,
+      isHiddenGem: (json['is_hidden_gem'] as bool?) ?? false,
+      isFeatured: (json['is_featured'] as bool?) ?? false,
+      priceLocalEgp: (json['price_local_egp'] as num?)?.toInt(),
+      priceForeignerEgp: (json['price_foreigner_egp'] as num?)?.toInt(),
+      bestTimeToVisit: json['best_time_to_visit'] as String?,
+    );
+  }
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -103,6 +116,7 @@ class Place {
         'description': description,
         'description_ar': descriptionAr,
         'image_url': imageUrl,
+        'image_urls': imageUrls,
         'rating': rating,
         'category': category,
         'category_ar': categoryAr,
@@ -128,6 +142,7 @@ class Place {
         'description': description,
         'description_ar': descriptionAr,
         'image_url': imageUrl,
+        'image_urls': imageUrls,
         'rating': rating,
         'category': category,
         'category_ar': categoryAr,
@@ -154,6 +169,7 @@ class Place {
     String? description,
     String? descriptionAr,
     String? imageUrl,
+    List<String>? imageUrls,
     double? rating,
     String? category,
     String? categoryAr,
@@ -179,6 +195,7 @@ class Place {
         description: description ?? this.description,
         descriptionAr: descriptionAr ?? this.descriptionAr,
         imageUrl: imageUrl ?? this.imageUrl,
+        imageUrls: imageUrls ?? this.imageUrls,
         rating: rating ?? this.rating,
         category: category ?? this.category,
         categoryAr: categoryAr ?? this.categoryAr,

@@ -53,6 +53,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
   late TextEditingController _description;
   late TextEditingController _descriptionAr;
   late TextEditingController _imageUrl;
+  late List<TextEditingController> _imageUrls;
   late TextEditingController _category;
   late TextEditingController _categoryAr;
   late TextEditingController _lat;
@@ -94,6 +95,12 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
     _description = TextEditingController(text: p?.description ?? '');
     _descriptionAr = TextEditingController(text: p?.descriptionAr ?? '');
     _imageUrl = TextEditingController(text: p?.imageUrl ?? '');
+    final initialUrls = (p?.imageUrls.isNotEmpty ?? false)
+        ? p!.imageUrls
+        : (p?.imageUrl.isNotEmpty == true ? <String>[p!.imageUrl] : <String>[]);
+    _imageUrls = initialUrls
+        .map((u) => TextEditingController(text: u))
+        .toList(growable: true);
     _category = TextEditingController(text: p?.category ?? 'Historical');
     _categoryAr = TextEditingController(text: p?.categoryAr ?? '');
     _lat = TextEditingController(text: (p?.lat ?? 31.2).toString());
@@ -418,6 +425,10 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
       if (_primaryImageRemoved) {
         imageUrl = '';
       }
+      final imageUrlsList = _imageUrls
+          .map((c) => c.text.trim())
+          .where((s) => s.isNotEmpty)
+          .toList(growable: false);
       final place = Place(
         id: _id.text.trim(),
         name: _name.text.trim(),
@@ -425,6 +436,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
         description: _description.text.trim(),
         descriptionAr: _nullable(_descriptionAr),
         imageUrl: imageUrl,
+        imageUrls: imageUrlsList,
         rating: double.tryParse(_rating.text) ?? 0,
         category: _category.text.trim(),
         categoryAr: _nullable(_categoryAr),
@@ -621,6 +633,70 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                   ),
                   const SizedBox(height: 12),
                   _buildImageGrid(),
+                ],
+              ),
+            ),
+
+            _section(
+              icon: Icons.collections_rounded,
+              title: 'Official Image URLs',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Add direct image URLs for the swipeable photo gallery shown in the app. The first URL is shown first; URLs are also saved to the places.image_urls text[] column. User-uploaded photos below are separate.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  ..._imageUrls.asMap().entries.map(
+                        (entry) => _buildOfficialUrlRow(
+                          entry.key,
+                          entry.value,
+                        ),
+                      ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: _addOfficialUrlRow,
+                          icon: const Icon(
+                            Icons.add_link_rounded,
+                            size: 18,
+                          ),
+                          label: const Text('Add image URL'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppTheme.primary,
+                            side: BorderSide(
+                              color: AppTheme.primary.withValues(alpha: 0.5),
+                            ),
+                            minimumSize: const Size.fromHeight(40),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: _addOfficialUrlFromPicked,
+                          icon: const Icon(
+                            Icons.upload_file_rounded,
+                            size: 18,
+                          ),
+                          label: const Text('Upload as URL'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppTheme.success,
+                            side: BorderSide(
+                              color: AppTheme.success.withValues(alpha: 0.5),
+                            ),
+                            minimumSize: const Size.fromHeight(40),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -1464,6 +1540,201 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
     );
   }
 
+  void _addOfficialUrlRow() {
+    setState(() {
+      _imageUrls.add(TextEditingController());
+    });
+  }
+
+  Future<void> _addOfficialUrlFromPicked() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: ImageSource.gallery);
+    if (picked == null) return;
+    setState(() => _saving = true);
+    try {
+      final bytes = await picked.readAsBytes();
+      final ext = picked.name.toLowerCase().endsWith('.png') ? 'png' : 'jpg';
+      final ts = DateTime.now().millisecondsSinceEpoch;
+      final id = 'ph_${ts}_off';
+      final url = await AdminService.instance.uploadImageBytes(
+        bytes,
+        'places',
+        '$id.$ext',
+        contentType: ext == 'png' ? 'image/png' : 'image/jpeg',
+      );
+      if (!mounted) return;
+      setState(() {
+        _imageUrls.add(TextEditingController(text: url));
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Upload failed: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  void _removeOfficialUrlRow(int index) {
+    setState(() {
+      _imageUrls.removeAt(index).dispose();
+    });
+  }
+
+  void _moveOfficialUrlRow(int index, int delta) {
+    final newIndex = index + delta;
+    if (newIndex < 0 || newIndex >= _imageUrls.length) return;
+    setState(() {
+      final c = _imageUrls.removeAt(index);
+      _imageUrls.insert(newIndex, c);
+    });
+  }
+
+  Widget _buildOfficialUrlRow(int index, TextEditingController controller) {
+    final url = controller.text;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Position badge / reorder
+          Container(
+            width: 30,
+            margin: const EdgeInsets.only(top: 6),
+            child: Column(
+              children: [
+                Container(
+                  width: 24,
+                  height: 24,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: index == 0
+                        ? AppTheme.primary
+                        : AppTheme.primary.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '${index + 1}',
+                    style: TextStyle(
+                      color: index == 0 ? Colors.white : AppTheme.primary,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                if (index == 0) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    'Cover',
+                    style: TextStyle(
+                      fontSize: 8,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.primary,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(width: 6),
+          // Thumbnail + text field column
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: SizedBox(
+                        width: 40,
+                        height: 40,
+                        child: url.isEmpty
+                            ? Container(
+                                color: AppTheme.border,
+                                child: const Icon(
+                                  Icons.image_outlined,
+                                  size: 18,
+                                  color: Colors.black38,
+                                ),
+                              )
+                            : Image.network(
+                                url,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Container(
+                                  color: AppTheme.border,
+                                  child: const Icon(
+                                    Icons.broken_image_outlined,
+                                    size: 18,
+                                    color: Colors.black38,
+                                  ),
+                                ),
+                              ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextFormField(
+                        controller: controller,
+                        onChanged: (_) => setState(() {}),
+                        decoration: InputDecoration(
+                          hintText: 'https://.../image.jpg',
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 12,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                // Reorder + delete row
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.arrow_upward_rounded, size: 16),
+                        visualDensity: VisualDensity.compact,
+                        onPressed:
+                            index == 0 ? null : () => _moveOfficialUrlRow(index, -1),
+                        tooltip: 'Move up',
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.arrow_downward_rounded, size: 16),
+                        visualDensity: VisualDensity.compact,
+                        onPressed: index == _imageUrls.length - 1
+                            ? null
+                            : () => _moveOfficialUrlRow(index, 1),
+                        tooltip: 'Move down',
+                      ),
+                      IconButton(
+                        icon: const Icon(
+                          Icons.delete_outline_rounded,
+                          size: 18,
+                          color: Colors.redAccent,
+                        ),
+                        visualDensity: VisualDensity.compact,
+                        onPressed: () => _removeOfficialUrlRow(index),
+                        tooltip: 'Remove',
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _imagePreview() {
     final url = _imageUrl.text.isNotEmpty ? _imageUrl.text : null;
     if (url == null) {
@@ -1926,5 +2197,13 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
   String? _validateNumber(String? v) {
     if (v == null || v.trim().isEmpty) return null;
     return double.tryParse(v) == null ? 'Invalid number' : null;
+  }
+
+  @override
+  void dispose() {
+    for (final c in _imageUrls) {
+      c.dispose();
+    }
+    super.dispose();
   }
 }
