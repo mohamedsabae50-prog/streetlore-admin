@@ -20,6 +20,8 @@ class _PhotoDraft {
   String captionAr = '';
   String captionEn = '';
   String userName = 'Streetlore';
+  String? _uploadedUrl;
+  String? _uploadedId;
 }
 
 class _CoverBadge extends StatelessWidget {
@@ -71,8 +73,6 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
   bool _isFeatured = false;
   bool _saving = false;
   bool _loadingPhotos = false;
-  Uint8List? _pickedBytes;
-  String _pickedExt = 'jpg';
 
   final List<PlacePhoto> _existingPhotos = [];
   final List<_PhotoDraft> _newPhotos = [];
@@ -162,100 +162,77 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
     return t.isEmpty ? null : t;
   }
 
-  Future<void> _pickImage() async {
-    final picker = ImagePicker();
-    final source = await showModalBottomSheet<ImageSource>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        margin: const EdgeInsets.all(16),
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: AppTheme.surface,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(
-                Icons.photo_camera_rounded,
-                color: AppTheme.primary,
-              ),
-              title: const Text('Take photo'),
-              onTap: () => Navigator.pop(ctx, ImageSource.camera),
-            ),
-            ListTile(
-              leading: const Icon(
-                Icons.photo_library_rounded,
-                color: AppTheme.success,
-              ),
-              title: const Text('Choose from gallery'),
-              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (source == null) return;
-    final picked = await picker.pickImage(source: source, maxWidth: 1600);
-    if (picked == null) return;
-    final bytes = await picked.readAsBytes();
-    final ext = picked.name.contains('.')
-        ? picked.name.split('.').last.toLowerCase()
-        : 'jpg';
-    setState(() {
-      _pickedBytes = bytes;
-      _pickedExt = ext;
-    });
-  }
-
   Future<void> _pickPhotoForDraft(_PhotoDraft draft) async {
     final picker = ImagePicker();
-    final picked = await picker.pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 1600,
-    );
+    final XFile? picked;
+    try {
+      picked = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1600,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not open file picker: $e')),
+      );
+      return;
+    }
     if (picked == null) return;
-    final bytes = await picked.readAsBytes();
-    final ext = picked.name.contains('.')
-        ? picked.name.split('.').last.toLowerCase()
-        : 'jpg';
-    setState(() {
-      draft.bytes = bytes;
-      draft.ext = ext;
-    });
-  }
-
-  Future<void> _pickMultiplePhotos() async {
-    final picker = ImagePicker();
-    final picked = await picker.pickMultiImage(
-      maxWidth: 1600,
-      imageQuality: 85,
-    );
-    if (picked.isEmpty) return;
-    setState(() {
-      for (final file in picked) {
-        final draft = _PhotoDraft();
-        draft.bytes = null;
-        
-        _attachBytes(draft, file);
-        _newPhotos.add(draft);
-      }
-    });
-  }
-
-  Future<void> _attachBytes(_PhotoDraft draft, XFile file) async {
-    final bytes = await file.readAsBytes();
-    final ext = file.name.contains('.')
-        ? file.name.split('.').last.toLowerCase()
-        : 'jpg';
-    if (mounted) {
+    try {
+      final bytes = await picked.readAsBytes();
+      if (bytes.isEmpty) throw Exception('Picked file is empty');
+      final ext = picked.name.toLowerCase().endsWith('.png') ? 'png' : 'jpg';
+      if (!mounted) return;
       setState(() {
         draft.bytes = bytes;
         draft.ext = ext;
       });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not read file: $e')),
+      );
     }
+  }
+
+  Future<void> _pickMultiplePhotos() async {
+    final picker = ImagePicker();
+    final List<XFile> picked;
+    try {
+      picked = await picker.pickMultiImage(
+        maxWidth: 1600,
+        imageQuality: 85,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not open file picker: $e')),
+      );
+      return;
+    }
+    if (picked.isEmpty) return;
+    final drafts = await _readPickedFiles(picked);
+    if (drafts.isEmpty || !mounted) return;
+    setState(() {
+      _newPhotos.addAll(drafts);
+    });
+  }
+
+  Future<List<_PhotoDraft>> _readPickedFiles(List<XFile> files) async {
+    final out = <_PhotoDraft>[];
+    for (final file in files) {
+      try {
+        final bytes = await file.readAsBytes();
+        if (bytes.isEmpty) continue;
+        final ext = file.name.toLowerCase().endsWith('.png') ? 'png' : 'jpg';
+        out.add(_PhotoDraft()
+          ..bytes = bytes
+          ..ext = ext);
+      } catch (_) {
+        continue;
+      }
+    }
+    return out;
   }
 
   void _addPhotoDraft() {
@@ -272,30 +249,64 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
 
   Future<void> _addMultiplePrimaryImages() async {
     final picker = ImagePicker();
-    final picked = await picker.pickMultiImage(
-      maxWidth: 1600,
-      imageQuality: 85,
-    );
+    final List<XFile> picked;
+    try {
+      picked = await picker.pickMultiImage(
+        maxWidth: 1600,
+        imageQuality: 85,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not open file picker: $e')),
+      );
+      return;
+    }
     if (picked.isEmpty) return;
+    final drafts = await _readPickedFiles(picked);
+    if (drafts.isEmpty || !mounted) return;
     setState(() {
-      for (final file in picked) {
-        final draft = _PhotoDraft();
-        _attachPrimaryBytes(draft, file);
-        _primaryImageDrafts.add(draft);
-      }
+      _primaryImageDrafts.addAll(drafts);
     });
   }
 
-  Future<void> _attachPrimaryBytes(_PhotoDraft draft, XFile file) async {
-    final bytes = await file.readAsBytes();
-    final ext = file.name.contains('.')
-        ? file.name.split('.').last.toLowerCase()
-        : 'jpg';
-    if (mounted) {
+  Future<void> _addOfficialUrlFromPicked() async {
+    final picker = ImagePicker();
+    final XFile? picked;
+    try {
+      picked = await picker.pickImage(source: ImageSource.gallery);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not open file picker: $e')),
+      );
+      return;
+    }
+    if (picked == null) return;
+    setState(() => _saving = true);
+    try {
+      final bytes = await picked.readAsBytes();
+      if (bytes.isEmpty) throw Exception('Picked file is empty');
+      final ext = picked.name.toLowerCase().endsWith('.png') ? 'png' : 'jpg';
+      final ts = DateTime.now().millisecondsSinceEpoch;
+      final id = 'ph_${ts}_off';
+      final url = await AdminService.instance.uploadImageBytes(
+        bytes,
+        'places',
+        '$id.$ext',
+        contentType: ext == 'png' ? 'image/png' : 'image/jpeg',
+      );
+      if (!mounted) return;
       setState(() {
-        draft.bytes = bytes;
-        draft.ext = ext;
+        _imageUrls.add(TextEditingController(text: url));
       });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Upload failed: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
   }
 
@@ -342,6 +353,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                   photo.imageUrl,
                   height: 140,
                   fit: BoxFit.cover,
+                  gaplessPlayback: true,
                   errorBuilder: (_, __, ___) => Container(
                     height: 140,
                     color: AppTheme.bg,
@@ -415,126 +427,183 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
-    try {
-      String imageUrl = _imageUrl.text.trim();
-      if (_primaryImageRemoved) {
-        imageUrl = '';
+
+    final errors = <String>[];
+    String imageUrl = _imageUrl.text.trim();
+    if (_primaryImageRemoved) {
+      imageUrl = '';
+    }
+    final imageUrlsList = _imageUrls
+        .map((c) => c.text.trim())
+        .where((s) => s.isNotEmpty)
+        .toList(growable: false);
+
+    // 1) Upload primary image drafts FIRST so the very first one can become the
+    // new cover. Captures (id, ext, uploadedUrl) per draft that succeeded.
+    final primaryUploaded = <_PhotoDraft>[];
+    final ts = DateTime.now().millisecondsSinceEpoch;
+    var pIdx = 0;
+    for (final draft in _primaryImageDrafts) {
+      if (draft.bytes == null) continue;
+      try {
+        final photoId = 'ph_${ts}_p$pIdx';
+        final url = await AdminService.instance.uploadImageBytes(
+          draft.bytes!,
+          'place-photos',
+          '$photoId.${draft.ext}',
+          contentType: draft.ext == 'png' ? 'image/png' : 'image/jpeg',
+        );
+        primaryUploaded.add(_PhotoDraft()
+          ..bytes = draft.bytes
+          ..ext = draft.ext
+          ..userName = 'Streetlore'
+          .._uploadedUrl = url
+          .._uploadedId = photoId);
+        pIdx++;
+      } catch (e) {
+        errors.add('Upload primary #${pIdx + 1}: $e');
       }
-      final imageUrlsList = _imageUrls
-          .map((c) => c.text.trim())
-          .where((s) => s.isNotEmpty)
-          .toList(growable: false);
-      final place = Place(
-        id: _id.text.trim(),
-        name: _name.text.trim(),
-        nameAr: _nullable(_nameAr),
-        description: _description.text.trim(),
-        descriptionAr: _nullable(_descriptionAr),
-        imageUrl: imageUrl,
-        imageUrls: imageUrlsList,
-        rating: double.tryParse(_rating.text) ?? 0,
-        category: _category.text.trim(),
-        categoryAr: _nullable(_categoryAr),
-        lat: double.tryParse(_lat.text) ?? 0,
-        lng: double.tryParse(_lng.text) ?? 0,
-        address: _address.text.trim(),
-        addressAr: _nullable(_addressAr),
-        openHours: _openHours.text.trim(),
-        reviewCount: int.tryParse(_reviewCount.text) ?? 0,
-        priceLevel: _priceLevel,
-        priceNote: _priceNote.text.trim(),
-        priceLocalEgp: int.tryParse(_priceLocal.text.trim()),
-        priceForeignerEgp: int.tryParse(_priceForeigner.text.trim()),
-        isHiddenGem: _isHiddenGem,
-        isFeatured: _isFeatured,
-      );
+    }
+
+    // 2) Decide the final imageUrl: keep existing, OR use the first new primary
+    // upload as the new cover when no existing cover is set.
+    var finalImageUrl = imageUrl;
+    if (imageUrl.isEmpty && primaryUploaded.isNotEmpty) {
+      finalImageUrl = primaryUploaded.first._uploadedUrl!;
+    }
+
+    // 3) Build the place object with the resolved cover imageUrl.
+    final place = Place(
+      id: _id.text.trim(),
+      name: _name.text.trim(),
+      nameAr: _nullable(_nameAr),
+      description: _description.text.trim(),
+      descriptionAr: _nullable(_descriptionAr),
+      imageUrl: finalImageUrl,
+      imageUrls: imageUrlsList,
+      rating: double.tryParse(_rating.text) ?? 0,
+      category: _category.text.trim(),
+      categoryAr: _nullable(_categoryAr),
+      lat: double.tryParse(_lat.text) ?? 0,
+      lng: double.tryParse(_lng.text) ?? 0,
+      address: _address.text.trim(),
+      addressAr: _nullable(_addressAr),
+      openHours: _openHours.text.trim(),
+      reviewCount: int.tryParse(_reviewCount.text) ?? 0,
+      priceLevel: _priceLevel,
+      priceNote: _priceNote.text.trim(),
+      priceLocalEgp: int.tryParse(_priceLocal.text.trim()),
+      priceForeignerEgp: int.tryParse(_priceForeigner.text.trim()),
+      isHiddenGem: _isHiddenGem,
+      isFeatured: _isFeatured,
+    );
+
+    // 4) Persist the place in ONE call (with the new cover, if any).
+    try {
       if (_isEditing) {
         await AdminService.instance.updatePlace(place);
       } else {
         await AdminService.instance.createPlace(place);
       }
-
-      for (final id in _removedPhotoIds) {
-        try {
-          await AdminService.instance.deletePhoto(id);
-        } catch (_) {}
-      }
-
-      for (final updated in _existingPhotos) {
-        try {
-          await AdminService.instance.updatePhoto(updated);
-        } catch (_) {}
-      }
-
-      final ts = DateTime.now().millisecondsSinceEpoch;
-      var imgIdx = 0;
-      var usedFirstNewAsCover = false;
-      for (final draft in _primaryImageDrafts) {
-        if (draft.bytes == null) continue;
-        try {
-          final photoId = 'ph_${ts}_p${imgIdx}';
-          final photoImageUrl = await AdminService.instance.uploadImageBytes(
-            draft.bytes!,
-            'place-photos',
-            '$photoId.${draft.ext}',
-            contentType: draft.ext == 'png' ? 'image/png' : 'image/jpeg',
-          );
-          if (!usedFirstNewAsCover && imageUrl.isEmpty) {
-            await AdminService.instance.updatePlace(place.copyWith(
-              imageUrl: photoImageUrl,
-            ));
-            usedFirstNewAsCover = true;
-          } else {
-            await AdminService.instance.createPhoto(
-              PlacePhoto(
-                id: photoId,
-                placeId: place.id,
-                userName: 'Streetlore',
-                imageUrl: photoImageUrl,
-                captionAr: '',
-                captionEn: '',
-              ),
-            );
-          }
-          imgIdx++;
-        } catch (_) {}
-      }
-
-      for (final draft in _newPhotos) {
-        if (draft.bytes == null) continue;
-        try {
-          final photoId = 'ph_${ts}_g${_newPhotos.indexOf(draft)}';
-          final photoImageUrl = await AdminService.instance.uploadImageBytes(
-            draft.bytes!,
-            'place-photos',
-            '$photoId.${draft.ext}',
-            contentType: draft.ext == 'png' ? 'image/png' : 'image/jpeg',
-          );
-          await AdminService.instance.createPhoto(
-            PlacePhoto(
-              id: photoId,
-              placeId: place.id,
-              userName: draft.userName.trim().isEmpty
-                  ? 'Streetlore'
-                  : draft.userName.trim(),
-              imageUrl: photoImageUrl,
-              captionAr: draft.captionAr.trim(),
-              captionEn: draft.captionEn.trim(),
-            ),
-          );
-        } catch (_) {}
-      }
-
-      if (!mounted) return;
-      Navigator.pop(context, place);
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Save failed: $e')));
-    } finally {
-      if (mounted) setState(() => _saving = false);
+      errors.insert(0, 'Save place: $e');
+      if (mounted) {
+        setState(() => _saving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Save failed: $e'),
+            duration: const Duration(seconds: 8),
+          ),
+        );
+      }
+      return;
     }
+
+    // 5) Remove deleted existing photos.
+    for (final id in _removedPhotoIds) {
+      try {
+        await AdminService.instance.deletePhoto(id);
+      } catch (e) {
+        errors.add('Delete photo $id: $e');
+      }
+    }
+
+    // 6) Persist edits to existing photos.
+    for (final updated in _existingPhotos) {
+      try {
+        await AdminService.instance.updatePhoto(updated);
+      } catch (e) {
+        errors.add('Update photo ${updated.id}: $e');
+      }
+    }
+
+    // 7) Insert the primary uploads as PlacePhoto rows.
+    for (final up in primaryUploaded) {
+      try {
+        await AdminService.instance.createPhoto(
+          PlacePhoto(
+            id: up._uploadedId!,
+            placeId: place.id,
+            userName: 'Streetlore',
+            imageUrl: up._uploadedUrl!,
+            captionAr: '',
+            captionEn: '',
+          ),
+        );
+      } catch (e) {
+        errors.add('Create photo ${up._uploadedId}: $e');
+      }
+    }
+
+    // 8) Upload + insert gallery drafts.
+    var gIdx = 0;
+    for (final draft in _newPhotos) {
+      if (draft.bytes == null) continue;
+      try {
+        final photoId = 'ph_${ts}_g$gIdx';
+        final url = await AdminService.instance.uploadImageBytes(
+          draft.bytes!,
+          'place-photos',
+          '$photoId.${draft.ext}',
+          contentType: draft.ext == 'png' ? 'image/png' : 'image/jpeg',
+        );
+        await AdminService.instance.createPhoto(
+          PlacePhoto(
+            id: photoId,
+            placeId: place.id,
+            userName: draft.userName.trim().isEmpty
+                ? 'Streetlore'
+                : draft.userName.trim(),
+            imageUrl: url,
+            captionAr: draft.captionAr.trim(),
+            captionEn: draft.captionEn.trim(),
+          ),
+        );
+      } catch (e) {
+        errors.add('Upload gallery #${gIdx + 1}: $e');
+      }
+      gIdx++;
+    }
+
+    if (mounted) setState(() => _saving = false);
+
+    if (errors.isNotEmpty && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Saved with ${errors.length} error(s): ${errors.first}',
+          ),
+          duration: const Duration(seconds: 8),
+        ),
+      );
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Place saved successfully')),
+      );
+    }
+
+    if (!mounted) return;
+    Navigator.pop(context, place);
   }
 
   @override
@@ -1238,6 +1307,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
               width: 70,
               height: 70,
               fit: BoxFit.cover,
+              gaplessPlayback: true,
               errorBuilder: (_, __, ___) => Container(
                 width: 70,
                 height: 70,
@@ -1345,6 +1415,17 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                         width: 70,
                         height: 70,
                         fit: BoxFit.cover,
+                        gaplessPlayback: true,
+                        filterQuality: FilterQuality.medium,
+                        errorBuilder: (_, __, ___) => Container(
+                          width: 70,
+                          height: 70,
+                          color: AppTheme.bg,
+                          child: const Icon(
+                            Icons.broken_image_outlined,
+                            color: AppTheme.textSecondary,
+                          ),
+                        ),
                       )
                     : Container(
                         width: 70,
@@ -1517,36 +1598,6 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
     });
   }
 
-  Future<void> _addOfficialUrlFromPicked() async {
-    final picker = ImagePicker();
-    final picked = await picker.pickImage(source: ImageSource.gallery);
-    if (picked == null) return;
-    setState(() => _saving = true);
-    try {
-      final bytes = await picked.readAsBytes();
-      final ext = picked.name.toLowerCase().endsWith('.png') ? 'png' : 'jpg';
-      final ts = DateTime.now().millisecondsSinceEpoch;
-      final id = 'ph_${ts}_off';
-      final url = await AdminService.instance.uploadImageBytes(
-        bytes,
-        'places',
-        '$id.$ext',
-        contentType: ext == 'png' ? 'image/png' : 'image/jpeg',
-      );
-      if (!mounted) return;
-      setState(() {
-        _imageUrls.add(TextEditingController(text: url));
-      });
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Upload failed: $e')),
-      );
-    } finally {
-      if (mounted) setState(() => _saving = false);
-    }
-  }
-
   void _removeOfficialUrlRow(int index) {
     setState(() {
       _imageUrls.removeAt(index).dispose();
@@ -1633,6 +1684,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                             : Image.network(
                                 url,
                                 fit: BoxFit.cover,
+                                gaplessPlayback: true,
                                 errorBuilder: (_, __, ___) => Container(
                                   color: AppTheme.border,
                                   child: const Icon(
@@ -1738,6 +1790,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
         url,
         height: 180,
         fit: BoxFit.cover,
+        gaplessPlayback: true,
         errorBuilder: (_, __, ___) => Container(
           height: 180,
           color: AppTheme.bg,
@@ -1962,7 +2015,22 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
           child: ClipRRect(
             borderRadius: BorderRadius.circular(12),
             child: draft.bytes != null
-                ? Image.memory(draft.bytes!, fit: BoxFit.cover)
+                ? Image.memory(
+                    draft.bytes!,
+                    fit: BoxFit.cover,
+                    gaplessPlayback: true,
+                    filterQuality: FilterQuality.medium,
+                    errorBuilder: (_, __, ___) => Container(
+                      color: AppTheme.bg,
+                      child: const Center(
+                        child: Icon(
+                          Icons.broken_image_outlined,
+                          color: AppTheme.textSecondary,
+                          size: 32,
+                        ),
+                      ),
+                    ),
+                  )
                 : Container(
                     color: AppTheme.bg,
                     child: const Center(
