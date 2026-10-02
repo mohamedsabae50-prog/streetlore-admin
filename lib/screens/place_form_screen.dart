@@ -68,6 +68,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
   late TextEditingController _priceLocal;
   late TextEditingController _priceForeigner;
   late TextEditingController _rating;
+  late TextEditingController _displayOrder;
   PriceLevel _priceLevel = PriceLevel.free;
   bool _isHiddenGem = false;
   bool _isFeatured = false;
@@ -119,6 +120,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
       text: p?.priceForeignerEgp?.toString() ?? '',
     );
     _rating = TextEditingController(text: (p?.rating ?? 0).toString());
+    _displayOrder = TextEditingController(text: (p?.displayOrder ?? 999).toString());
     _priceLevel = p?.priceLevel ?? PriceLevel.free;
     _isHiddenGem = p?.isHiddenGem ?? false;
     _isFeatured = p?.isFeatured ?? false;
@@ -507,6 +509,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
       priceForeignerEgp: int.tryParse(_priceForeigner.text.trim()),
       isHiddenGem: _isHiddenGem,
       isFeatured: _isFeatured,
+      displayOrder: int.tryParse(_displayOrder.text.trim()) ?? 999,
     );
 
     // 4) Persist the place in ONE call (with the new cover, if any).
@@ -802,6 +805,26 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                                 decimal: true,
                               ),
                               validator: _validateNumber,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _labelBilingual('Display Order', isEn: true),
+                            TextFormField(
+                              controller: _displayOrder,
+                              keyboardType: TextInputType.number,
+                              validator: _validateNumber,
+                              decoration: const InputDecoration(
+                                hintText: '1, 2, 3… (lower = first)',
+                                helperText:
+                                    '1 appears first, 2 second, etc. Default 999.',
+                                prefixIcon: Icon(Icons.format_list_numbered_rounded),
+                              ),
                             ),
                           ],
                         ),

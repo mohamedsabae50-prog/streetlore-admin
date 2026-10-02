@@ -38,6 +38,7 @@ class Place {
   final bool isFeatured;
   final int? priceLocalEgp;
   final int? priceForeignerEgp;
+  final int displayOrder;
 
   const Place({
     required this.id,
@@ -62,6 +63,7 @@ class Place {
     this.isFeatured = false,
     this.priceLocalEgp,
     this.priceForeignerEgp,
+    this.displayOrder = 999,
   });
 
   factory Place.fromJson(Map<String, dynamic> json) {
@@ -97,6 +99,7 @@ class Place {
       isFeatured: (json['is_featured'] as bool?) ?? false,
       priceLocalEgp: (json['price_local_egp'] as num?)?.toInt(),
       priceForeignerEgp: (json['price_foreigner_egp'] as num?)?.toInt(),
+      displayOrder: (json['display_order'] as num?)?.toInt() ?? 999,
     );
   }
 
@@ -123,6 +126,7 @@ class Place {
         'is_featured': isFeatured,
         'price_local_egp': priceLocalEgp,
         'price_foreigner_egp': priceForeignerEgp,
+        'display_order': displayOrder,
       };
 
   Map<String, dynamic> toSupabaseUpdate() => {
@@ -147,6 +151,7 @@ class Place {
         'is_featured': isFeatured,
         'price_local_egp': priceLocalEgp,
         'price_foreigner_egp': priceForeignerEgp,
+        'display_order': displayOrder,
       };
 
   Place copyWith({
@@ -172,6 +177,7 @@ class Place {
     bool? isFeatured,
     int? priceLocalEgp,
     int? priceForeignerEgp,
+    int? displayOrder,
   }) =>
       Place(
         id: id ?? this.id,
@@ -196,6 +202,7 @@ class Place {
         isFeatured: isFeatured ?? this.isFeatured,
         priceLocalEgp: priceLocalEgp ?? this.priceLocalEgp,
         priceForeignerEgp: priceForeignerEgp ?? this.priceForeignerEgp,
+        displayOrder: displayOrder ?? this.displayOrder,
       );
 }
 
