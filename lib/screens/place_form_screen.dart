@@ -216,6 +216,13 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
     setState(() {
       _newPhotos.addAll(drafts);
     });
+    // Force a second rebuild on the next frame in case the first setState
+    // didn't flush all pending frames (Flutter web workaround for the
+    // "double-pick to see the image" issue caused by stale paint state).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() {});
+    });
   }
 
   Future<List<_PhotoDraft>> _readPickedFiles(List<XFile> files) async {
@@ -267,6 +274,10 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
     if (drafts.isEmpty || !mounted) return;
     setState(() {
       _primaryImageDrafts.addAll(drafts);
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() {});
     });
   }
 
