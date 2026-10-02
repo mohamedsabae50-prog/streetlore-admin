@@ -67,7 +67,6 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
   late TextEditingController _priceLocal;
   late TextEditingController _priceForeigner;
   late TextEditingController _rating;
-  late TextEditingController _bestTimeToVisit;
   PriceLevel _priceLevel = PriceLevel.free;
   bool _isHiddenGem = false;
   bool _isFeatured = false;
@@ -122,8 +121,6 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
       text: p?.priceForeignerEgp?.toString() ?? '',
     );
     _rating = TextEditingController(text: (p?.rating ?? 0).toString());
-    _bestTimeToVisit =
-        TextEditingController(text: p?.bestTimeToVisit ?? '');
     _priceLevel = p?.priceLevel ?? PriceLevel.free;
     _isHiddenGem = p?.isHiddenGem ?? false;
     _isFeatured = p?.isFeatured ?? false;
@@ -453,9 +450,6 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
         priceForeignerEgp: int.tryParse(_priceForeigner.text.trim()),
         isHiddenGem: _isHiddenGem,
         isFeatured: _isFeatured,
-        bestTimeToVisit: _bestTimeToVisit.text.trim().isEmpty
-            ? null
-            : _bestTimeToVisit.text.trim(),
       );
       if (_isEditing) {
         await AdminService.instance.updatePlace(place);
@@ -770,17 +764,6 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                         ),
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 14),
-                  _labelBilingual('Best Time', isEn: true),
-                  TextFormField(
-                    controller: _bestTimeToVisit,
-                    decoration: const InputDecoration(
-                      hintText: 'Morning / Sunset / Late Night',
-                      prefixIcon: Icon(Icons.access_time_rounded),
-                      helperText:
-                          'Optional. Shown verbatim on the Best Time screen.',
-                    ),
                   ),
                   const SizedBox(height: 14),
                   _labelBilingual('Category', isEn: true),
