@@ -63,7 +63,6 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
   late TextEditingController _openHours;
   late TextEditingController _reviewCount;
   late TextEditingController _priceNote;
-  late TextEditingController _priceNoteAr;
   late TextEditingController _priceLocal;
   late TextEditingController _priceForeigner;
   late TextEditingController _rating;
@@ -113,7 +112,6 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
       text: (p?.reviewCount ?? 0).toString(),
     );
     _priceNote = TextEditingController(text: p?.priceNote ?? '');
-    _priceNoteAr = TextEditingController(text: p?.priceNoteAr ?? '');
     _priceLocal = TextEditingController(
       text: p?.priceLocalEgp?.toString() ?? '',
     );
@@ -445,7 +443,6 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
         reviewCount: int.tryParse(_reviewCount.text) ?? 0,
         priceLevel: _priceLevel,
         priceNote: _priceNote.text.trim(),
-        priceNoteAr: _nullable(_priceNoteAr),
         priceLocalEgp: int.tryParse(_priceLocal.text.trim()),
         priceForeignerEgp: int.tryParse(_priceForeigner.text.trim()),
         isHiddenGem: _isHiddenGem,
@@ -1073,15 +1070,6 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  _labelBilingual('Price note (AR)', isEn: false),
-                  TextFormField(
-                    controller: _priceNoteAr,
-                    textDirection: TextDirection.rtl,
-                    textAlign: TextAlign.right,
-                    decoration: const InputDecoration(
-                      hintText: '100 جنيه للكبار، 50 للطلاب',
-                    ),
-                  ),
                 ],
               ),
             ),

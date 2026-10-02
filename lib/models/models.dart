@@ -1,4 +1,4 @@
-enum PriceLevel { free, cheap, moderate, expensive }
+﻿enum PriceLevel { free, cheap, moderate, expensive }
 
 PriceLevel priceLevelFromString(String? s) {
   switch (s) {
@@ -34,7 +34,6 @@ class Place {
   final int reviewCount;
   final PriceLevel priceLevel;
   final String priceNote;
-  final String? priceNoteAr;
   final bool isHiddenGem;
   final bool isFeatured;
   final int? priceLocalEgp;
@@ -59,7 +58,6 @@ class Place {
     this.reviewCount = 0,
     this.priceLevel = PriceLevel.free,
     this.priceNote = '',
-    this.priceNoteAr,
     this.isHiddenGem = false,
     this.isFeatured = false,
     this.priceLocalEgp,
@@ -95,7 +93,6 @@ class Place {
       reviewCount: (json['review_count'] as int?) ?? 0,
       priceLevel: priceLevelFromString(json['price_level'] as String?),
       priceNote: (json['price_note'] as String?) ?? '',
-      priceNoteAr: json['price_note_ar'] as String?,
       isHiddenGem: (json['is_hidden_gem'] as bool?) ?? false,
       isFeatured: (json['is_featured'] as bool?) ?? false,
       priceLocalEgp: (json['price_local_egp'] as num?)?.toInt(),
@@ -122,7 +119,6 @@ class Place {
         'review_count': reviewCount,
         'price_level': priceLevelToString(priceLevel),
         'price_note': priceNote,
-        'price_note_ar': priceNoteAr,
         'is_hidden_gem': isHiddenGem,
         'is_featured': isFeatured,
         'price_local_egp': priceLocalEgp,
@@ -147,7 +143,6 @@ class Place {
         'review_count': reviewCount,
         'price_level': priceLevelToString(priceLevel),
         'price_note': priceNote,
-        'price_note_ar': priceNoteAr,
         'is_hidden_gem': isHiddenGem,
         'is_featured': isFeatured,
         'price_local_egp': priceLocalEgp,
@@ -173,7 +168,6 @@ class Place {
     int? reviewCount,
     PriceLevel? priceLevel,
     String? priceNote,
-    String? priceNoteAr,
     bool? isHiddenGem,
     bool? isFeatured,
     int? priceLocalEgp,
@@ -198,7 +192,6 @@ class Place {
         reviewCount: reviewCount ?? this.reviewCount,
         priceLevel: priceLevel ?? this.priceLevel,
         priceNote: priceNote ?? this.priceNote,
-        priceNoteAr: priceNoteAr ?? this.priceNoteAr,
         isHiddenGem: isHiddenGem ?? this.isHiddenGem,
         isFeatured: isFeatured ?? this.isFeatured,
         priceLocalEgp: priceLocalEgp ?? this.priceLocalEgp,
