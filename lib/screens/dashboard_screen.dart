@@ -69,8 +69,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Streetlore Admin',
-            style: TextStyle(fontWeight: FontWeight.w800)),
+        title: Row(
+          children: const [
+            Text('Streetlore Admin',
+                style: TextStyle(fontWeight: FontWeight.w800)),
+            SizedBox(width: 10),
+            Text('v1.0.58',
+                style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
+                    color: Colors.black54)),
+          ],
+        ),
         backgroundColor: Colors.white,
         elevation: 0,
         actions: [
