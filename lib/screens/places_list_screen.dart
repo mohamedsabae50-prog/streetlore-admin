@@ -7,6 +7,7 @@ import 'place_form_screen.dart';
 
 class PlacesListScreen extends StatefulWidget {
   const PlacesListScreen({super.key});
+
   @override
   State<PlacesListScreen> createState() => _PlacesListScreenState();
 }
@@ -14,7 +15,9 @@ class PlacesListScreen extends StatefulWidget {
 class _PlacesListScreenState extends State<PlacesListScreen> {
   List<Place> _places = [];
   bool _loading = true;
+  bool _savingOrder = false;
   String _filter = '';
+  bool _editOrder = true;
 
   @override
   void initState() {
@@ -36,6 +39,38 @@ class _PlacesListScreenState extends State<PlacesListScreen> {
       setState(() => _loading = false);
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text('Load failed: $e')));
+    }
+  }
+
+  Future<void> _persistOrder(int oldIndex, int newIndex) async {
+    if (newIndex > oldIndex) newIndex -= 1;
+    final moved = _places.removeAt(oldIndex);
+    _places.insert(newIndex, moved);
+    setState(() {});
+
+    // Build the new display_order list (10-step gaps so we have room to
+    // drop a new place between any two existing ones without re-numbering
+    // the world). Then commit.
+    const int step = 10;
+    final entries = <({String id, int displayOrder})>[];
+    for (var i = 0; i < _places.length; i++) {
+      entries.add((id: _places[i].id, displayOrder: (i + 1) * step));
+    }
+    setState(() => _savingOrder = true);
+    try {
+      await AdminService.instance.updateDisplayOrders(entries);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('New order saved')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Order save failed: $e')),
+      );
+      await _load();
+    } finally {
+      if (mounted) setState(() => _savingOrder = false);
     }
   }
 
@@ -70,6 +105,21 @@ class _PlacesListScreenState extends State<PlacesListScreen> {
     }
   }
 
+  void _openEdit(Place p) async {
+    final result = await Navigator.push<Place>(
+      context,
+      MaterialPageRoute(builder: (_) => PlaceFormScreen(place: p)),
+    );
+    if (result != null) _load();
+  }
+
+  void _openPhotos(Place p) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => PhotosListScreen(place: p)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final filtered = _filter.isEmpty
@@ -85,6 +135,18 @@ class _PlacesListScreenState extends State<PlacesListScreen> {
             style: TextStyle(fontWeight: FontWeight.w800)),
         backgroundColor: Colors.white,
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: Icon(
+              _editOrder ? Icons.drag_indicator_rounded : Icons.list_alt_rounded,
+              color: _editOrder ? AppTheme.primary : null,
+            ),
+            onPressed: () => setState(() => _editOrder = !_editOrder),
+            tooltip: _editOrder
+                ? 'Stop reordering (drag handles hidden)'
+                : 'Reorder places by drag-and-drop',
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
@@ -115,6 +177,23 @@ class _PlacesListScreenState extends State<PlacesListScreen> {
               ),
             ),
           ),
+          if (_savingOrder)
+            const LinearProgressIndicator(minHeight: 2),
+          if (_editOrder && !_loading && _places.isNotEmpty)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+              width: double.infinity,
+              color: AppTheme.primary.withValues(alpha: 0.08),
+              child: Text(
+                'Drag-and-drop mode — long-press a row and drag to reorder. '
+                'Changes save automatically.',
+                style: TextStyle(
+                  color: AppTheme.primary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
           Expanded(
             child: _loading
                 ? const Center(child: CircularProgressIndicator())
@@ -134,39 +213,59 @@ class _PlacesListScreenState extends State<PlacesListScreen> {
                           ],
                         ),
                       )
-                    : RefreshIndicator(
-                        onRefresh: _load,
-                        child: ListView.separated(
-                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 90),
-                          itemCount: filtered.length,
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(height: 8),
-                          itemBuilder: (context, i) {
-                            final p = filtered[i];
-                            return _PlaceRow(
-                              place: p,
-                              onPhotos: () async {
-                                await Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (_) =>
-                                          PhotosListScreen(place: p)),
+                    : _editOrder
+                        ? ReorderableListView.builder(
+                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 90),
+                            itemCount: filtered.length,
+                            buildDefaultDragHandles: false,
+                            onReorder: _persistOrder,
+                            itemBuilder: (context, i) {
+                              final p = filtered[i];
+                              return Padding(
+                                key: ValueKey('place_${p.id}'),
+                                padding:
+                                    const EdgeInsets.only(bottom: 8),
+                                child: _PlaceRow(
+                                  place: p,
+                                  orderPosition: i + 1,
+                                  onPhotos: () => _openPhotos(p),
+                                  onEdit: () => _openEdit(p),
+                                  onDelete: () => _delete(p),
+                                  dragHandle: ReorderableDragStartListener(
+                                    index: i,
+                                    child: const Padding(
+                                      padding: EdgeInsets.all(8),
+                                      child: Icon(
+                                        Icons.drag_handle_rounded,
+                                        color: Colors.black45,
+                                        size: 22,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          )
+                        : RefreshIndicator(
+                            onRefresh: _load,
+                            child: ListView.separated(
+                              padding:
+                                  const EdgeInsets.fromLTRB(16, 0, 16, 90),
+                              itemCount: filtered.length,
+                              separatorBuilder: (_, __) =>
+                                  const SizedBox(height: 8),
+                              itemBuilder: (context, i) {
+                                final p = filtered[i];
+                                return _PlaceRow(
+                                  place: p,
+                                  orderPosition: i + 1,
+                                  onPhotos: () => _openPhotos(p),
+                                  onEdit: () => _openEdit(p),
+                                  onDelete: () => _delete(p),
                                 );
                               },
-                              onEdit: () async {
-                                final result = await Navigator.push<Place>(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (_) =>
-                                          PlaceFormScreen(place: p)),
-                                );
-                                if (result != null) _load();
-                              },
-                              onDelete: () => _delete(p),
-                            );
-                          },
-                        ),
-                      ),
+                            ),
+                          ),
           ),
         ],
       ),
@@ -176,15 +275,21 @@ class _PlacesListScreenState extends State<PlacesListScreen> {
 
 class _PlaceRow extends StatelessWidget {
   final Place place;
+  final int orderPosition;
   final VoidCallback onPhotos;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
+  final Widget? dragHandle;
+
   const _PlaceRow({
     required this.place,
+    required this.orderPosition,
     required this.onPhotos,
     required this.onEdit,
     required this.onDelete,
+    this.dragHandle,
   });
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -209,12 +314,15 @@ class _PlaceRow extends StatelessWidget {
               width: 60,
               height: 60,
               fit: BoxFit.cover,
+              gaplessPlayback: true,
               errorBuilder: (_, __, ___) => Container(
                 width: 60,
                 height: 60,
                 color: AppTheme.bg,
-                child: const Icon(Icons.image_not_supported_rounded,
-                    color: AppTheme.textSecondary),
+                child: const Icon(
+                  Icons.image_not_supported_rounded,
+                  color: AppTheme.textSecondary,
+                ),
               ),
             ),
           ),
@@ -223,15 +331,38 @@ class _PlaceRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  place.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                    color: AppTheme.textPrimary,
-                  ),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primary.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        '#$orderPosition',
+                        style: const TextStyle(
+                          color: AppTheme.primary,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        place.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 2),
                 Text(
@@ -264,6 +395,7 @@ class _PlaceRow extends StatelessWidget {
               ],
             ),
           ),
+          if (dragHandle != null) dragHandle!,
           IconButton(
             icon: const Icon(Icons.photo_library_outlined,
                 color: AppTheme.success),

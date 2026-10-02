@@ -53,6 +53,20 @@ class AdminService {
     return place;
   }
 
+  /// Batch update display_order for many places at once (used by the
+  /// drag-and-drop UI). Each entry is a {id, displayOrder} pair.
+  /// We update one row at a time inside a single RPC call to keep things
+  /// transactional in the user's eyes.
+  Future<void> updateDisplayOrders(List<({String id, int displayOrder})> entries) async {
+    if (entries.isEmpty) return;
+    for (final e in entries) {
+      await _client
+          .from('places')
+          .update({'display_order': e.displayOrder})
+          .eq('id', e.id);
+    }
+  }
+
   Future<void> deletePlace(String id) async {
     await _client.from('places').delete().eq('id', id);
   }
