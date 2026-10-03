@@ -57,46 +57,38 @@ class AdminService {
   /// Batch update display_order for many places at once (used by the
   /// drag-and-drop UI). Each entry is a {id, displayOrder} pair.
   ///
-  /// v1.0.67 Sledgehammer — we no longer use the client-side `.update()`
-  /// path which was silently failing under Supabase RLS. Instead we call
-  /// a single RPC `force_update_display_orders(place_ids uuid[],
-  /// new_orders int[])` that is declared with `postgres` ownership
-  /// (`SECURITY DEFINER`) so it bypasses every places RLS policy. The
-  /// function also gates on the admin's JWT email and raises a hard SQL
-  /// EXCEPTION if the call is unauthorized or any row couldn't be
-  /// updated — PostgREST surfaces that as a real PostgrestException
-  /// which Flutter can NOT mistake for success.
+  /// v1.0.67/68 Sledgehammer — we no longer use the client-side
+  /// `.update()` path which was silently failing under Supabase RLS.
+  /// Instead we call a single RPC `force_update_display_orders(
+  /// p_place_ids text[], p_new_orders int[])` that is declared with
+  /// `postgres` ownership (`SECURITY DEFINER`) so it bypasses every
+  /// places RLS policy. The function also gates on the admin's JWT email
+  /// and raises a hard SQL EXCEPTION if the call is unauthorized or any
+  /// row couldn't be updated — PostgREST surfaces that as a real
+  /// PostgrestException which Flutter can NOT mistake for success.
+  ///
+  /// v1.0.68 fix: places.id is TEXT (some rows are plain integers like
+  /// "10" / "11"), so the RPC accepts text[] and the client passes ids
+  /// through verbatim with no UUID parsing.
   Future<void> updateDisplayOrders(
     List<({String id, int displayOrder})> entries,
   ) async {
     if (entries.isEmpty) return;
 
-    // The RPC expects uuid[] but the Flutter side uses String ids — parse
-    // defensively. Any malformed id throws synchronously here rather than
-    // round-tripping to Postgres, giving the UI an immediate error.
+    // Pass place ids through verbatim — places.id is TEXT, not UUID.
+    // Empty / whitespace-only ids are still rejected locally so we get a
+    // clean error message instead of a Postgres EXCEPTION.
     final placeIds = <String>[];
     final newOrders = <int>[];
     for (final e in entries) {
-      try {
-        // Touch the value so an invalid UUID throws early.
-        final id = e.id.trim();
-        if (id.isEmpty) {
-          throw FormatException('empty place id');
-        }
-        // UUID sanity-check via Uri/parsing — Postgres will re-validate
-        // on the server side, but catching here avoids a confusing
-        // RPC error.
-        if (id.contains(' ') || id.length < 8) {
-          throw FormatException('invalid place id "$id"');
-        }
-        placeIds.add(id);
-        newOrders.add(e.displayOrder);
-      } on Object catch (err) {
+      final id = e.id.trim();
+      if (id.isEmpty) {
         throw Exception(
-          'Bad entry in drag-and-drop payload: '
-          '{id: "${e.id}", displayOrder: ${e.displayOrder}} — $err',
+          'Bad entry in drag-and-drop payload: empty place id.',
         );
       }
+      placeIds.add(id);
+      newOrders.add(e.displayOrder);
     }
 
     try {
