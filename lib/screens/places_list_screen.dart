@@ -66,8 +66,15 @@ class _PlacesListScreenState extends State<PlacesListScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Order save failed: $e')),
+        SnackBar(
+          content: Text('Order save FAILED — reverted. $e'),
+          duration: const Duration(seconds: 6),
+          backgroundColor: AppTheme.danger,
+        ),
       );
+      // v1.0.65: always reload from the server after a failure so the
+      // local optimistic re-order doesn't linger in the UI and look like
+      // it actually persisted.
       await _load();
     } finally {
       if (mounted) setState(() => _savingOrder = false);

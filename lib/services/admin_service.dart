@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/supabase_config.dart';
 import '../models/models.dart';
@@ -55,15 +56,55 @@ class AdminService {
 
   /// Batch update display_order for many places at once (used by the
   /// drag-and-drop UI). Each entry is a {id, displayOrder} pair.
-  /// We update one row at a time inside a single RPC call to keep things
-  /// transactional in the user's eyes.
-  Future<void> updateDisplayOrders(List<({String id, int displayOrder})> entries) async {
+  ///
+  /// v1.0.65 fix: previously this loop called `.update(...)` and assumed
+  /// success. Postgrest does NOT throw on RLS-rejected updates — it just
+  /// returns 0 rows affected — so a silent RLS rejection looked like a
+  /// successful save and the new order was lost on refresh. We now
+  /// `.select('id')` after each update and throw if no row came back, so
+  /// the UI can surface a real error and roll back.
+  Future<void> updateDisplayOrders(
+    List<({String id, int displayOrder})> entries,
+  ) async {
     if (entries.isEmpty) return;
+    final failures = <String>[];
     for (final e in entries) {
-      await _client
-          .from('places')
-          .update({'display_order': e.displayOrder})
-          .eq('id', e.id);
+      try {
+        final res = await _client
+            .from('places')
+            .update({'display_order': e.displayOrder})
+            .eq('id', e.id)
+            .select('id');
+        final rows = res as List<dynamic>;
+        if (rows.isEmpty) {
+          // RLS blocked the update silently — or the row vanished.
+          failures.add(e.id);
+          debugPrint(
+            'AdminService.updateDisplayOrders: 0 rows returned for id='
+            '${e.id}, order=${e.displayOrder} (likely RLS denial)',
+          );
+        }
+      } on PostgrestException catch (err) {
+        failures.add(e.id);
+        debugPrint(
+          'AdminService.updateDisplayOrders: PostgrestException for '
+          'id=${e.id}: ${err.code} ${err.message}',
+        );
+      } catch (err) {
+        failures.add(e.id);
+        debugPrint(
+          'AdminService.updateDisplayOrders: error for id=${e.id}: $err',
+        );
+      }
+    }
+    if (failures.isNotEmpty) {
+      throw Exception(
+        'Supabase rejected ${failures.length} of ${entries.length} '
+        'display_order updates. RLS policy on places may be missing '
+        'UPDATE for the admin account. Failed ids: '
+        '${failures.take(5).join(", ")}'
+        '${failures.length > 5 ? "…" : ""}',
+      );
     }
   }
 

@@ -74,7 +74,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             Text('Streetlore Admin',
                 style: TextStyle(fontWeight: FontWeight.w800)),
             SizedBox(width: 10),
-            Text('v1.0.64',
+            Text('v1.0.65',
                 style: TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 12,
