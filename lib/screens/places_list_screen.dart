@@ -65,11 +65,19 @@ class _PlacesListScreenState extends State<PlacesListScreen> {
       );
     } catch (e) {
       if (!mounted) return;
+      final msg = e.toString().replaceFirst('Exception: ', '');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Order save FAILED — reverted. $e'),
-          duration: const Duration(seconds: 6),
+          content: Text(
+            'Order save FAILED — reverted. Tap for details.',
+          ),
+          duration: const Duration(seconds: 8),
           backgroundColor: AppTheme.danger,
+          action: SnackBarAction(
+            label: 'Details',
+            textColor: Colors.white,
+            onPressed: () => _showErrorDialog(msg),
+          ),
         ),
       );
       // v1.0.65: always reload from the server after a failure so the
@@ -79,6 +87,30 @@ class _PlacesListScreenState extends State<PlacesListScreen> {
     } finally {
       if (mounted) setState(() => _savingOrder = false);
     }
+  }
+
+  Future<void> _showErrorDialog(String msg) async {
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Save failed'),
+        content: SizedBox(
+          width: 480,
+          child: SingleChildScrollView(
+            child: SelectableText(
+              msg,
+              style: const TextStyle(fontSize: 12, height: 1.35),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _delete(Place p) async {
