@@ -57,111 +57,107 @@ class AdminService {
   /// Batch update display_order for many places at once (used by the
   /// drag-and-drop UI). Each entry is a {id, displayOrder} pair.
   ///
-  /// v1.0.66 rewrite — verify-after-write strategy:
-  ///   1. Send every UPDATE individually.
-  ///   2. Re-fetch all rows from Supabase with a SELECT.
-  ///   3. Compare the actual `display_order` of each id against the
-  ///      intended value. If anything is off, throw with a full diff so
-  ///      the UI can surface a real error and roll back the optimistic
-  ///      re-order. This catches every silent-RLS, network-truncated,
-  ///      and missing-row failure mode — the previous `.select('id')`
-  ///      on the UPDATE response was unreliable under RLS.
+  /// v1.0.67 Sledgehammer — we no longer use the client-side `.update()`
+  /// path which was silently failing under Supabase RLS. Instead we call
+  /// a single RPC `force_update_display_orders(place_ids uuid[],
+  /// new_orders int[])` that is declared with `postgres` ownership
+  /// (`SECURITY DEFINER`) so it bypasses every places RLS policy. The
+  /// function also gates on the admin's JWT email and raises a hard SQL
+  /// EXCEPTION if the call is unauthorized or any row couldn't be
+  /// updated — PostgREST surfaces that as a real PostgrestException
+  /// which Flutter can NOT mistake for success.
   Future<void> updateDisplayOrders(
     List<({String id, int displayOrder})> entries,
   ) async {
     if (entries.isEmpty) return;
 
-    // Phase 1 — fire every UPDATE.
-    final expected = <String, int>{
-      for (final e in entries) e.id: e.displayOrder,
-    };
-    final updateErrors = <String>[];
+    // The RPC expects uuid[] but the Flutter side uses String ids — parse
+    // defensively. Any malformed id throws synchronously here rather than
+    // round-tripping to Postgres, giving the UI an immediate error.
+    final placeIds = <String>[];
+    final newOrders = <int>[];
     for (final e in entries) {
       try {
-        await _client
-            .from('places')
-            .update({'display_order': e.displayOrder})
-            .eq('id', e.id);
-      } on PostgrestException catch (err) {
-        updateErrors.add('${e.id} [${err.code}] ${err.message}');
-        debugPrint(
-          'AdminService.updateDisplayOrders: PostgrestException for '
-          'id=${e.id}: ${err.code} ${err.message}',
-        );
-      } catch (err) {
-        updateErrors.add('$e.id $err');
-        debugPrint(
-          'AdminService.updateDisplayOrders: error for id=${e.id}: $err',
+        // Touch the value so an invalid UUID throws early.
+        final id = e.id.trim();
+        if (id.isEmpty) {
+          throw FormatException('empty place id');
+        }
+        // UUID sanity-check via Uri/parsing — Postgres will re-validate
+        // on the server side, but catching here avoids a confusing
+        // RPC error.
+        if (id.contains(' ') || id.length < 8) {
+          throw FormatException('invalid place id "$id"');
+        }
+        placeIds.add(id);
+        newOrders.add(e.displayOrder);
+      } on Object catch (err) {
+        throw Exception(
+          'Bad entry in drag-and-drop payload: '
+          '{id: "${e.id}", displayOrder: ${e.displayOrder}} — $err',
         );
       }
     }
 
-    // Phase 2 — re-fetch every id and verify the value actually landed.
-    // We pull the whole places table (admin can read everything) and
-    // filter to the ids we just touched, since the supabase_flutter
-    // version pinned here doesn't expose `.inFilter()` / `.in_()`.
-    final ids = entries.map((e) => e.id).toList(growable: false);
-    final allPlaces = await _client
-        .from('places')
-        .select('id, display_order') as List<dynamic>;
-    final rows = allPlaces
-        .where((r) => ids.contains((r as Map<String, dynamic>)['id']))
-        .map<({String id, int displayOrder})>((r) {
-          final m = r as Map<String, dynamic>;
-          return (
-            id: m['id'] as String,
-            displayOrder: (m['display_order'] as num?)?.toInt() ?? -1,
+    try {
+      final result = await _client.rpc(
+        'force_update_display_orders',
+        params: {
+          'p_place_ids': placeIds,
+          'p_new_orders': newOrders,
+        },
+      );
+      // RPC returned without raising. Verify the return table actually
+      // contains every requested id with the requested order — the SQL
+      // function only does this check inside itself, but if the function
+      // definition ever drifts, this is the last line of defence.
+      final rows = (result as List<dynamic>)
+          .map<({String id, int displayOrder})>((r) {
+            final m = r as Map<String, dynamic>;
+            return (
+              id: m['updated_id'] as String,
+              displayOrder: (m['updated_order'] as num).toInt(),
+            );
+          })
+          .toList();
+      final expected = <String, int>{
+        for (final e in entries) e.id: e.displayOrder,
+      };
+      final mismatches = <String>[];
+      for (final row in rows) {
+        final want = expected[row.id];
+        if (want == null) continue;
+        if (row.displayOrder != want) {
+          mismatches.add(
+            '${row.id}: expected $want, DB has ${row.displayOrder}',
           );
-        })
-        .toList();
-
-    final mismatches = <String>[];
-    final missing = <String>[];
-    final seen = <String>{};
-    for (final row in rows) {
-      seen.add(row.id);
-      final want = expected[row.id];
-      if (want == null) continue;
-      if (row.displayOrder != want) {
-        mismatches.add(
-          '${row.id}: expected $want, DB has ${row.displayOrder}',
+        }
+      }
+      if (rows.length != entries.length || mismatches.isNotEmpty) {
+        throw Exception(
+          'force_update_display_orders returned '
+          '${rows.length} rows, expected ${entries.length}.\n'
+          '${mismatches.isEmpty ? "" : "Mismatches: ${mismatches.join(", ")}"}',
         );
       }
-    }
-    for (final id in ids) {
-      if (!seen.contains(id)) missing.add(id);
-    }
-
-    if (updateErrors.isNotEmpty || mismatches.isNotEmpty || missing.isNotEmpty) {
-      final buf = StringBuffer(
-        'display_order save FAILED — Supabase did not persist the new order.\n\n',
+    } on PostgrestException catch (err) {
+      // Hard SQL EXCEPTION — surface verbatim.
+      debugPrint(
+        'AdminService.updateDisplayOrders: PostgrestException '
+        '${err.code} ${err.message}',
       );
-      if (updateErrors.isNotEmpty) {
-        buf.writeln(
-          'UPDATE errors (${updateErrors.length}):\n  • '
-          '${updateErrors.take(5).join("\n  • ")}'
-          '${updateErrors.length > 5 ? "\n  • …" : ""}\n',
-        );
-      }
-      if (mismatches.isNotEmpty) {
-        buf.writeln(
-          'VERIFY mismatches (${mismatches.length}):\n  • '
-          '${mismatches.take(5).join("\n  • ")}'
-          '${mismatches.length > 5 ? "\n  • …" : ""}\n',
-        );
-      }
-      if (missing.isNotEmpty) {
-        buf.writeln(
-          'Missing rows (${missing.length}): ${missing.take(5).join(", ")}'
-          '${missing.length > 5 ? ", …" : ""}\n',
-        );
-      }
-      buf.writeln(
-        'This almost always means the Supabase places table is missing '
-        'an UPDATE policy for the admin account. Run '
-        'supabase/migrations/2026_10_03_admin_places_rls.sql.',
+      throw Exception(
+        'force_update_display_orders REJECTED by Supabase.\n\n'
+        'code: ${err.code}\n'
+        'message: ${err.message}\n\n'
+        'If "Unauthorized" — make sure you are signed in with the admin '
+        'account and re-run 2026_10_03_admin_force_update_display_orders.sql.\n'
+        'If "array length mismatch" / "missing ids" — the RPC did not '
+        'write every row; refresh and try again.',
       );
-      throw Exception(buf.toString());
+    } catch (err) {
+      debugPrint('AdminService.updateDisplayOrders: $err');
+      rethrow;
     }
   }
 
