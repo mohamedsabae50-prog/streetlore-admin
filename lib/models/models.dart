@@ -39,6 +39,8 @@ class Place {
   final int? priceLocalEgp;
   final int? priceForeignerEgp;
   final int displayOrder;
+  final bool enableChat;
+  final bool enableGallery;
 
   const Place({
     required this.id,
@@ -64,6 +66,8 @@ class Place {
     this.priceLocalEgp,
     this.priceForeignerEgp,
     this.displayOrder = 999,
+    this.enableChat = true,
+    this.enableGallery = true,
   });
 
   factory Place.fromJson(Map<String, dynamic> json) {
@@ -100,6 +104,8 @@ class Place {
       priceLocalEgp: (json['price_local_egp'] as num?)?.toInt(),
       priceForeignerEgp: (json['price_foreigner_egp'] as num?)?.toInt(),
       displayOrder: (json['display_order'] as num?)?.toInt() ?? 999,
+      enableChat: (json['enable_chat'] as bool?) ?? true,
+      enableGallery: (json['enable_gallery'] as bool?) ?? true,
     );
   }
 
@@ -127,6 +133,8 @@ class Place {
         'price_local_egp': priceLocalEgp,
         'price_foreigner_egp': priceForeignerEgp,
         'display_order': displayOrder,
+        'enable_chat': enableChat,
+        'enable_gallery': enableGallery,
       };
 
   Map<String, dynamic> toSupabaseUpdate() => {
@@ -152,6 +160,8 @@ class Place {
         'price_local_egp': priceLocalEgp,
         'price_foreigner_egp': priceForeignerEgp,
         'display_order': displayOrder,
+        'enable_chat': enableChat,
+        'enable_gallery': enableGallery,
       };
 
   Place copyWith({
@@ -178,6 +188,8 @@ class Place {
     int? priceLocalEgp,
     int? priceForeignerEgp,
     int? displayOrder,
+    bool? enableChat,
+    bool? enableGallery,
   }) =>
       Place(
         id: id ?? this.id,
@@ -203,6 +215,8 @@ class Place {
         priceLocalEgp: priceLocalEgp ?? this.priceLocalEgp,
         priceForeignerEgp: priceForeignerEgp ?? this.priceForeignerEgp,
         displayOrder: displayOrder ?? this.displayOrder,
+        enableChat: enableChat ?? this.enableChat,
+        enableGallery: enableGallery ?? this.enableGallery,
       );
 }
 

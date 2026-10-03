@@ -72,6 +72,8 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
   PriceLevel _priceLevel = PriceLevel.free;
   bool _isHiddenGem = false;
   bool _isFeatured = false;
+  bool _enableChat = true;
+  bool _enableGallery = true;
   bool _saving = false;
   bool _loadingPhotos = false;
 
@@ -124,6 +126,8 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
     _priceLevel = p?.priceLevel ?? PriceLevel.free;
     _isHiddenGem = p?.isHiddenGem ?? false;
     _isFeatured = p?.isFeatured ?? false;
+    _enableChat = p?.enableChat ?? true;
+    _enableGallery = p?.enableGallery ?? true;
     _lat.addListener(_onCoordFieldChanged);
     _lng.addListener(_onCoordFieldChanged);
     if (_isEditing) {
@@ -510,6 +514,8 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
       isHiddenGem: _isHiddenGem,
       isFeatured: _isFeatured,
       displayOrder: int.tryParse(_displayOrder.text.trim()) ?? 999,
+      enableChat: _enableChat,
+      enableGallery: _enableGallery,
     );
 
     // 4) Persist the place in ONE call (with the new cover, if any).
@@ -1180,14 +1186,36 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
             _section(
               icon: Icons.local_offer_rounded,
               title: 'Tags',
-              child: SwitchListTile.adaptive(
-                value: _isHiddenGem,
-                onChanged: (v) => setState(() => _isHiddenGem = v),
-                title: const Text('Hidden gem'),
-                subtitle: const Text(
-                  'Show only when filtering "Hidden Gems"',
-                ),
-                contentPadding: EdgeInsets.zero,
+              child: Column(
+                children: [
+                  SwitchListTile.adaptive(
+                    value: _isHiddenGem,
+                    onChanged: (v) => setState(() => _isHiddenGem = v),
+                    title: const Text('Hidden gem'),
+                    subtitle: const Text(
+                      'Show only when filtering "Hidden Gems"',
+                    ),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                  SwitchListTile.adaptive(
+                    value: _enableChat,
+                    onChanged: (v) => setState(() => _enableChat = v),
+                    title: const Text('Enable Community Chat'),
+                    subtitle: const Text(
+                      'Show the chat section on this place details page',
+                    ),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                  SwitchListTile.adaptive(
+                    value: _enableGallery,
+                    onChanged: (v) => setState(() => _enableGallery = v),
+                    title: const Text('Enable Photo Gallery'),
+                    subtitle: const Text(
+                      'Show the visitor photo gallery on this place details page',
+                    ),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ],
               ),
             ),
 
