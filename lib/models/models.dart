@@ -318,3 +318,35 @@ class PlacePhoto {
         'likes': likes,
       };
 }
+
+class ChatMessage {
+  final String id;
+  final String placeId;
+  final String userId;
+  final String userName;
+  final String text;
+  final DateTime sentAt;
+  final String? userAvatarColor;
+
+  const ChatMessage({
+    required this.id,
+    required this.placeId,
+    required this.userId,
+    required this.userName,
+    required this.text,
+    required this.sentAt,
+    this.userAvatarColor,
+  });
+
+  factory ChatMessage.fromJson(Map<String, dynamic> json) => ChatMessage(
+        id: (json['id'] as String?) ?? '',
+        placeId: (json['place_id'] as String?) ?? '',
+        userId: (json['user_id'] as String?) ?? '',
+        userName: (json['user_name'] as String?) ?? 'Streetlore',
+        text: (json['text'] as String?) ?? '',
+        sentAt: json['sent_at'] == null
+            ? DateTime.now()
+            : DateTime.tryParse(json['sent_at'] as String) ?? DateTime.now(),
+        userAvatarColor: json['user_avatar_color'] as String?,
+      );
+}

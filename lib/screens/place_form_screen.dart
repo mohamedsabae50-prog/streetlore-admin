@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -1275,6 +1277,11 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
             ),
 
             const SizedBox(height: 22),
+            if (_isEditing && (widget.place?.id ?? _id.text).isNotEmpty)
+              _ModerationSection(
+                placeId: widget.place?.id ?? _id.text,
+              ),
+            const SizedBox(height: 22),
             ElevatedButton(
               onPressed: _saving ? null : _save,
               style: ElevatedButton.styleFrom(
@@ -2306,5 +2313,535 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
       c.dispose();
     }
     super.dispose();
+  }
+}
+
+class _ModerationSection extends StatefulWidget {
+  final String placeId;
+  const _ModerationSection({required this.placeId});
+
+  @override
+  State<_ModerationSection> createState() => _ModerationSectionState();
+}
+
+class _ModerationSectionState extends State<_ModerationSection> {
+  bool _loading = false;
+  List<ChatMessage> _messages = const <ChatMessage>[];
+  List<PlacePhoto> _photos = const <PlacePhoto>[];
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _refresh();
+  }
+
+  Future<void> _refresh() async {
+    if (!mounted) return;
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final svc = AdminService.instance;
+      final msgs = await svc.fetchChatMessages(widget.placeId);
+      final photos = await svc.fetchPhotos(placeId: widget.placeId);
+      if (!mounted) return;
+      setState(() {
+        _messages = msgs;
+        _photos = photos;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = e.toString();
+      });
+    }
+  }
+
+  Future<void> _deleteMessage(ChatMessage m) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete message?'),
+        content: Text(
+          'This will permanently remove the message from "${m.userName}".\n\n'
+          '"${m.text}"',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text(
+              'Delete',
+              style: TextStyle(
+                color: AppTheme.danger,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    if (!mounted) return;
+    try {
+      await AdminService.instance.deleteChatMessage(m.id);
+      await _refresh();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not delete message: $e')),
+      );
+    }
+  }
+
+  Future<void> _deletePhoto(PlacePhoto p) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete photo?'),
+        content: Text(
+          'This will permanently remove the photo uploaded by '
+          '"${p.userName}".',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text(
+              'Delete',
+              style: TextStyle(
+                color: AppTheme.danger,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    if (!mounted) return;
+    try {
+      await AdminService.instance.deletePhoto(p.id);
+      await _refresh();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not delete photo: $e')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 18),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: AppTheme.danger.withValues(alpha: 0.4),
+          width: 1.4,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.shield_outlined,
+                color: AppTheme.danger,
+                size: 18,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Moderation',
+                style: TextStyle(
+                  color: AppTheme.textPrimary,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const Spacer(),
+              IconButton(
+                tooltip: 'Refresh',
+                onPressed: _loading ? null : _refresh,
+                icon: _loading
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.refresh_rounded, size: 18),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Granular per-room moderation. Delete any chat message or user-uploaded photo from this place.',
+            style: TextStyle(
+              fontSize: 12,
+              color: AppTheme.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 14),
+          if (_error != null)
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppTheme.danger.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.error_outline, color: AppTheme.danger, size: 16),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      _error!,
+                      style: TextStyle(
+                        color: AppTheme.danger,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          _Subsection(
+            title: 'Chat messages',
+            count: _messages.length,
+            icon: Icons.chat_bubble_outline_rounded,
+            child: _messages.isEmpty
+                ? _EmptyHint(
+                    text: 'No chat messages yet for this place.',
+                  )
+                : Column(
+                    children: [
+                      for (final m in _messages)
+                        _MessageRow(
+                          key: ValueKey('msg_${m.id}'),
+                          message: m,
+                          onDelete: () => _deleteMessage(m),
+                        ),
+                    ],
+                  ),
+          ),
+          const SizedBox(height: 12),
+          _Subsection(
+            title: 'User photos',
+            count: _photos.length,
+            icon: Icons.photo_library_outlined,
+            child: _photos.isEmpty
+                ? _EmptyHint(
+                    text: 'No user-uploaded photos yet for this place.',
+                  )
+                : Column(
+                    children: [
+                      for (final p in _photos)
+                        _PhotoRow(
+                          key: ValueKey('photo_${p.id}'),
+                          photo: p,
+                          onDelete: () => _deletePhoto(p),
+                        ),
+                    ],
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Subsection extends StatelessWidget {
+  final String title;
+  final int count;
+  final IconData icon;
+  final Widget child;
+  const _Subsection({
+    required this.title,
+    required this.count,
+    required this.icon,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, size: 16, color: AppTheme.textSecondary),
+            const SizedBox(width: 6),
+            Text(
+              title,
+              style: TextStyle(
+                color: AppTheme.textPrimary,
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 6,
+                vertical: 1,
+              ),
+              decoration: BoxDecoration(
+                color: AppTheme.border,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                '$count',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: AppTheme.textSecondary,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        child,
+      ],
+    );
+  }
+}
+
+class _EmptyHint extends StatelessWidget {
+  final String text;
+  const _EmptyHint({required this.text});
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+      decoration: BoxDecoration(
+        color: AppTheme.bg,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppTheme.border),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 12,
+          color: AppTheme.textSecondary,
+          fontStyle: FontStyle.italic,
+        ),
+      ),
+    );
+  }
+}
+
+class _MessageRow extends StatelessWidget {
+  final ChatMessage message;
+  final VoidCallback onDelete;
+  const _MessageRow({
+    super.key,
+    required this.message,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: AppTheme.bg,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppTheme.border),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      message.userName,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      _fmtTime(message.sentAt),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  message.text,
+                  maxLines: 4,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 13, height: 1.35),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          IconButton(
+            tooltip: 'Delete message',
+            onPressed: onDelete,
+            icon: Icon(
+              Icons.delete_outline_rounded,
+              color: AppTheme.danger,
+              size: 20,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _fmtTime(DateTime dt) {
+    final d = DateTime.now().difference(dt);
+    if (d.inMinutes < 1) return 'now';
+    if (d.inMinutes < 60) return '${d.inMinutes}m';
+    if (d.inHours < 24) return '${d.inHours}h';
+    return '${d.inDays}d';
+  }
+}
+
+class _PhotoRow extends StatelessWidget {
+  final PlacePhoto photo;
+  final VoidCallback onDelete;
+  const _PhotoRow({
+    super.key,
+    required this.photo,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: AppTheme.bg,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppTheme.border),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: SizedBox(
+              width: 56,
+              height: 56,
+              child: photo.imageUrl.startsWith('data:')
+                  ? Image.memory(
+                      _decodeDataUri(photo.imageUrl),
+                      fit: BoxFit.cover,
+                      gaplessPlayback: true,
+                      errorBuilder: (_, __, ___) => _brokenThumb(),
+                    )
+                  : Image.network(
+                      photo.imageUrl,
+                      fit: BoxFit.cover,
+                      gaplessPlayback: true,
+                      errorBuilder: (_, __, ___) => _brokenThumb(),
+                    ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  photo.userName,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
+                if (photo.captionEn.isNotEmpty || photo.captionAr.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(
+                      photo.captionEn.isNotEmpty
+                          ? photo.captionEn
+                          : photo.captionAr,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 12, height: 1.3),
+                    ),
+                  ),
+                const SizedBox(height: 2),
+                Text(
+                  '${photo.likes} ❤',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          IconButton(
+            tooltip: 'Delete photo',
+            onPressed: onDelete,
+            icon: Icon(
+              Icons.delete_outline_rounded,
+              color: AppTheme.danger,
+              size: 20,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _brokenThumb() => Container(
+        color: const Color(0xFF1C2433),
+        child: const Icon(
+          Icons.image_not_supported_outlined,
+          color: Colors.white24,
+          size: 24,
+        ),
+      );
+
+  Uint8List _decodeDataUri(String uri) {
+    try {
+      final comma = uri.indexOf(',');
+      final b64 = comma >= 0 ? uri.substring(comma + 1) : uri;
+      return Uint8List.fromList(base64Decode(b64));
+    } catch (_) {
+      return Uint8List(0);
+    }
   }
 }

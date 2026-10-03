@@ -173,4 +173,25 @@ class AdminService {
   Future<void> deletePhoto(String id) async {
     await _client.from('place_photos').delete().eq('id', id);
   }
+
+  /// v1.0.64: Granular moderation — fetch every chat message for a
+  /// specific place, newest first. Uses the `place_chat` table (the same
+  /// table the mobile ChatProvider writes to).
+  Future<List<ChatMessage>> fetchChatMessages(String placeId) async {
+    final res = await _client
+        .from('place_chat')
+        .select()
+        .eq('place_id', placeId)
+        .order('sent_at', ascending: false);
+    return (res as List<dynamic>)
+        .map((e) => ChatMessage.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// v1.0.64: Granular moderation — delete a single chat message by id.
+  /// RLS policy `admin can delete place_chat` (see migration
+  /// `2026_10_03_admin_moderation.sql`) authorizes the admin user.
+  Future<void> deleteChatMessage(String id) async {
+    await _client.from('place_chat').delete().eq('id', id);
+  }
 }
