@@ -48,14 +48,23 @@ class _PlacesListScreenState extends State<PlacesListScreen> {
     _places.insert(newIndex, moved);
     setState(() {});
 
-    // Build the new display_order list (10-step gaps so we have room to
-    // drop a new place between any two existing ones without re-numbering
-    // the world). Then commit.
+    // v1.0.69 fix: build the display_order payload from the NEW indices,
+    // never from the Place.displayOrder field on each object (which still
+    // holds the OLD DB values until the RPC runs and we re-fetch).
+    // 10-step gaps leave room to drop a new place between any two
+    // existing ones without re-numbering the world.
     const int step = 10;
-    final entries = <({String id, int displayOrder})>[];
+    final placeIds = <String>[];
+    final newOrders = <int>[];
     for (var i = 0; i < _places.length; i++) {
-      entries.add((id: _places[i].id, displayOrder: (i + 1) * step));
+      placeIds.add(_places[i].id);
+      newOrders.add((i + 1) * step);
     }
+    final entries = List<({String id, int displayOrder})>.generate(
+      _places.length,
+      (i) => (id: placeIds[i], displayOrder: newOrders[i]),
+    );
+
     setState(() => _savingOrder = true);
     try {
       await AdminService.instance.updateDisplayOrders(entries);

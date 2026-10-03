@@ -32,9 +32,17 @@ class AdminService {
   }
 
   Future<List<Place>> fetchPlaces() async {
+    // v1.0.69 fix: sort by display_order first, then by id. Previously
+    // this only ordered by id, which made the admin page always show
+    // places in DB insertion order — so drag-and-drop reorders looked
+    // like they "reverted on refresh" even though the RPC had actually
+    // written the new display_order values. The mobile app already uses
+    // the same sort, so the admin UI now matches what users see in the
+    // app.
     final res = await _client
         .from('places')
         .select()
+        .order('display_order', ascending: true)
         .order('id', ascending: true);
     return (res as List<dynamic>)
         .map((e) => Place.fromJson(e as Map<String, dynamic>))
