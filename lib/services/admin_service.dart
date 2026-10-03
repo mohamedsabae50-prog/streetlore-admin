@@ -97,12 +97,15 @@ class AdminService {
     }
 
     // Phase 2 — re-fetch every id and verify the value actually landed.
+    // We pull the whole places table (admin can read everything) and
+    // filter to the ids we just touched, since the supabase_flutter
+    // version pinned here doesn't expose `.inFilter()` / `.in_()`.
     final ids = entries.map((e) => e.id).toList(growable: false);
-    final verifyRes = await _client
+    final allPlaces = await _client
         .from('places')
-        .select('id, display_order')
-        .in_('id', ids);
-    final rows = verifyRes
+        .select('id, display_order') as List<dynamic>;
+    final rows = allPlaces
+        .where((r) => ids.contains((r as Map<String, dynamic>)['id']))
         .map<({String id, int displayOrder})>((r) {
           final m = r as Map<String, dynamic>;
           return (
