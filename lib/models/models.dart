@@ -268,6 +268,8 @@ class Tour {
 class PlacePhoto {
   final String id;
   final String placeId;
+  // v1.0.72 — owner id, required by the new RLS policy on place_photos.
+  final String userId;
   final String userName;
   final String imageUrl;
   final String captionAr;
@@ -278,6 +280,7 @@ class PlacePhoto {
   const PlacePhoto({
     required this.id,
     required this.placeId,
+    required this.userId,
     required this.userName,
     required this.imageUrl,
     this.captionAr = '',
@@ -289,6 +292,7 @@ class PlacePhoto {
   factory PlacePhoto.fromJson(Map<String, dynamic> json) => PlacePhoto(
         id: (json['id'] as String?) ?? '',
         placeId: (json['place_id'] as String?) ?? '',
+        userId: (json['user_id'] as String?) ?? '',
         userName: (json['user_name'] as String?) ?? 'Streetlore',
         imageUrl: (json['image_url'] as String?) ?? '',
         captionAr: (json['caption_ar'] as String?) ?? '',
@@ -302,6 +306,7 @@ class PlacePhoto {
   Map<String, dynamic> toJson() => {
         'id': id,
         'place_id': placeId,
+        'user_id': userId,
         'user_name': userName,
         'image_url': imageUrl,
         'caption_ar': captionAr,
@@ -311,6 +316,7 @@ class PlacePhoto {
 
   Map<String, dynamic> toSupabaseUpdate() => {
         'place_id': placeId,
+        'user_id': userId,
         'user_name': userName,
         'image_url': imageUrl,
         'caption_ar': captionAr,

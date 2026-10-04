@@ -105,6 +105,7 @@ class _PhotoFormScreenState extends State<PhotoFormScreen> {
       final photo = PlacePhoto(
         id: _id.text.trim(),
         placeId: _selectedPlaceId!,
+        userId: AdminService.instance.adminUserId,
         userName: _userName.text.trim().isEmpty
             ? 'Streetlore'
             : _userName.text.trim(),

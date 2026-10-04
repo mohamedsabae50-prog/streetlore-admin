@@ -430,6 +430,9 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
           _existingPhotos[idx] = PlacePhoto(
             id: photo.id,
             placeId: photo.placeId,
+            userId: photo.userId.isEmpty
+                ? AdminService.instance.adminUserId
+                : photo.userId,
             userName: userNameCtrl.text.trim().isEmpty
                 ? 'Streetlore'
                 : userNameCtrl.text.trim(),
@@ -567,6 +570,9 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
           PlacePhoto(
             id: up._uploadedId!,
             placeId: place.id,
+            // v1.0.72 — required by RLS policy user_id::text = auth.uid().
+            // The admin's auth.uid() is the JWT subject.
+            userId: AdminService.instance.adminUserId,
             userName: 'Streetlore',
             imageUrl: up._uploadedUrl!,
             captionAr: '',
@@ -594,6 +600,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
           PlacePhoto(
             id: photoId,
             placeId: place.id,
+            userId: AdminService.instance.adminUserId,
             userName: draft.userName.trim().isEmpty
                 ? 'Streetlore'
                 : draft.userName.trim(),

@@ -20,6 +20,17 @@ class AdminService {
     }
   }
 
+  /// v1.0.72 — the signed-in admin's auth.uid() (JWT subject). Required
+  /// for the RLS policy `user_id::text = auth.uid()::text` to admit
+  /// admin-owned INSERTs into `place_photos`.
+  String get adminUserId {
+    try {
+      return _client.auth.currentUser?.id ?? '';
+    } catch (_) {
+      return '';
+    }
+  }
+
   Future<void> signIn(String email, String password) async {
     await _client.auth.signInWithPassword(
       email: email,
