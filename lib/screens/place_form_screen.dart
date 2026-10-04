@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -2329,6 +2330,7 @@ class _ModerationSectionState extends State<_ModerationSection> {
   List<ChatMessage> _messages = const <ChatMessage>[];
   List<PlacePhoto> _photos = const <PlacePhoto>[];
   String? _error;
+  DateTime? _lastFetched;
 
   @override
   void initState() {
@@ -2344,15 +2346,26 @@ class _ModerationSectionState extends State<_ModerationSection> {
     });
     try {
       final svc = AdminService.instance;
+      debugPrint(
+        '_ModerationSection._refresh: placeId=${widget.placeId} '
+        '(runtime type=${widget.placeId.runtimeType})',
+      );
       final msgs = await svc.fetchChatMessages(widget.placeId);
       final photos = await svc.fetchPhotos(placeId: widget.placeId);
+      debugPrint(
+        '_ModerationSection._refresh: fetched '
+        '${msgs.length} chat messages, ${photos.length} photos for '
+        'placeId=${widget.placeId}',
+      );
       if (!mounted) return;
       setState(() {
         _messages = msgs;
         _photos = photos;
         _loading = false;
+        _lastFetched = DateTime.now();
       });
     } catch (e) {
+      debugPrint('_ModerationSection._refresh error: $e');
       if (!mounted) return;
       setState(() {
         _loading = false;
@@ -2502,6 +2515,21 @@ class _ModerationSectionState extends State<_ModerationSection> {
               color: AppTheme.textSecondary,
             ),
           ),
+          if (_lastFetched != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                'Last refreshed ${_lastFetched!.hour.toString().padLeft(2, '0')}:'
+                '${_lastFetched!.minute.toString().padLeft(2, '0')}:'
+                '${_lastFetched!.second.toString().padLeft(2, '0')}'
+                ' • id=${widget.placeId}',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: AppTheme.textSecondary.withValues(alpha: 0.7),
+                  fontFamily: 'monospace',
+                ),
+              ),
+            ),
           const SizedBox(height: 14),
           if (_error != null)
             Container(
