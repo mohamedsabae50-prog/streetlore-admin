@@ -1045,8 +1045,8 @@ aMM(){var s,r,q,p,o=v.G,n=o.window,m=A.b25(n.navigator)
 if(m==null||m.length===0)return B.OL
 s=A.b([],t.ss)
 for(n=m.length,r=0;r<m.length;m.length===n||(0,A.E)(m),++r){q=m[r]
-p=new o.Intl.Locale(q)
-s.push(new A.la(p.language,p.script,p.region))}return s},
+try{p=new o.Intl.Locale(q)
+s.push(new A.la(p.language,p.script,p.region))}catch(e){console.warn("[streetlore] skipping invalid platform locale:",q,e)}}return s},
 b9U(a,b){var s=a.jX(b),r=A.bbO(A.bh(s.b))
 switch(s.a){case"setDevicePixelRatio":$.dw().d=r
 $.aU().x.$0()
