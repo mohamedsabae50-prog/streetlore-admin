@@ -110,7 +110,7 @@ class _ToursListScreenState extends State<ToursListScreen> {
                   child: ListView.separated(
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 90),
                     itemCount: _tours.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    separatorBuilder: (_, _) => const SizedBox(height: 8),
                     itemBuilder: (context, i) {
                       final t = _tours[i];
                       return Container(
@@ -135,7 +135,7 @@ class _ToursListScreenState extends State<ToursListScreen> {
                                 width: 60,
                                 height: 60,
                                 fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => Container(
+                                errorBuilder: (_, _, _) => Container(
                                   width: 60,
                                   height: 60,
                                   color: AppTheme.bg,

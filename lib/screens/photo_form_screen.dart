@@ -179,7 +179,7 @@ class _PhotoFormScreenState extends State<PhotoFormScreen> {
                   const SizedBox(height: 22),
                   _label('Place'),
                   DropdownButtonFormField<String>(
-                    value: _selectedPlaceId,
+                    initialValue: _selectedPlaceId,
                     items: _places
                         .map((p) => DropdownMenuItem(
                               value: p.id,
@@ -273,7 +273,7 @@ class _PhotoFormScreenState extends State<PhotoFormScreen> {
           existingUrl,
           height: 180,
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => Container(
+          errorBuilder: (_, _, _) => Container(
             height: 180,
             color: AppTheme.bg,
             child: const Center(

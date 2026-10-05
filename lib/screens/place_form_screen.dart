@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -374,7 +373,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                   height: 140,
                   fit: BoxFit.cover,
                   gaplessPlayback: true,
-                  errorBuilder: (_, __, ___) => Container(
+                  errorBuilder: (_, _, _) => Container(
                     height: 140,
                     color: AppTheme.bg,
                     child: const Center(child: Icon(Icons.broken_image)),
@@ -1385,7 +1384,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
               height: 70,
               fit: BoxFit.cover,
               gaplessPlayback: true,
-              errorBuilder: (_, __, ___) => Container(
+              errorBuilder: (_, _, _) => Container(
                 width: 70,
                 height: 70,
                 color: AppTheme.bg,
@@ -1494,7 +1493,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                         fit: BoxFit.cover,
                         gaplessPlayback: true,
                         filterQuality: FilterQuality.medium,
-                        errorBuilder: (_, __, ___) => Container(
+                        errorBuilder: (_, _, _) => Container(
                           width: 70,
                           height: 70,
                           color: AppTheme.bg,
@@ -1762,7 +1761,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                                 url,
                                 fit: BoxFit.cover,
                                 gaplessPlayback: true,
-                                errorBuilder: (_, __, ___) => Container(
+                                errorBuilder: (_, _, _) => Container(
                                   color: AppTheme.border,
                                   child: const Icon(
                                     Icons.broken_image_outlined,
@@ -1831,53 +1830,6 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _imagePreview() {
-    final url = _imageUrl.text.isNotEmpty ? _imageUrl.text : null;
-    if (url == null) {
-      return Container(
-        height: 180,
-        decoration: BoxDecoration(
-          color: AppTheme.bg,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppTheme.border),
-        ),
-        child: const Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.image_outlined,
-                size: 56,
-                color: AppTheme.textSecondary,
-              ),
-              SizedBox(height: 6),
-              Text('No image', style: TextStyle(color: AppTheme.textSecondary)),
-            ],
-          ),
-        ),
-      );
-    }
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
-      child: Image.network(
-        url,
-        height: 180,
-        fit: BoxFit.cover,
-        gaplessPlayback: true,
-        errorBuilder: (_, __, ___) => Container(
-          height: 180,
-          color: AppTheme.bg,
-          child: const Center(
-            child: Text(
-              'Image failed to load',
-              style: TextStyle(color: AppTheme.textSecondary),
-            ),
-          ),
-        ),
       ),
     );
   }
@@ -1990,7 +1942,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                     ),
                   );
                 },
-                errorBuilder: (_, error, __) => Container(
+                errorBuilder: (_, error, _) => Container(
                   color: AppTheme.bg,
                   child: Center(
                     child: Column(
@@ -2097,7 +2049,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                     fit: BoxFit.cover,
                     gaplessPlayback: true,
                     filterQuality: FilterQuality.medium,
-                    errorBuilder: (_, __, ___) => Container(
+                    errorBuilder: (_, _, _) => Container(
                       color: AppTheme.bg,
                       child: const Center(
                         child: Icon(
@@ -2246,48 +2198,12 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
     );
   }
 
-  Widget _categoryDropdown() => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _labelBilingual('Category', isEn: true),
-          DropdownButtonFormField<String>(
-            value: _category.text,
-            items: const [
-              DropdownMenuItem(value: 'Historical', child: Text('Historical')),
-              DropdownMenuItem(value: 'Culture', child: Text('Culture')),
-              DropdownMenuItem(value: 'Nature', child: Text('Nature')),
-              DropdownMenuItem(value: 'Food', child: Text('Food')),
-              DropdownMenuItem(value: 'Shopping', child: Text('Shopping')),
-              DropdownMenuItem(value: 'Mosques', child: Text('Mosques')),
-              DropdownMenuItem(value: 'Churches', child: Text('Churches')),
-              DropdownMenuItem(value: 'Streets', child: Text('Streets')),
-            ],
-            onChanged: (v) {
-              if (v != null) {
-                setState(() => _category.text = v);
-              }
-            },
-            decoration: const InputDecoration(),
-          ),
-          const SizedBox(height: 8),
-          _labelBilingual('Category (AR)', isEn: false),
-          TextFormField(
-            controller: _categoryAr,
-            textDirection: TextDirection.rtl,
-            textAlign: TextAlign.right,
-            decoration: const InputDecoration(
-              hintText: 'تاريخي، ثقافي، طبيعي...',
-            ),
-          ),
-        ],
-      );
-
   Widget _priceLevelDropdown() => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _labelBilingual('Price level', isEn: true),
           DropdownButtonFormField<PriceLevel>(
-            value: _priceLevel,
+            initialValue: _priceLevel,
             items: const [
               DropdownMenuItem(value: PriceLevel.free, child: Text('Free')),
               DropdownMenuItem(value: PriceLevel.cheap, child: Text('Cheap')),
@@ -2800,13 +2716,13 @@ class _PhotoRow extends StatelessWidget {
                       _decodeDataUri(photo.imageUrl),
                       fit: BoxFit.cover,
                       gaplessPlayback: true,
-                      errorBuilder: (_, __, ___) => _brokenThumb(),
+                      errorBuilder: (_, _, _) => _brokenThumb(),
                     )
                   : Image.network(
                       photo.imageUrl,
                       fit: BoxFit.cover,
                       gaplessPlayback: true,
-                      errorBuilder: (_, __, ___) => _brokenThumb(),
+                      errorBuilder: (_, _, _) => _brokenThumb(),
                     ),
             ),
           ),

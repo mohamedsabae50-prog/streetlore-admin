@@ -300,7 +300,7 @@ class _PlacesListScreenState extends State<PlacesListScreen> {
                               padding:
                                   const EdgeInsets.fromLTRB(16, 0, 16, 90),
                               itemCount: filtered.length,
-                              separatorBuilder: (_, __) =>
+                              separatorBuilder: (_, _) =>
                                   const SizedBox(height: 8),
                               itemBuilder: (context, i) {
                                 final p = filtered[i];
@@ -363,7 +363,7 @@ class _PlaceRow extends StatelessWidget {
               height: 60,
               fit: BoxFit.cover,
               gaplessPlayback: true,
-              errorBuilder: (_, __, ___) => Container(
+              errorBuilder: (_, _, _) => Container(
                 width: 60,
                 height: 60,
                 color: AppTheme.bg,
@@ -443,7 +443,7 @@ class _PlaceRow extends StatelessWidget {
               ],
             ),
           ),
-          if (dragHandle != null) dragHandle!,
+          ?dragHandle,
           IconButton(
             icon: const Icon(Icons.photo_library_outlined,
                 color: AppTheme.success),

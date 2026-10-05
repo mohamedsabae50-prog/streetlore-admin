@@ -396,7 +396,7 @@ class _TourFormScreenState extends State<TourFormScreen> {
                                       width: 80,
                                       height: 80,
                                       fit: BoxFit.cover,
-                                      errorBuilder: (_, __, ___) => Container(
+                                      errorBuilder: (_, _, _) => Container(
                                               color: AppTheme.bg,
                                               child: const Icon(
                                                   Icons.broken_image_outlined),
@@ -407,7 +407,7 @@ class _TourFormScreenState extends State<TourFormScreen> {
                                       width: 80,
                                       height: 80,
                                       fit: BoxFit.cover,
-                                      errorBuilder: (_, __, ___) => Container(
+                                      errorBuilder: (_, _, _) => Container(
                                               color: AppTheme.bg,
                                               child: const Icon(
                                                   Icons.broken_image_outlined),
