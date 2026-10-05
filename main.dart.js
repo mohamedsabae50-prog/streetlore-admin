@@ -1046,7 +1046,7 @@ if(m==null||m.length===0)return B.rQ
 s=A.b([],t.ss)
 for(n=m.length,r=0;r<m.length;m.length===n||(0,A.E)(m),++r){q=m[r]
 p=new o.Intl.Locale(q)
-s.push(new A.ru(p.language,p.script,p.region))}return s},
+try{s.push(new A.ru(p.language,p.script,p.region))}catch(e){}return s},
 b9U(a,b){var s=a.jX(b),r=A.bbO(A.bh(s.b))
 switch(s.a){case"setDevicePixelRatio":$.dw().d=r
 $.aU().x.$0()
