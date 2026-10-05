@@ -223,16 +223,26 @@ class Place {
 class Tour {
   final String id;
   final String title;
+  final String? titleAr;
   final String description;
+  final String? descriptionAr;
   final String duration;
+  final String? durationAr;
+  final String category;
+  final String? categoryAr;
   final String imageUrl;
   final List<Place> places;
 
   const Tour({
     required this.id,
     required this.title,
+    this.titleAr,
     required this.description,
+    this.descriptionAr,
     required this.duration,
+    this.durationAr,
+    this.category = 'General',
+    this.categoryAr,
     required this.imageUrl,
     this.places = const [],
   });
@@ -240,8 +250,13 @@ class Tour {
   factory Tour.fromJson(Map<String, dynamic> json) => Tour(
         id: (json['id'] as String?) ?? '',
         title: (json['title'] as String?) ?? '',
+        titleAr: json['title_ar'] as String?,
         description: (json['description'] as String?) ?? '',
+        descriptionAr: json['description_ar'] as String?,
         duration: (json['duration'] as String?) ?? '',
+        durationAr: json['duration_ar'] as String?,
+        category: (json['category'] as String?) ?? 'General',
+        categoryAr: json['category_ar'] as String?,
         imageUrl: (json['image_url'] as String?) ?? '',
         places: ((json['places'] as List<dynamic>?) ?? const [])
             .map((e) => Place.fromJson(e as Map<String, dynamic>))
@@ -251,18 +266,55 @@ class Tour {
   Map<String, dynamic> toJson() => {
         'id': id,
         'title': title,
+        'title_ar': titleAr,
         'description': description,
+        'description_ar': descriptionAr,
         'duration': duration,
+        'duration_ar': durationAr,
+        'category': category,
+        'category_ar': categoryAr,
         'image_url': imageUrl,
         'places': places.map((e) => e.toJson()).toList(),
       };
 
   Map<String, dynamic> toSupabaseUpdate() => {
         'title': title,
+        'title_ar': titleAr ?? '',
         'description': description,
+        'description_ar': descriptionAr ?? '',
         'duration': duration,
+        'duration_ar': durationAr ?? '',
+        'category': category,
+        'category_ar': categoryAr ?? '',
         'image_url': imageUrl,
       };
+
+  Tour copyWith({
+    String? id,
+    String? title,
+    String? titleAr,
+    String? description,
+    String? descriptionAr,
+    String? duration,
+    String? durationAr,
+    String? category,
+    String? categoryAr,
+    String? imageUrl,
+    List<Place>? places,
+  }) =>
+      Tour(
+        id: id ?? this.id,
+        title: title ?? this.title,
+        titleAr: titleAr ?? this.titleAr,
+        description: description ?? this.description,
+        descriptionAr: descriptionAr ?? this.descriptionAr,
+        duration: duration ?? this.duration,
+        durationAr: durationAr ?? this.durationAr,
+        category: category ?? this.category,
+        categoryAr: categoryAr ?? this.categoryAr,
+        imageUrl: imageUrl ?? this.imageUrl,
+        places: places ?? this.places,
+      );
 }
 
 class PlacePhoto {

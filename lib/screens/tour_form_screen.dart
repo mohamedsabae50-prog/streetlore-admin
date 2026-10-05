@@ -1,4 +1,8 @@
+import 'dart:typed_data';
+
+import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../models/models.dart';
 import '../services/admin_service.dart';
 import '../theme.dart';
@@ -10,17 +14,33 @@ class TourFormScreen extends StatefulWidget {
   State<TourFormScreen> createState() => _TourFormScreenState();
 }
 
+class _CoverDraft {
+  Uint8List? bytes;
+  String ext = 'jpg';
+  String? uploadedUrl;
+}
+
 class _TourFormScreenState extends State<TourFormScreen> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _id;
-  late TextEditingController _title;
-  late TextEditingController _description;
-  late TextEditingController _duration;
+  late TextEditingController _titleEn;
+  late TextEditingController _titleAr;
+  late TextEditingController _descriptionEn;
+  late TextEditingController _descriptionAr;
+  late TextEditingController _durationEn;
+  late TextEditingController _durationAr;
+  late TextEditingController _category;
+  late TextEditingController _categoryAr;
   late TextEditingController _imageUrl;
+  late TextEditingController _search;
+
+  final _cover = _CoverDraft();
+
   List<Place> _allPlaces = [];
   List<Place> _selectedPlaces = [];
   bool _saving = false;
   bool _loading = true;
+  bool _uploadingCover = false;
 
   bool get _isEditing => widget.tour != null;
 
@@ -28,13 +48,42 @@ class _TourFormScreenState extends State<TourFormScreen> {
   void initState() {
     super.initState();
     final t = widget.tour;
-    _id = TextEditingController(text: t?.id ?? 't_${DateTime.now().millisecondsSinceEpoch}');
-    _title = TextEditingController(text: t?.title ?? '');
-    _description = TextEditingController(text: t?.description ?? '');
-    _duration = TextEditingController(text: t?.duration ?? '');
+    _id = TextEditingController(
+      text: t?.id ?? 'tour_${DateTime.now().millisecondsSinceEpoch}',
+    );
+    _titleEn = TextEditingController(text: t?.title ?? '');
+    _titleAr = TextEditingController(text: t?.titleAr ?? '');
+    _descriptionEn = TextEditingController(text: t?.description ?? '');
+    _descriptionAr = TextEditingController(text: t?.descriptionAr ?? '');
+    _durationEn = TextEditingController(text: t?.duration ?? '');
+    _durationAr = TextEditingController(text: t?.durationAr ?? '');
+    _category = TextEditingController(text: t?.category ?? 'Historical');
+    _categoryAr = TextEditingController(text: t?.categoryAr ?? '');
     _imageUrl = TextEditingController(text: t?.imageUrl ?? '');
+    _search = TextEditingController();
     _selectedPlaces = List<Place>.from(t?.places ?? const []);
     _load();
+  }
+
+  @override
+  void dispose() {
+    _id.dispose();
+    _titleEn.dispose();
+    _titleAr.dispose();
+    _descriptionEn.dispose();
+    _descriptionAr.dispose();
+    _durationEn.dispose();
+    _durationAr.dispose();
+    _category.dispose();
+    _categoryAr.dispose();
+    _imageUrl.dispose();
+    _search.dispose();
+    super.dispose();
+  }
+
+  String? _nullable(TextEditingController c) {
+    final v = c.text.trim();
+    return v.isEmpty ? null : v;
   }
 
   Future<void> _load() async {
@@ -53,6 +102,50 @@ class _TourFormScreenState extends State<TourFormScreen> {
     }
   }
 
+  Future<void> _pickAndUploadCover() async {
+    if (_uploadingCover) return;
+    final picker = ImagePicker();
+    XFile? picked;
+    try {
+      picked = await picker.pickImage(source: ImageSource.gallery);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not open file picker: $e')),
+      );
+      return;
+    }
+    if (picked == null) return;
+    try {
+      final bytes = await picked.readAsBytes();
+      if (bytes.isEmpty) throw Exception('Picked file is empty');
+      final ext = picked.name.toLowerCase().endsWith('.png') ? 'png' : 'jpg';
+      if (!mounted) return;
+      setState(() {
+        _cover.bytes = bytes;
+        _cover.ext = ext;
+        _uploadingCover = true;
+      });
+      final publicUrl = await AdminService.instance.uploadImageBytes(
+        bytes,
+        'tours',
+        '${_id.text.trim()}.$ext',
+      );
+      if (!mounted) return;
+      setState(() {
+        _cover.uploadedUrl = publicUrl;
+        _imageUrl.text = publicUrl;
+        _uploadingCover = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _uploadingCover = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Cover upload failed: $e')),
+      );
+    }
+  }
+
   Future<void> _pickPlaces() async {
     final result = await showModalBottomSheet<List<Place>>(
       context: context,
@@ -61,6 +154,7 @@ class _TourFormScreenState extends State<TourFormScreen> {
       builder: (ctx) => _PlacePickerSheet(
         all: _allPlaces,
         initiallySelected: _selectedPlaces,
+        searchCtrl: _search,
       ),
     );
     if (result != null) {
@@ -86,9 +180,16 @@ class _TourFormScreenState extends State<TourFormScreen> {
     try {
       final tour = Tour(
         id: _id.text.trim(),
-        title: _title.text.trim(),
-        description: _description.text.trim(),
-        duration: _duration.text.trim(),
+        title: _titleEn.text.trim(),
+        titleAr: _nullable(_titleAr),
+        description: _descriptionEn.text.trim(),
+        descriptionAr: _nullable(_descriptionAr),
+        duration: _durationEn.text.trim(),
+        durationAr: _nullable(_durationAr),
+        category: _category.text.trim().isEmpty
+            ? 'General'
+            : _category.text.trim(),
+        categoryAr: _nullable(_categoryAr),
         imageUrl: _imageUrl.text.trim(),
         places: _selectedPlaces,
       );
@@ -101,8 +202,10 @@ class _TourFormScreenState extends State<TourFormScreen> {
       Navigator.pop(context, tour);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Save failed: $e')));
+      debugPrint('TourFormScreen save error: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Save failed: $e')),
+      );
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -110,6 +213,7 @@ class _TourFormScreenState extends State<TourFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final coverPreview = _cover.uploadedUrl ?? _imageUrl.text.trim();
     return Scaffold(
       appBar: AppBar(
         title: Text(_isEditing ? 'Edit Tour' : 'New Tour',
@@ -127,7 +231,8 @@ class _TourFormScreenState extends State<TourFormScreen> {
                   )
                 : Text(_isEditing ? 'Update' : 'Create',
                     style: const TextStyle(
-                        fontWeight: FontWeight.w800, color: AppTheme.primary)),
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.primary)),
           ),
         ],
       ),
@@ -146,57 +251,216 @@ class _TourFormScreenState extends State<TourFormScreen> {
                         ? 'ID is required'
                         : null,
                   ),
-                  const SizedBox(height: 14),
-                  _label('Title'),
+                  const SizedBox(height: 18),
+
+                  _label('Title (English)'),
                   TextFormField(
-                    controller: _title,
+                    controller: _titleEn,
                     validator: (v) => (v == null || v.trim().isEmpty)
                         ? 'Title is required'
                         : null,
                   ),
-                  const SizedBox(height: 14),
-                  _label('Description'),
+                  const SizedBox(height: 10),
+                  _label('Title (Arabic)'),
                   TextFormField(
-                    controller: _description,
+                    controller: _titleAr,
+                    textDirection: TextDirection.rtl,
+                    textAlign: TextAlign.right,
+                    decoration: const InputDecoration(
+                      hintText: 'عنوان الجولة بالعربي',
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+
+                  _label('Description (English)'),
+                  TextFormField(
+                    controller: _descriptionEn,
                     maxLines: 3,
                     validator: (v) => (v == null || v.trim().isEmpty)
                         ? 'Description is required'
                         : null,
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 10),
+                  _label('Description (Arabic)'),
+                  TextFormField(
+                    controller: _descriptionAr,
+                    maxLines: 3,
+                    textDirection: TextDirection.rtl,
+                    textAlign: TextAlign.right,
+                    decoration: const InputDecoration(
+                      hintText: 'وصف الجولة بالعربي',
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _label('Duration'),
+                            _label('Duration (English)'),
                             TextFormField(
-                              controller: _duration,
+                              controller: _durationEn,
                               decoration: const InputDecoration(
-                                  hintText: '4 Hours'),
-                              validator: (v) =>
-                                  (v == null || v.trim().isEmpty)
-                                      ? 'Required'
-                                      : null,
+                                hintText: '4 Hours',
+                              ),
+                              validator: (v) => (v == null || v.trim().isEmpty)
+                                  ? 'Required'
+                                  : null,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _label('Duration (Arabic)'),
+                            TextFormField(
+                              controller: _durationAr,
+                              textDirection: TextDirection.rtl,
+                              textAlign: TextAlign.right,
+                              decoration: const InputDecoration(
+                                hintText: '٤ ساعات',
+                              ),
                             ),
                           ],
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 14),
-                  _label('Cover image URL'),
+                  const SizedBox(height: 18),
+
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _label('Category / Theme'),
+                            TextFormField(
+                              controller: _category,
+                              decoration: const InputDecoration(
+                                hintText: 'Historical, Coastal, Spiritual…',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _label('Category (Arabic)'),
+                            TextFormField(
+                              controller: _categoryAr,
+                              textDirection: TextDirection.rtl,
+                              textAlign: TextAlign.right,
+                              decoration: const InputDecoration(
+                                hintText: 'تاريخي / ساحلي / روحاني',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+
+                  _label('Cover image'),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: SizedBox(
+                          width: 80,
+                          height: 80,
+                          child: coverPreview.isEmpty
+                              ? Container(
+                                  color: AppTheme.bg,
+                                  child: const Icon(
+                                    Icons.image_outlined,
+                                    color: AppTheme.textSecondary,
+                                    size: 28,
+                                  ),
+                                )
+                              : (kIsWeb
+                                  ? Image.network(
+                                      coverPreview,
+                                      width: 80,
+                                      height: 80,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (_, __, ___) => Container(
+                                              color: AppTheme.bg,
+                                              child: const Icon(
+                                                  Icons.broken_image_outlined),
+                                            ),
+                                    )
+                                  : Image.network(
+                                      coverPreview,
+                                      width: 80,
+                                      height: 80,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (_, __, ___) => Container(
+                                              color: AppTheme.bg,
+                                              child: const Icon(
+                                                  Icons.broken_image_outlined),
+                                            ),
+                                    )),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            OutlinedButton.icon(
+                              onPressed:
+                                  _uploadingCover ? null : _pickAndUploadCover,
+                              icon: _uploadingCover
+                                  ? const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2),
+                                    )
+                                  : const Icon(Icons.upload_rounded, size: 18),
+                              label: Text(_uploadingCover
+                                  ? 'Uploading…'
+                                  : 'Upload to Supabase'),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'or paste a URL below',
+                              style: TextStyle(
+                                color: AppTheme.textSecondary,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
                   TextFormField(
                     controller: _imageUrl,
                     decoration: const InputDecoration(
-                      hintText: 'https://images.unsplash.com/...',
+                      hintText: 'https://upload.wikimedia.org/...',
                     ),
                     validator: (v) => (v == null || v.trim().isEmpty)
-                        ? 'Image URL is required'
+                        ? 'Cover image is required'
                         : null,
+                    onChanged: (_) => setState(() {}),
                   ),
-                  const SizedBox(height: 22),
+                  const SizedBox(height: 24),
+
                   Row(
                     children: [
                       _label('Stops (${_selectedPlaces.length})'),
@@ -216,11 +480,14 @@ class _TourFormScreenState extends State<TourFormScreen> {
                         color: AppTheme.bg,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                            color: AppTheme.border, style: BorderStyle.solid),
+                            color: AppTheme.border,
+                            style: BorderStyle.solid),
                       ),
                       child: const Center(
-                        child: Text('No stops yet — tap "Add stops"',
-                            style: TextStyle(color: AppTheme.textSecondary)),
+                        child: Text(
+                          'No stops yet — tap "Add stops"',
+                          style: TextStyle(color: AppTheme.textSecondary),
+                        ),
                       ),
                     )
                   else
@@ -271,8 +538,7 @@ class _TourFormScreenState extends State<TourFormScreen> {
                                         color: AppTheme.textPrimary)),
                               ),
                               IconButton(
-                                icon: const Icon(
-                                    Icons.close_rounded,
+                                icon: const Icon(Icons.close_rounded,
                                     color: AppTheme.danger),
                                 onPressed: () => _removePlace(p),
                               ),
@@ -281,7 +547,7 @@ class _TourFormScreenState extends State<TourFormScreen> {
                         );
                       },
                     ),
-                  const SizedBox(height: 22),
+                  const SizedBox(height: 24),
                   ElevatedButton(
                     onPressed: _saving ? null : _save,
                     child: _saving
@@ -291,7 +557,8 @@ class _TourFormScreenState extends State<TourFormScreen> {
                             child: CircularProgressIndicator(
                                 strokeWidth: 2, color: Colors.white),
                           )
-                        : Text(_isEditing ? 'Update Tour' : 'Create Tour'),
+                        : Text(
+                            _isEditing ? 'Update Tour' : 'Create Tour'),
                   ),
                   const SizedBox(height: 32),
                 ],
@@ -313,9 +580,11 @@ class _TourFormScreenState extends State<TourFormScreen> {
 class _PlacePickerSheet extends StatefulWidget {
   final List<Place> all;
   final List<Place> initiallySelected;
+  final TextEditingController searchCtrl;
   const _PlacePickerSheet({
     required this.all,
     required this.initiallySelected,
+    required this.searchCtrl,
   });
   @override
   State<_PlacePickerSheet> createState() => _PlacePickerSheetState();
@@ -329,16 +598,39 @@ class _PlacePickerSheetState extends State<_PlacePickerSheet> {
   void initState() {
     super.initState();
     _selected = widget.initiallySelected.map((p) => p.id).toSet();
+    widget.searchCtrl.addListener(_syncFilter);
+  }
+
+  @override
+  void dispose() {
+    widget.searchCtrl.removeListener(_syncFilter);
+    super.dispose();
+  }
+
+  void _syncFilter() {
+    if (_filter == widget.searchCtrl.text) return;
+    setState(() => _filter = widget.searchCtrl.text);
+  }
+
+  String _localizedName(Place p) {
+    final ar = p.nameAr;
+    if (ar != null && ar.isNotEmpty) {
+      // Show bilingual for clarity, but trim long descriptions.
+      return '${p.name} / $ar';
+    }
+    return p.name;
   }
 
   @override
   Widget build(BuildContext context) {
-    final filtered = _filter.isEmpty
+    final q = _filter.toLowerCase();
+    final filtered = q.isEmpty
         ? widget.all
         : widget.all
             .where((p) =>
-                p.name.toLowerCase().contains(_filter.toLowerCase()) ||
-                p.category.toLowerCase().contains(_filter.toLowerCase()))
+                p.name.toLowerCase().contains(q) ||
+                p.category.toLowerCase().contains(q) ||
+                (p.nameAr?.toLowerCase().contains(q) ?? false))
             .toList();
     return DraggableScrollableSheet(
       initialChildSize: 0.85,
@@ -381,7 +673,7 @@ class _PlacePickerSheetState extends State<_PlacePickerSheet> {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: TextField(
-                  onChanged: (v) => setState(() => _filter = v),
+                  controller: widget.searchCtrl,
                   decoration: const InputDecoration(
                     hintText: 'Search places...',
                     prefixIcon: Icon(Icons.search_rounded),
@@ -405,7 +697,7 @@ class _PlacePickerSheetState extends State<_PlacePickerSheet> {
                           _selected.add(p.id);
                         }
                       }),
-                      title: Text(p.name,
+                      title: Text(_localizedName(p),
                           style: const TextStyle(
                               fontWeight: FontWeight.w700,
                               color: AppTheme.textPrimary)),

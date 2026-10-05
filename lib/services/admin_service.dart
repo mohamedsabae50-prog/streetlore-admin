@@ -190,20 +190,17 @@ class AdminService {
     await _client.from('tours').insert({
       'id': tour.id,
       'title': tour.title,
+      'title_ar': tour.titleAr ?? '',
       'description': tour.description,
+      'description_ar': tour.descriptionAr ?? '',
       'duration': tour.duration,
+      'duration_ar': tour.durationAr ?? '',
+      'category': tour.category,
+      'category_ar': tour.categoryAr ?? '',
       'image_url': tour.imageUrl,
     });
     if (tour.places.isNotEmpty) {
-      final rows = <Map<String, dynamic>>[];
-      for (var i = 0; i < tour.places.length; i++) {
-        rows.add({
-          'tour_id': tour.id,
-          'place_id': tour.places[i].id,
-          'position': i,
-        });
-      }
-      await _client.from('tour_places').insert(rows);
+      await _replaceTourWaypoints(tour.id, tour.places.map((p) => p.id).toList());
     }
     return tour;
   }
@@ -213,23 +210,39 @@ class AdminService {
         .from('tours')
         .update(tour.toSupabaseUpdate())
         .eq('id', tour.id);
-    await _client.from('tour_places').delete().eq('tour_id', tour.id);
-    if (tour.places.isNotEmpty) {
-      final rows = <Map<String, dynamic>>[];
-      for (var i = 0; i < tour.places.length; i++) {
-        rows.add({
-          'tour_id': tour.id,
-          'place_id': tour.places[i].id,
-          'position': i,
-        });
-      }
-      await _client.from('tour_places').insert(rows);
-    }
+    await _replaceTourWaypoints(
+      tour.id,
+      tour.places.map((p) => p.id).toList(),
+    );
     return tour;
   }
 
   Future<void> deleteTour(String id) async {
+    // The tour_places rows are removed by the `on delete cascade` FK on
+    // tour_places.tour_id. (Migration 004 leaves that FK in place.)
     await _client.from('tours').delete().eq('id', id);
+  }
+
+  /// Batch-rewrite every waypoint row for [tourId] to match
+  /// [orderedPlaceIds]. Done as delete-all + insert-all so the final
+  /// ordering is identical to the admin's drag-and-drop state regardless
+  /// of how many stops were reordered. Runs inside the admin RLS
+  /// policies declared in migration 004.
+  Future<void> _replaceTourWaypoints(
+    String tourId,
+    List<String> orderedPlaceIds,
+  ) async {
+    await _client.from('tour_places').delete().eq('tour_id', tourId);
+    if (orderedPlaceIds.isEmpty) return;
+    final rows = <Map<String, dynamic>>[];
+    for (var i = 0; i < orderedPlaceIds.length; i++) {
+      rows.add({
+        'tour_id': tourId,
+        'place_id': orderedPlaceIds[i],
+        'position': i,
+      });
+    }
+    await _client.from('tour_places').insert(rows);
   }
 
   Future<String> uploadImageBytes(
