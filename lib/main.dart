@@ -26,12 +26,10 @@ class StreetloreAdminApp extends StatelessWidget {
       title: 'Streetlore Admin',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
-      
-      
-      
-      
-      
-      
+      // Reverted to v1.0.45 form. Flutter 3.22 handled this gracefully;
+      // Flutter 3.44's stricter Locale() validation can crash on
+      // certain Chromium platform locales. The admin UI is hard-coded
+      // English.
       locale: const Locale('en'),
       supportedLocales: const [
         Locale('en'),
