@@ -1041,11 +1041,12 @@ p=new A.PD(new A.a6y(q),new A.Er(new A.Cb(s),!1,!1,B.as,o,p,"/",r,r,r,r,r),A.b([
 p.adv()
 return p},
 b2y(a){return new A.ab1($.a7,a)},
-aMM(){var s,r,q,p,o=v.G,n=o.window,m=A.b25(n.navigator)
+aMM(){var s,r,q,p,o=v.G,n=window,navigator,m=A.b25(window.navigator)
 if(m==null||m.length===0)return B.OL
 s=A.b([],t.ss)
-for(n=m.length,r=0;r<m.length;m.length===n||(0,A.E)(m),++r){q=m[r]
-try{p=new o.Intl.Locale(q)
+for(p=m.length,r=0;r<m.length;m.length===p||(0,A.E)(m),++r){q=m[r]
+var qClean=(typeof q=="string")?q.split(";")[0]:q
+try{p=new o.Intl.Locale(qClean)
 s.push(new A.la(p.language,p.script,p.region))}catch(e){console.warn("[streetlore] skipping invalid platform locale:",q,e)}}return s},
 b9U(a,b){var s=a.jX(b),r=A.bbO(A.bh(s.b))
 switch(s.a){case"setDevicePixelRatio":$.dw().d=r
