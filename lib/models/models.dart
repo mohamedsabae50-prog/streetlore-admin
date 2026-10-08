@@ -41,7 +41,6 @@ class Place {
   final int displayOrder;
   final bool enableChat;
   final bool enableGallery;
-  final bool enablePhotoUpload;
 
   const Place({
     required this.id,
@@ -69,7 +68,6 @@ class Place {
     this.displayOrder = 999,
     this.enableChat = true,
     this.enableGallery = true,
-    this.enablePhotoUpload = true,
   });
 
   factory Place.fromJson(Map<String, dynamic> json) {
@@ -110,10 +108,6 @@ class Place {
           (json['is_chat_enabled'] as bool?) ??
           true,
       enableGallery: (json['enable_gallery'] as bool?) ?? true,
-      enablePhotoUpload:
-          (json['enable_photo_upload'] as bool?) ??
-          (json['is_photo_upload_enabled'] as bool?) ??
-          true,
     );
   }
 
@@ -143,7 +137,6 @@ class Place {
     'display_order': displayOrder,
     'enable_chat': enableChat,
     'enable_gallery': enableGallery,
-    'enable_photo_upload': enablePhotoUpload,
   };
 
   Map<String, dynamic> toSupabaseUpdate() => {
@@ -171,7 +164,6 @@ class Place {
     'display_order': displayOrder,
     'enable_chat': enableChat,
     'enable_gallery': enableGallery,
-    'enable_photo_upload': enablePhotoUpload,
   };
 
   Place copyWith({
@@ -200,7 +192,6 @@ class Place {
     int? displayOrder,
     bool? enableChat,
     bool? enableGallery,
-    bool? enablePhotoUpload,
   }) => Place(
     id: id ?? this.id,
     name: name ?? this.name,
@@ -227,7 +218,6 @@ class Place {
     displayOrder: displayOrder ?? this.displayOrder,
     enableChat: enableChat ?? this.enableChat,
     enableGallery: enableGallery ?? this.enableGallery,
-    enablePhotoUpload: enablePhotoUpload ?? this.enablePhotoUpload,
   );
 }
 

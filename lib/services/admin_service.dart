@@ -6,8 +6,7 @@ import '../models/models.dart';
 
 class AdminService {
   static AdminService? _instance;
-  static AdminService get instance =>
-      _instance ??= AdminService._();
+  static AdminService get instance => _instance ??= AdminService._();
   AdminService._();
 
   SupabaseClient get _client => Supabase.instance.client;
@@ -32,10 +31,7 @@ class AdminService {
   }
 
   Future<void> signIn(String email, String password) async {
-    await _client.auth.signInWithPassword(
-      email: email,
-      password: password,
-    );
+    await _client.auth.signInWithPassword(email: email, password: password);
   }
 
   Future<void> signOut() async {
@@ -64,7 +60,7 @@ class AdminService {
     final row = await _client
         .from('places')
         .insert(place.toJson())
-        .select('id, enable_chat, enable_gallery, enable_photo_upload')
+        .select('id, enable_chat, enable_gallery')
         .single();
     _verifyFeatureFlags(row, place);
     return place;
@@ -75,7 +71,7 @@ class AdminService {
         .from('places')
         .update(place.toSupabaseUpdate())
         .eq('id', place.id)
-        .select('id, enable_chat, enable_gallery, enable_photo_upload')
+        .select('id, enable_chat, enable_gallery')
         .maybeSingle();
     if (row == null) {
       throw StateError('Supabase did not update place ${place.id}.');
@@ -86,8 +82,7 @@ class AdminService {
 
   void _verifyFeatureFlags(Map<String, dynamic> row, Place place) {
     if (row['enable_chat'] != place.enableChat ||
-        row['enable_gallery'] != place.enableGallery ||
-        row['enable_photo_upload'] != place.enablePhotoUpload) {
+        row['enable_gallery'] != place.enableGallery) {
       throw StateError(
         'Supabase saved different feature flags for place ${place.id}.',
       );
@@ -123,9 +118,7 @@ class AdminService {
     for (final e in entries) {
       final id = e.id.trim();
       if (id.isEmpty) {
-        throw Exception(
-          'Bad entry in drag-and-drop payload: empty place id.',
-        );
+        throw Exception('Bad entry in drag-and-drop payload: empty place id.');
       }
       placeIds.add(id);
       newOrders.add(e.displayOrder);
@@ -134,10 +127,7 @@ class AdminService {
     try {
       final result = await _client.rpc(
         'force_update_display_orders',
-        params: {
-          'p_place_ids': placeIds,
-          'p_new_orders': newOrders,
-        },
+        params: {'p_place_ids': placeIds, 'p_new_orders': newOrders},
       );
       // RPC returned without raising. Verify the return table actually
       // contains every requested id with the requested order — the SQL
@@ -221,7 +211,10 @@ class AdminService {
       'image_url': tour.imageUrl,
     });
     if (tour.places.isNotEmpty) {
-      await _replaceTourWaypoints(tour.id, tour.places.map((p) => p.id).toList());
+      await _replaceTourWaypoints(
+        tour.id,
+        tour.places.map((p) => p.id).toList(),
+      );
     }
     return tour;
   }
@@ -231,10 +224,7 @@ class AdminService {
         .from('tours')
         .update(tour.toSupabaseUpdate())
         .eq('id', tour.id);
-    await _replaceTourWaypoints(
-      tour.id,
-      tour.places.map((p) => p.id).toList(),
-    );
+    await _replaceTourWaypoints(tour.id, tour.places.map((p) => p.id).toList());
     return tour;
   }
 
@@ -273,19 +263,18 @@ class AdminService {
     String contentType = 'image/jpeg',
   }) async {
     final path = '$folder/$fileName';
-    await _client.storage.from(SupabaseConfig.imagesBucket).uploadBinary(
+    await _client.storage
+        .from(SupabaseConfig.imagesBucket)
+        .uploadBinary(
           path,
           bytes,
           fileOptions: FileOptions(contentType: contentType, upsert: true),
         );
-    return _client.storage
-        .from(SupabaseConfig.imagesBucket)
-        .getPublicUrl(path);
+    return _client.storage.from(SupabaseConfig.imagesBucket).getPublicUrl(path);
   }
 
-  String publicImageUrl(String path) => _client.storage
-      .from(SupabaseConfig.imagesBucket)
-      .getPublicUrl(path);
+  String publicImageUrl(String path) =>
+      _client.storage.from(SupabaseConfig.imagesBucket).getPublicUrl(path);
 
   Future<List<PlacePhoto>> fetchPhotos({String? placeId}) async {
     final base = _client.from('place_photos').select();
