@@ -61,16 +61,37 @@ class AdminService {
   }
 
   Future<Place> createPlace(Place place) async {
-    await _client.from('places').insert(place.toJson());
+    final row = await _client
+        .from('places')
+        .insert(place.toJson())
+        .select('id, enable_chat, enable_gallery, enable_photo_upload')
+        .single();
+    _verifyFeatureFlags(row, place);
     return place;
   }
 
   Future<Place> updatePlace(Place place) async {
-    await _client
+    final row = await _client
         .from('places')
         .update(place.toSupabaseUpdate())
-        .eq('id', place.id);
+        .eq('id', place.id)
+        .select('id, enable_chat, enable_gallery, enable_photo_upload')
+        .maybeSingle();
+    if (row == null) {
+      throw StateError('Supabase did not update place ${place.id}.');
+    }
+    _verifyFeatureFlags(row, place);
     return place;
+  }
+
+  void _verifyFeatureFlags(Map<String, dynamic> row, Place place) {
+    if (row['enable_chat'] != place.enableChat ||
+        row['enable_gallery'] != place.enableGallery ||
+        row['enable_photo_upload'] != place.enablePhotoUpload) {
+      throw StateError(
+        'Supabase saved different feature flags for place ${place.id}.',
+      );
+    }
   }
 
   /// Batch update display_order for many places at once (used by the

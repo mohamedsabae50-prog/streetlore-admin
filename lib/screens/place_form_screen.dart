@@ -76,6 +76,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
   bool _isFeatured = false;
   bool _enableChat = true;
   bool _enableGallery = true;
+  bool _enablePhotoUpload = true;
   bool _saving = false;
   bool _loadingPhotos = false;
 
@@ -130,6 +131,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
     _isFeatured = p?.isFeatured ?? false;
     _enableChat = p?.enableChat ?? true;
     _enableGallery = p?.enableGallery ?? true;
+    _enablePhotoUpload = p?.enablePhotoUpload ?? true;
     _lat.addListener(_onCoordFieldChanged);
     _lng.addListener(_onCoordFieldChanged);
     if (_isEditing) {
@@ -521,6 +523,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
       displayOrder: int.tryParse(_displayOrder.text.trim()) ?? 999,
       enableChat: _enableChat,
       enableGallery: _enableGallery,
+      enablePhotoUpload: _enablePhotoUpload,
     );
 
     // 4) Persist the place in ONE call (with the new cover, if any).
@@ -1221,6 +1224,16 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                     title: const Text('Enable Photo Gallery'),
                     subtitle: const Text(
                       'Show the visitor photo gallery on this place details page',
+                    ),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                  SwitchListTile.adaptive(
+                    value: _enablePhotoUpload,
+                    onChanged: (v) =>
+                        setState(() => _enablePhotoUpload = v),
+                    title: const Text('Enable Photo Uploads'),
+                    subtitle: const Text(
+                      'Allow visitors to add photos to this place',
                     ),
                     contentPadding: EdgeInsets.zero,
                   ),

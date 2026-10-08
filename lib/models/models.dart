@@ -41,6 +41,7 @@ class Place {
   final int displayOrder;
   final bool enableChat;
   final bool enableGallery;
+  final bool enablePhotoUpload;
 
   const Place({
     required this.id,
@@ -68,6 +69,7 @@ class Place {
     this.displayOrder = 999,
     this.enableChat = true,
     this.enableGallery = true,
+    this.enablePhotoUpload = true,
   });
 
   factory Place.fromJson(Map<String, dynamic> json) {
@@ -94,8 +96,7 @@ class Place {
       lng: (json['lng'] as num?)?.toDouble() ?? 0,
       address: (json['address'] as String?) ?? 'Alexandria, Egypt',
       addressAr: json['address_ar'] as String?,
-      openHours:
-          (json['open_hours'] as String?) ?? '9:00 AM - 6:00 PM',
+      openHours: (json['open_hours'] as String?) ?? '9:00 AM - 6:00 PM',
       reviewCount: (json['review_count'] as int?) ?? 0,
       priceLevel: priceLevelFromString(json['price_level'] as String?),
       priceNote: (json['price_note'] as String?) ?? '',
@@ -104,65 +105,74 @@ class Place {
       priceLocalEgp: (json['price_local_egp'] as num?)?.toInt(),
       priceForeignerEgp: (json['price_foreigner_egp'] as num?)?.toInt(),
       displayOrder: (json['display_order'] as num?)?.toInt() ?? 999,
-      enableChat: (json['enable_chat'] as bool?) ?? true,
+      enableChat:
+          (json['enable_chat'] as bool?) ??
+          (json['is_chat_enabled'] as bool?) ??
+          true,
       enableGallery: (json['enable_gallery'] as bool?) ?? true,
+      enablePhotoUpload:
+          (json['enable_photo_upload'] as bool?) ??
+          (json['is_photo_upload_enabled'] as bool?) ??
+          true,
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'name_ar': nameAr,
-        'description': description,
-        'description_ar': descriptionAr,
-        'image_url': imageUrl,
-        'image_urls': imageUrls,
-        'rating': rating,
-        'category': category,
-        'category_ar': categoryAr,
-        'lat': lat,
-        'lng': lng,
-        'address': address,
-        'address_ar': addressAr,
-        'open_hours': openHours,
-        'review_count': reviewCount,
-        'price_level': priceLevelToString(priceLevel),
-        'price_note': priceNote,
-        'is_hidden_gem': isHiddenGem,
-        'is_featured': isFeatured,
-        'price_local_egp': priceLocalEgp,
-        'price_foreigner_egp': priceForeignerEgp,
-        'display_order': displayOrder,
-        'enable_chat': enableChat,
-        'enable_gallery': enableGallery,
-      };
+    'id': id,
+    'name': name,
+    'name_ar': nameAr,
+    'description': description,
+    'description_ar': descriptionAr,
+    'image_url': imageUrl,
+    'image_urls': imageUrls,
+    'rating': rating,
+    'category': category,
+    'category_ar': categoryAr,
+    'lat': lat,
+    'lng': lng,
+    'address': address,
+    'address_ar': addressAr,
+    'open_hours': openHours,
+    'review_count': reviewCount,
+    'price_level': priceLevelToString(priceLevel),
+    'price_note': priceNote,
+    'is_hidden_gem': isHiddenGem,
+    'is_featured': isFeatured,
+    'price_local_egp': priceLocalEgp,
+    'price_foreigner_egp': priceForeignerEgp,
+    'display_order': displayOrder,
+    'enable_chat': enableChat,
+    'enable_gallery': enableGallery,
+    'enable_photo_upload': enablePhotoUpload,
+  };
 
   Map<String, dynamic> toSupabaseUpdate() => {
-        'name': name,
-        'name_ar': nameAr,
-        'description': description,
-        'description_ar': descriptionAr,
-        'image_url': imageUrl,
-        'image_urls': imageUrls,
-        'rating': rating,
-        'category': category,
-        'category_ar': categoryAr,
-        'lat': lat,
-        'lng': lng,
-        'address': address,
-        'address_ar': addressAr,
-        'open_hours': openHours,
-        'review_count': reviewCount,
-        'price_level': priceLevelToString(priceLevel),
-        'price_note': priceNote,
-        'is_hidden_gem': isHiddenGem,
-        'is_featured': isFeatured,
-        'price_local_egp': priceLocalEgp,
-        'price_foreigner_egp': priceForeignerEgp,
-        'display_order': displayOrder,
-        'enable_chat': enableChat,
-        'enable_gallery': enableGallery,
-      };
+    'name': name,
+    'name_ar': nameAr,
+    'description': description,
+    'description_ar': descriptionAr,
+    'image_url': imageUrl,
+    'image_urls': imageUrls,
+    'rating': rating,
+    'category': category,
+    'category_ar': categoryAr,
+    'lat': lat,
+    'lng': lng,
+    'address': address,
+    'address_ar': addressAr,
+    'open_hours': openHours,
+    'review_count': reviewCount,
+    'price_level': priceLevelToString(priceLevel),
+    'price_note': priceNote,
+    'is_hidden_gem': isHiddenGem,
+    'is_featured': isFeatured,
+    'price_local_egp': priceLocalEgp,
+    'price_foreigner_egp': priceForeignerEgp,
+    'display_order': displayOrder,
+    'enable_chat': enableChat,
+    'enable_gallery': enableGallery,
+    'enable_photo_upload': enablePhotoUpload,
+  };
 
   Place copyWith({
     String? id,
@@ -190,34 +200,35 @@ class Place {
     int? displayOrder,
     bool? enableChat,
     bool? enableGallery,
-  }) =>
-      Place(
-        id: id ?? this.id,
-        name: name ?? this.name,
-        nameAr: nameAr ?? this.nameAr,
-        description: description ?? this.description,
-        descriptionAr: descriptionAr ?? this.descriptionAr,
-        imageUrl: imageUrl ?? this.imageUrl,
-        imageUrls: imageUrls ?? this.imageUrls,
-        rating: rating ?? this.rating,
-        category: category ?? this.category,
-        categoryAr: categoryAr ?? this.categoryAr,
-        lat: lat ?? this.lat,
-        lng: lng ?? this.lng,
-        address: address ?? this.address,
-        addressAr: addressAr ?? this.addressAr,
-        openHours: openHours ?? this.openHours,
-        reviewCount: reviewCount ?? this.reviewCount,
-        priceLevel: priceLevel ?? this.priceLevel,
-        priceNote: priceNote ?? this.priceNote,
-        isHiddenGem: isHiddenGem ?? this.isHiddenGem,
-        isFeatured: isFeatured ?? this.isFeatured,
-        priceLocalEgp: priceLocalEgp ?? this.priceLocalEgp,
-        priceForeignerEgp: priceForeignerEgp ?? this.priceForeignerEgp,
-        displayOrder: displayOrder ?? this.displayOrder,
-        enableChat: enableChat ?? this.enableChat,
-        enableGallery: enableGallery ?? this.enableGallery,
-      );
+    bool? enablePhotoUpload,
+  }) => Place(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    nameAr: nameAr ?? this.nameAr,
+    description: description ?? this.description,
+    descriptionAr: descriptionAr ?? this.descriptionAr,
+    imageUrl: imageUrl ?? this.imageUrl,
+    imageUrls: imageUrls ?? this.imageUrls,
+    rating: rating ?? this.rating,
+    category: category ?? this.category,
+    categoryAr: categoryAr ?? this.categoryAr,
+    lat: lat ?? this.lat,
+    lng: lng ?? this.lng,
+    address: address ?? this.address,
+    addressAr: addressAr ?? this.addressAr,
+    openHours: openHours ?? this.openHours,
+    reviewCount: reviewCount ?? this.reviewCount,
+    priceLevel: priceLevel ?? this.priceLevel,
+    priceNote: priceNote ?? this.priceNote,
+    isHiddenGem: isHiddenGem ?? this.isHiddenGem,
+    isFeatured: isFeatured ?? this.isFeatured,
+    priceLocalEgp: priceLocalEgp ?? this.priceLocalEgp,
+    priceForeignerEgp: priceForeignerEgp ?? this.priceForeignerEgp,
+    displayOrder: displayOrder ?? this.displayOrder,
+    enableChat: enableChat ?? this.enableChat,
+    enableGallery: enableGallery ?? this.enableGallery,
+    enablePhotoUpload: enablePhotoUpload ?? this.enablePhotoUpload,
+  );
 }
 
 class Tour {
@@ -248,46 +259,46 @@ class Tour {
   });
 
   factory Tour.fromJson(Map<String, dynamic> json) => Tour(
-        id: (json['id'] as String?) ?? '',
-        title: (json['title'] as String?) ?? '',
-        titleAr: json['title_ar'] as String?,
-        description: (json['description'] as String?) ?? '',
-        descriptionAr: json['description_ar'] as String?,
-        duration: (json['duration'] as String?) ?? '',
-        durationAr: json['duration_ar'] as String?,
-        category: (json['category'] as String?) ?? 'General',
-        categoryAr: json['category_ar'] as String?,
-        imageUrl: (json['image_url'] as String?) ?? '',
-        places: ((json['places'] as List<dynamic>?) ?? const [])
-            .map((e) => Place.fromJson(e as Map<String, dynamic>))
-            .toList(),
-      );
+    id: (json['id'] as String?) ?? '',
+    title: (json['title'] as String?) ?? '',
+    titleAr: json['title_ar'] as String?,
+    description: (json['description'] as String?) ?? '',
+    descriptionAr: json['description_ar'] as String?,
+    duration: (json['duration'] as String?) ?? '',
+    durationAr: json['duration_ar'] as String?,
+    category: (json['category'] as String?) ?? 'General',
+    categoryAr: json['category_ar'] as String?,
+    imageUrl: (json['image_url'] as String?) ?? '',
+    places: ((json['places'] as List<dynamic>?) ?? const [])
+        .map((e) => Place.fromJson(e as Map<String, dynamic>))
+        .toList(),
+  );
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'title': title,
-        'title_ar': titleAr,
-        'description': description,
-        'description_ar': descriptionAr,
-        'duration': duration,
-        'duration_ar': durationAr,
-        'category': category,
-        'category_ar': categoryAr,
-        'image_url': imageUrl,
-        'places': places.map((e) => e.toJson()).toList(),
-      };
+    'id': id,
+    'title': title,
+    'title_ar': titleAr,
+    'description': description,
+    'description_ar': descriptionAr,
+    'duration': duration,
+    'duration_ar': durationAr,
+    'category': category,
+    'category_ar': categoryAr,
+    'image_url': imageUrl,
+    'places': places.map((e) => e.toJson()).toList(),
+  };
 
   Map<String, dynamic> toSupabaseUpdate() => {
-        'title': title,
-        'title_ar': titleAr ?? '',
-        'description': description,
-        'description_ar': descriptionAr ?? '',
-        'duration': duration,
-        'duration_ar': durationAr ?? '',
-        'category': category,
-        'category_ar': categoryAr ?? '',
-        'image_url': imageUrl,
-      };
+    'title': title,
+    'title_ar': titleAr ?? '',
+    'description': description,
+    'description_ar': descriptionAr ?? '',
+    'duration': duration,
+    'duration_ar': durationAr ?? '',
+    'category': category,
+    'category_ar': categoryAr ?? '',
+    'image_url': imageUrl,
+  };
 
   Tour copyWith({
     String? id,
@@ -301,20 +312,19 @@ class Tour {
     String? categoryAr,
     String? imageUrl,
     List<Place>? places,
-  }) =>
-      Tour(
-        id: id ?? this.id,
-        title: title ?? this.title,
-        titleAr: titleAr ?? this.titleAr,
-        description: description ?? this.description,
-        descriptionAr: descriptionAr ?? this.descriptionAr,
-        duration: duration ?? this.duration,
-        durationAr: durationAr ?? this.durationAr,
-        category: category ?? this.category,
-        categoryAr: categoryAr ?? this.categoryAr,
-        imageUrl: imageUrl ?? this.imageUrl,
-        places: places ?? this.places,
-      );
+  }) => Tour(
+    id: id ?? this.id,
+    title: title ?? this.title,
+    titleAr: titleAr ?? this.titleAr,
+    description: description ?? this.description,
+    descriptionAr: descriptionAr ?? this.descriptionAr,
+    duration: duration ?? this.duration,
+    durationAr: durationAr ?? this.durationAr,
+    category: category ?? this.category,
+    categoryAr: categoryAr ?? this.categoryAr,
+    imageUrl: imageUrl ?? this.imageUrl,
+    places: places ?? this.places,
+  );
 }
 
 class PlacePhoto {
@@ -342,39 +352,39 @@ class PlacePhoto {
   });
 
   factory PlacePhoto.fromJson(Map<String, dynamic> json) => PlacePhoto(
-        id: (json['id'] as String?) ?? '',
-        placeId: (json['place_id'] as String?) ?? '',
-        userId: (json['user_id'] as String?) ?? '',
-        userName: (json['user_name'] as String?) ?? 'Streetlore',
-        imageUrl: (json['image_url'] as String?) ?? '',
-        captionAr: (json['caption_ar'] as String?) ?? '',
-        captionEn: (json['caption_en'] as String?) ?? '',
-        likes: (json['likes'] as num?)?.toInt() ?? 0,
-        createdAt: json['created_at'] == null
-            ? null
-            : DateTime.tryParse(json['created_at'] as String),
-      );
+    id: (json['id'] as String?) ?? '',
+    placeId: (json['place_id'] as String?) ?? '',
+    userId: (json['user_id'] as String?) ?? '',
+    userName: (json['user_name'] as String?) ?? 'Streetlore',
+    imageUrl: (json['image_url'] as String?) ?? '',
+    captionAr: (json['caption_ar'] as String?) ?? '',
+    captionEn: (json['caption_en'] as String?) ?? '',
+    likes: (json['likes'] as num?)?.toInt() ?? 0,
+    createdAt: json['created_at'] == null
+        ? null
+        : DateTime.tryParse(json['created_at'] as String),
+  );
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'place_id': placeId,
-        'user_id': userId,
-        'user_name': userName,
-        'image_url': imageUrl,
-        'caption_ar': captionAr,
-        'caption_en': captionEn,
-        'likes': likes,
-      };
+    'id': id,
+    'place_id': placeId,
+    'user_id': userId,
+    'user_name': userName,
+    'image_url': imageUrl,
+    'caption_ar': captionAr,
+    'caption_en': captionEn,
+    'likes': likes,
+  };
 
   Map<String, dynamic> toSupabaseUpdate() => {
-        'place_id': placeId,
-        'user_id': userId,
-        'user_name': userName,
-        'image_url': imageUrl,
-        'caption_ar': captionAr,
-        'caption_en': captionEn,
-        'likes': likes,
-      };
+    'place_id': placeId,
+    'user_id': userId,
+    'user_name': userName,
+    'image_url': imageUrl,
+    'caption_ar': captionAr,
+    'caption_en': captionEn,
+    'likes': likes,
+  };
 }
 
 class ChatMessage {
@@ -397,14 +407,14 @@ class ChatMessage {
   });
 
   factory ChatMessage.fromJson(Map<String, dynamic> json) => ChatMessage(
-        id: (json['id'] as String?) ?? '',
-        placeId: (json['place_id'] as String?) ?? '',
-        userId: (json['user_id'] as String?) ?? '',
-        userName: (json['user_name'] as String?) ?? 'Streetlore',
-        text: (json['text'] as String?) ?? '',
-        sentAt: json['sent_at'] == null
-            ? DateTime.now()
-            : DateTime.tryParse(json['sent_at'] as String) ?? DateTime.now(),
-        userAvatarColor: json['user_avatar_color'] as String?,
-      );
+    id: (json['id'] as String?) ?? '',
+    placeId: (json['place_id'] as String?) ?? '',
+    userId: (json['user_id'] as String?) ?? '',
+    userName: (json['user_name'] as String?) ?? 'Streetlore',
+    text: (json['text'] as String?) ?? '',
+    sentAt: json['sent_at'] == null
+        ? DateTime.now()
+        : DateTime.tryParse(json['sent_at'] as String) ?? DateTime.now(),
+    userAvatarColor: json['user_avatar_color'] as String?,
+  );
 }

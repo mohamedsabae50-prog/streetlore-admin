@@ -30,8 +30,9 @@ class _PhotosListScreenState extends State<PhotosListScreen> {
     });
     try {
       final places = await AdminService.instance.fetchPlaces();
-      final photos =
-          await AdminService.instance.fetchPhotos(placeId: widget.place?.id);
+      final photos = await AdminService.instance.fetchPhotos(
+        placeId: widget.place?.id,
+      );
       if (!mounted) return;
       setState(() {
         _placeNames = {for (final p in places) p.id: p.name};
@@ -52,16 +53,17 @@ class _PhotosListScreenState extends State<PhotosListScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Delete photo?'),
-        content: Text(
-            'Photo by "${p.userName}" will be permanently removed.'),
+        content: Text('Photo by "${p.userName}" will be permanently removed.'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel')),
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
           TextButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              style: TextButton.styleFrom(foregroundColor: AppTheme.danger),
-              child: const Text('Delete')),
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: AppTheme.danger),
+            child: const Text('Delete'),
+          ),
         ],
       ),
     );
@@ -69,13 +71,15 @@ class _PhotosListScreenState extends State<PhotosListScreen> {
     try {
       await AdminService.instance.deletePhoto(p.id);
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Photo deleted')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Photo deleted')));
       _load();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Delete failed: $e')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Delete failed: $e')));
     }
   }
 
@@ -95,7 +99,8 @@ class _PhotosListScreenState extends State<PhotosListScreen> {
           final result = await Navigator.push<PlacePhoto>(
             context,
             MaterialPageRoute(
-                builder: (_) => PhotoFormScreen(placeId: widget.place?.id)),
+              builder: (_) => PhotoFormScreen(placeId: widget.place?.id),
+            ),
           );
           if (result != null) _load();
         },
@@ -105,67 +110,71 @@ class _PhotosListScreenState extends State<PhotosListScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? _errorState()
-              : _photos.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.photo_library_outlined,
-                              size: 64,
-                              color: AppTheme.textSecondary
-                                  .withValues(alpha: 0.4)),
-                          const SizedBox(height: 10),
-                          const Text('No photos yet',
-                              style:
-                                  TextStyle(color: AppTheme.textSecondary)),
-                        ],
-                      ),
-                    )
-                  : RefreshIndicator(
-                      onRefresh: _load,
-                      child: ListView.separated(
-                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 90),
-                        itemCount: _photos.length,
-                        separatorBuilder: (_, _) => const SizedBox(height: 8),
-                        itemBuilder: (context, i) {
-                          final p = _photos[i];
-                          return _PhotoCard(
-                            photo: p,
-                            placeName: _placeNames[p.placeId] ?? p.placeId,
-                            onEdit: () async {
-                              final result =
-                                  await Navigator.push<PlacePhoto>(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (_) =>
-                                        PhotoFormScreen(photo: p)),
-                              );
-                              if (result != null) _load();
-                            },
-                            onDelete: () => _delete(p),
-                          );
-                        },
-                      ),
-                    ),
+          ? _errorState()
+          : _photos.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.photo_library_outlined,
+                    size: 64,
+                    color: AppTheme.textSecondary.withValues(alpha: 0.4),
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    'No photos yet',
+                    style: TextStyle(color: AppTheme.textSecondary),
+                  ),
+                ],
+              ),
+            )
+          : RefreshIndicator(
+              onRefresh: _load,
+              child: ListView.separated(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 90),
+                itemCount: _photos.length,
+                separatorBuilder: (_, _) => const SizedBox(height: 8),
+                itemBuilder: (context, i) {
+                  final p = _photos[i];
+                  return _PhotoCard(
+                    photo: p,
+                    placeName: _placeNames[p.placeId] ?? p.placeId,
+                    onEdit: () async {
+                      final result = await Navigator.push<PlacePhoto>(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => PhotoFormScreen(photo: p),
+                        ),
+                      );
+                      if (result != null) _load();
+                    },
+                    onDelete: () => _delete(p),
+                  );
+                },
+              ),
+            ),
     );
   }
 
   Widget _errorState() {
-    final tableMissing = _error!.contains('PGRST205') ||
-        _error!.contains('place_photos');
+    final tableMissing =
+        _error!.contains('PGRST205') || _error!.contains('place_photos');
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.cloud_off_rounded,
-                size: 56, color: AppTheme.textSecondary),
+            const Icon(
+              Icons.cloud_off_rounded,
+              size: 56,
+              color: AppTheme.textSecondary,
+            ),
             const SizedBox(height: 12),
             Text(
               tableMissing
-                  ? 'The "place_photos" table does not exist yet.\nRun the SQL in supabase/migrations/001_place_photos.sql in your Supabase SQL Editor, then retry.'
+                  ? 'The "place_photos" table does not exist yet.\nRun supabase/migrations/2026_10_08_mobile_admin_sync.sql in the Supabase SQL Editor, then retry.'
                   : 'Load failed: $_error',
               textAlign: TextAlign.center,
               style: const TextStyle(color: AppTheme.textSecondary),
@@ -215,19 +224,37 @@ class _PhotoCard extends StatelessWidget {
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(10),
-            child: Image.network(
-              photo.imageUrl,
-              width: 72,
-              height: 72,
-              fit: BoxFit.cover,
-              errorBuilder: (_, _, _) => Container(
-                width: 72,
-                height: 72,
-                color: AppTheme.bg,
-                child: const Icon(Icons.image_not_supported_rounded,
-                    color: AppTheme.textSecondary),
-              ),
-            ),
+            child: photo.imageUrl.startsWith('data:')
+                ? Image.memory(
+                    UriData.parse(photo.imageUrl).contentAsBytes(),
+                    width: 72,
+                    height: 72,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => Container(
+                      width: 72,
+                      height: 72,
+                      color: AppTheme.bg,
+                      child: const Icon(
+                        Icons.image_not_supported_rounded,
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
+                  )
+                : Image.network(
+                    photo.imageUrl,
+                    width: 72,
+                    height: 72,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => Container(
+                      width: 72,
+                      height: 72,
+                      color: AppTheme.bg,
+                      child: const Icon(
+                        Icons.image_not_supported_rounded,
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
+                  ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -236,8 +263,11 @@ class _PhotoCard extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.person_outline_rounded,
-                        size: 14, color: AppTheme.textSecondary),
+                    const Icon(
+                      Icons.person_outline_rounded,
+                      size: 14,
+                      color: AppTheme.textSecondary,
+                    ),
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
@@ -295,8 +325,11 @@ class _PhotoCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    const Icon(Icons.favorite_rounded,
-                        size: 12, color: AppTheme.danger),
+                    const Icon(
+                      Icons.favorite_rounded,
+                      size: 12,
+                      color: AppTheme.danger,
+                    ),
                     const SizedBox(width: 3),
                     Text(
                       '${photo.likes}',
@@ -314,14 +347,15 @@ class _PhotoCard extends StatelessWidget {
           Column(
             children: [
               IconButton(
-                icon: const Icon(Icons.edit_rounded,
-                    color: AppTheme.primary),
+                icon: const Icon(Icons.edit_rounded, color: AppTheme.primary),
                 onPressed: onEdit,
                 tooltip: 'Edit',
               ),
               IconButton(
-                icon: const Icon(Icons.delete_outline_rounded,
-                    color: AppTheme.danger),
+                icon: const Icon(
+                  Icons.delete_outline_rounded,
+                  color: AppTheme.danger,
+                ),
                 onPressed: onDelete,
                 tooltip: 'Delete',
               ),
