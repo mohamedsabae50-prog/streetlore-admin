@@ -46,3 +46,10 @@ app.*.map.json
 
 # Local one-off scripts
 *.ps1
+
+# Local dev/debug artifacts (one-off patch scripts and runtime debug
+# captures left behind by admin deployment experiments).
+/tools/
+/_live_*.js
+/_final.js
+/.trash_backup/
