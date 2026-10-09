@@ -38,6 +38,29 @@ class AdminService {
     await _client.auth.signOut();
   }
 
+  Future<({int places, int tours})> fetchDashboardCounts() async {
+    final results = await Future.wait([
+      _client.from('places').select('id').count(),
+      _client.from('tours').select('id').count(),
+    ]);
+
+    final places = (results[0] as dynamic).count;
+    final tours = (results[1] as dynamic).count;
+    if (places is! int || tours is! int) {
+      throw StateError('Supabase did not return exact dashboard counts.');
+    }
+    return (places: places, tours: tours);
+  }
+
+  Future<int> fetchPhotoCount() async {
+    final result = await _client.from('place_photos').select('id').count();
+    final count = (result as dynamic).count;
+    if (count is! int) {
+      throw StateError('Supabase did not return the photo count.');
+    }
+    return count;
+  }
+
   Future<List<Place>> fetchPlaces() async {
     // v1.0.69 fix: sort by display_order first, then by id. Previously
     // this only ordered by id, which made the admin page always show

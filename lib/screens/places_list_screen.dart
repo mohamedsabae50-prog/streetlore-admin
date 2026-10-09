@@ -361,6 +361,8 @@ class _PlaceRow extends StatelessWidget {
               place.imageUrl,
               width: 60,
               height: 60,
+              cacheWidth: 180,
+              cacheHeight: 180,
               fit: BoxFit.cover,
               gaplessPlayback: true,
               errorBuilder: (_, _, _) => Container(

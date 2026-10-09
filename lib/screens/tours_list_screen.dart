@@ -134,6 +134,8 @@ class _ToursListScreenState extends State<ToursListScreen> {
                                 t.imageUrl,
                                 width: 60,
                                 height: 60,
+                                cacheWidth: 180,
+                                cacheHeight: 180,
                                 fit: BoxFit.cover,
                                 errorBuilder: (_, _, _) => Container(
                                   width: 60,

@@ -30,13 +30,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _refreshCounts() async {
     setState(() => _loading = true);
+    final photosFuture = AdminService.instance.fetchPhotoCount();
     try {
-      final places = await AdminService.instance.fetchPlaces();
-      final tours = await AdminService.instance.fetchTours();
+      final counts = await AdminService.instance.fetchDashboardCounts();
       if (!mounted) return;
       setState(() {
-        _placesCount = places.length;
-        _toursCount = tours.length;
+        _placesCount = counts.places;
+        _toursCount = counts.tours;
         _loading = false;
       });
     } catch (e) {
@@ -47,10 +47,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
       );
     }
     try {
-      final photos = await AdminService.instance.fetchPhotos();
+      final photosCount = await photosFuture;
       if (!mounted) return;
       setState(() {
-        _photosCount = photos.length;
+        _photosCount = photosCount;
         _photosAvailable = true;
       });
     } catch (_) {
