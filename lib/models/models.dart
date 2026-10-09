@@ -1,5 +1,78 @@
 ﻿enum PriceLevel { free, cheap, moderate, expensive }
 
+class AdminUser {
+  final String id;
+  final String email;
+  final String name;
+  final DateTime? createdAt;
+
+  const AdminUser({
+    required this.id,
+    required this.email,
+    required this.name,
+    this.createdAt,
+  });
+
+  factory AdminUser.fromJson(Map<String, dynamic> json) => AdminUser(
+    id: json['id'] as String,
+    email: (json['email'] as String?) ?? '',
+    name: (json['name'] as String?) ?? 'Unnamed user',
+    createdAt: DateTime.tryParse((json['created_at'] as String?) ?? ''),
+  );
+}
+
+class PopularTour {
+  final String id;
+  final String title;
+  final int viewCount;
+
+  const PopularTour({
+    required this.id,
+    required this.title,
+    required this.viewCount,
+  });
+
+  factory PopularTour.fromJson(Map<String, dynamic> json) {
+    final viewCount = json['view_count'];
+    if (viewCount is! num) {
+      throw const FormatException('Popular tour is missing its view count.');
+    }
+    return PopularTour(
+      id: json['id'] as String,
+      title: json['title'] as String,
+      viewCount: viewCount.toInt(),
+    );
+  }
+}
+
+class AdminAnalytics {
+  final int totalAiGuideUsage;
+  final int totalCheckins;
+  final List<PopularTour> popularTours;
+
+  const AdminAnalytics({
+    required this.totalAiGuideUsage,
+    required this.totalCheckins,
+    required this.popularTours,
+  });
+
+  factory AdminAnalytics.fromJson(Map<String, dynamic> json) {
+    final aiUsage = json['total_ai_guide_usage'];
+    final checkins = json['total_checkins'];
+    final popularTours = json['popular_tours'];
+    if (aiUsage is! num || checkins is! num || popularTours is! List) {
+      throw const FormatException('Invalid admin analytics response.');
+    }
+    return AdminAnalytics(
+      totalAiGuideUsage: aiUsage.toInt(),
+      totalCheckins: checkins.toInt(),
+      popularTours: popularTours
+          .map((tour) => PopularTour.fromJson(tour as Map<String, dynamic>))
+          .toList(growable: false),
+    );
+  }
+}
+
 PriceLevel priceLevelFromString(String? s) {
   switch (s) {
     case 'cheap':
@@ -232,6 +305,8 @@ class Tour {
   final String category;
   final String? categoryAr;
   final String imageUrl;
+  final String status;
+  final int viewCount;
   final List<Place> places;
 
   const Tour({
@@ -245,6 +320,8 @@ class Tour {
     this.category = 'General',
     this.categoryAr,
     required this.imageUrl,
+    this.status = 'published',
+    this.viewCount = 0,
     this.places = const [],
   });
 
@@ -280,6 +357,8 @@ class Tour {
     category: (json['category'] as String?) ?? 'General',
     categoryAr: json['category_ar'] as String?,
     imageUrl: (json['image_url'] as String?) ?? '',
+    status: (json['status'] as String?) ?? 'published',
+    viewCount: (json['view_count'] as num?)?.toInt() ?? 0,
     places: ((json['places'] as List<dynamic>?) ?? const [])
         .map((e) => Place.fromJson(e as Map<String, dynamic>))
         .toList(),
@@ -296,6 +375,8 @@ class Tour {
     'category': category,
     'category_ar': categoryAr,
     'image_url': imageUrl,
+    'status': status,
+    'view_count': viewCount,
     'places': places.map((e) => e.toJson()).toList(),
   };
 
@@ -309,6 +390,7 @@ class Tour {
     'category': category,
     'category_ar': categoryAr ?? '',
     'image_url': imageUrl,
+    'status': status,
   };
 
   Tour copyWith({
@@ -322,6 +404,8 @@ class Tour {
     String? category,
     String? categoryAr,
     String? imageUrl,
+    String? status,
+    int? viewCount,
     List<Place>? places,
   }) => Tour(
     id: id ?? this.id,
@@ -334,6 +418,8 @@ class Tour {
     category: category ?? this.category,
     categoryAr: categoryAr ?? this.categoryAr,
     imageUrl: imageUrl ?? this.imageUrl,
+    status: status ?? this.status,
+    viewCount: viewCount ?? this.viewCount,
     places: places ?? this.places,
   );
 }

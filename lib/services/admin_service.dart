@@ -61,6 +61,60 @@ class AdminService {
     return count;
   }
 
+  Future<AdminAnalytics> fetchAdminAnalytics() async {
+    final response = await _client.rpc('get_admin_analytics');
+    if (response is! Map) {
+      throw const FormatException('Invalid admin analytics response.');
+    }
+    return AdminAnalytics.fromJson(Map<String, dynamic>.from(response));
+  }
+
+  Future<({List<AdminUser> users, bool hasMore})> fetchUsers({
+    String query = '',
+    int page = 1,
+    int perPage = 50,
+  }) async {
+    final response = await _client.functions.invoke(
+      'admin-user-management',
+      body: {
+        'action': 'list',
+        'query': query,
+        'page': page,
+        'per_page': perPage,
+      },
+    );
+    if (response.status < 200 || response.status >= 300) {
+      throw StateError('User list request failed (${response.status}).');
+    }
+    final data = response.data;
+    if (data is! Map<String, dynamic> || data['users'] is! List) {
+      throw const FormatException('Invalid user list response.');
+    }
+    return (
+      users: (data['users'] as List<dynamic>)
+          .map((user) => AdminUser.fromJson(user as Map<String, dynamic>))
+          .toList(),
+      hasMore: data['has_more'] == true,
+    );
+  }
+
+  Future<void> deleteUser(String userId) async {
+    final response = await _client.functions.invoke(
+      'admin-user-management',
+      body: {'action': 'delete', 'user_id': userId},
+    );
+    if (response.status < 200 || response.status >= 300) {
+      final data = response.data;
+      final detail = data is Map<String, dynamic>
+          ? data['message'] ?? data['error']
+          : null;
+      throw StateError(
+        'User deletion failed (${response.status})'
+        '${detail == null ? '' : ': $detail'}',
+      );
+    }
+  }
+
   Future<List<Place>> fetchPlaces() async {
     // v1.0.69 fix: sort by display_order first, then by id. Previously
     // this only ordered by id, which made the admin page always show
@@ -232,6 +286,7 @@ class AdminService {
       'category': tour.category,
       'category_ar': tour.categoryAr ?? '',
       'image_url': tour.imageUrl,
+      'status': tour.status,
     });
     if (tour.places.isNotEmpty) {
       await _replaceTourWaypoints(
@@ -322,7 +377,43 @@ class AdminService {
   }
 
   Future<void> deletePhoto(String id) async {
-    await _client.from('place_photos').delete().eq('id', id);
+    final photo = await _client
+        .from('place_photos')
+        .select('image_url')
+        .eq('id', id)
+        .maybeSingle();
+    if (photo == null) {
+      throw StateError('Photo $id no longer exists.');
+    }
+    final imageUrl = photo['image_url'] as String? ?? '';
+    final storagePath = _placeImageStoragePath(imageUrl);
+    if (storagePath != null) {
+      await _client.storage.from('place-images').remove([storagePath]);
+    }
+    final deleted = await _client
+        .from('place_photos')
+        .delete()
+        .eq('id', id)
+        .select('id');
+    if ((deleted as List<dynamic>).isEmpty) {
+      throw StateError('Supabase did not delete photo $id.');
+    }
+  }
+
+  String? _placeImageStoragePath(String imageUrl) {
+    final uri = Uri.tryParse(imageUrl);
+    final supabaseUri = Uri.tryParse(SupabaseConfig.url);
+    if (uri == null || supabaseUri == null || uri.host != supabaseUri.host) {
+      return null;
+    }
+    final segments = uri.pathSegments;
+    for (var i = 0; i + 2 < segments.length; i++) {
+      if (segments[i] == 'public' && segments[i + 1] == 'place-images') {
+        final path = segments.skip(i + 2).join('/');
+        return path.isEmpty ? null : path;
+      }
+    }
+    return null;
   }
 
   /// v1.0.64: Granular moderation — fetch every chat message for a

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../models/models.dart';
 import '../services/admin_service.dart';
 import '../theme.dart';
-import 'photo_form_screen.dart';
 
 class PhotosListScreen extends StatefulWidget {
   final Place? place;
@@ -88,24 +87,13 @@ class _PhotosListScreenState extends State<PhotosListScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          widget.place == null ? 'Photos' : 'Photos — ${widget.place!.name}',
+          widget.place == null
+              ? 'User Photo Moderation'
+              : 'User Photos — ${widget.place!.name}',
           style: const TextStyle(fontWeight: FontWeight.w800),
         ),
         backgroundColor: Colors.white,
         elevation: 0,
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          final result = await Navigator.push<PlacePhoto>(
-            context,
-            MaterialPageRoute(
-              builder: (_) => PhotoFormScreen(placeId: widget.place?.id),
-            ),
-          );
-          if (result != null) _load();
-        },
-        icon: const Icon(Icons.add_a_photo_rounded),
-        label: const Text('New Photo'),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -132,7 +120,7 @@ class _PhotosListScreenState extends State<PhotosListScreen> {
           : RefreshIndicator(
               onRefresh: _load,
               child: ListView.separated(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 90),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
                 itemCount: _photos.length,
                 separatorBuilder: (_, _) => const SizedBox(height: 8),
                 itemBuilder: (context, i) {
@@ -140,15 +128,6 @@ class _PhotosListScreenState extends State<PhotosListScreen> {
                   return _PhotoCard(
                     photo: p,
                     placeName: _placeNames[p.placeId] ?? p.placeId,
-                    onEdit: () async {
-                      final result = await Navigator.push<PlacePhoto>(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => PhotoFormScreen(photo: p),
-                        ),
-                      );
-                      if (result != null) _load();
-                    },
                     onDelete: () => _delete(p),
                   );
                 },
@@ -195,12 +174,10 @@ class _PhotosListScreenState extends State<PhotosListScreen> {
 class _PhotoCard extends StatelessWidget {
   final PlacePhoto photo;
   final String placeName;
-  final VoidCallback onEdit;
   final VoidCallback onDelete;
   const _PhotoCard({
     required this.photo,
     required this.placeName,
-    required this.onEdit,
     required this.onDelete,
   });
 
@@ -283,6 +260,18 @@ class _PhotoCard extends StatelessWidget {
                     ),
                   ],
                 ),
+                if (photo.userId.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    'User ID: ${photo.userId}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: AppTheme.textSecondary,
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 2),
                 Text(
                   placeName,
@@ -346,11 +335,6 @@ class _PhotoCard extends StatelessWidget {
           ),
           Column(
             children: [
-              IconButton(
-                icon: const Icon(Icons.edit_rounded, color: AppTheme.primary),
-                onPressed: onEdit,
-                tooltip: 'Edit',
-              ),
               IconButton(
                 icon: const Icon(
                   Icons.delete_outline_rounded,

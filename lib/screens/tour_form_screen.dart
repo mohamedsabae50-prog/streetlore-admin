@@ -34,6 +34,7 @@ class _TourFormScreenState extends State<TourFormScreen> {
   late TextEditingController _imageUrl;
   late TextEditingController _search;
 
+  String _status = 'published';
   final _cover = _CoverDraft();
 
   List<Place> _allPlaces = [];
@@ -60,6 +61,7 @@ class _TourFormScreenState extends State<TourFormScreen> {
     _category = TextEditingController(text: t?.category ?? 'Historical');
     _categoryAr = TextEditingController(text: t?.categoryAr ?? '');
     _imageUrl = TextEditingController(text: t?.imageUrl ?? '');
+    _status = t?.status ?? 'published';
     _search = TextEditingController();
     _selectedPlaces = List<Place>.from(t?.places ?? const []);
     _load();
@@ -191,6 +193,7 @@ class _TourFormScreenState extends State<TourFormScreen> {
             : _category.text.trim(),
         categoryAr: _nullable(_categoryAr),
         imageUrl: _imageUrl.text.trim(),
+        status: _status,
         places: _selectedPlaces,
       );
       if (_isEditing) {
@@ -458,6 +461,28 @@ class _TourFormScreenState extends State<TourFormScreen> {
                         ? 'Cover image is required'
                         : null,
                     onChanged: (_) => setState(() {}),
+                  ),
+                  const SizedBox(height: 24),
+
+                  _label('Status'),
+                  DropdownButtonFormField<String>(
+                    initialValue: _status,
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                    ),
+                    items: const [
+                      DropdownMenuItem(
+                        value: 'draft',
+                        child: Text('Draft'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'published',
+                        child: Text('Published'),
+                      ),
+                    ],
+                    onChanged: (value) {
+                      if (value != null) setState(() => _status = value);
+                    },
                   ),
                   const SizedBox(height: 24),
 

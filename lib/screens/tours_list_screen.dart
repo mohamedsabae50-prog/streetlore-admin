@@ -182,6 +182,35 @@ class _ToursListScreenState extends State<ToursListScreen> {
                                       color: AppTheme.textSecondary,
                                     ),
                                   ),
+                                  const SizedBox(height: 5),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 3,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: t.status == 'published'
+                                          ? AppTheme.success.withValues(
+                                              alpha: 0.12,
+                                            )
+                                          : AppTheme.textSecondary.withValues(
+                                              alpha: 0.12,
+                                            ),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      t.status == 'published'
+                                          ? 'Published'
+                                          : 'Draft',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w800,
+                                        color: t.status == 'published'
+                                            ? AppTheme.success
+                                            : AppTheme.textSecondary,
+                                      ),
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
