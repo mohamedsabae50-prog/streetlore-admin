@@ -248,6 +248,27 @@ class Tour {
     this.places = const [],
   });
 
+  String? get coverImageUrl {
+    String? validUrl(String candidate) {
+      final value = candidate.trim();
+      final uri = Uri.tryParse(value);
+      return uri != null &&
+          (uri.scheme == 'https' || uri.scheme == 'http') &&
+          uri.host.isNotEmpty
+          ? value
+          : null;
+    }
+
+    final cover = validUrl(imageUrl);
+    final placeImages = places
+        .map((place) => validUrl(place.imageUrl))
+        .whereType<String>()
+        .toList(growable: false);
+    if (cover != null && placeImages.contains(cover)) return cover;
+    if (placeImages.isNotEmpty) return placeImages.first;
+    return places.isEmpty ? cover : null;
+  }
+
   factory Tour.fromJson(Map<String, dynamic> json) => Tour(
     id: (json['id'] as String?) ?? '',
     title: (json['title'] as String?) ?? '',

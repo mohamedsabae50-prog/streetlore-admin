@@ -113,6 +113,7 @@ class _ToursListScreenState extends State<ToursListScreen> {
                     separatorBuilder: (_, _) => const SizedBox(height: 8),
                     itemBuilder: (context, i) {
                       final t = _tours[i];
+                      final coverImageUrl = t.coverImageUrl;
                       return Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
@@ -130,22 +131,33 @@ class _ToursListScreenState extends State<ToursListScreen> {
                           children: [
                             ClipRRect(
                               borderRadius: BorderRadius.circular(10),
-                              child: Image.network(
-                                t.imageUrl,
-                                width: 60,
-                                height: 60,
-                                cacheWidth: 180,
-                                cacheHeight: 180,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, _, _) => Container(
-                                  width: 60,
-                                  height: 60,
-                                  color: AppTheme.bg,
-                                  child: const Icon(
-                                      Icons.image_not_supported_rounded,
-                                      color: AppTheme.textSecondary),
-                                ),
-                              ),
+                              child: coverImageUrl != null
+                                  ? Image.network(
+                                      coverImageUrl,
+                                      width: 60,
+                                      height: 60,
+                                      cacheWidth: 180,
+                                      cacheHeight: 180,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (_, _, _) => Container(
+                                        width: 60,
+                                        height: 60,
+                                        color: AppTheme.bg,
+                                        child: const Icon(
+                                          Icons.image_not_supported_rounded,
+                                          color: AppTheme.textSecondary,
+                                        ),
+                                      ),
+                                    )
+                                  : Container(
+                                      width: 60,
+                                      height: 60,
+                                      color: AppTheme.bg,
+                                      child: const Icon(
+                                        Icons.image_not_supported_rounded,
+                                        color: AppTheme.textSecondary,
+                                      ),
+                                  ),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
