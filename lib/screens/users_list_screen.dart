@@ -134,6 +134,9 @@ class _UsersListScreenState extends State<UsersListScreen> {
     }
   }
 
+  bool _containsArabic(String value) =>
+      RegExp(r'[\u0600-\u06FF]').hasMatch(value);
+
   @override
   void dispose() {
     _searchDebounce?.cancel();
@@ -248,6 +251,9 @@ class _UsersListScreenState extends State<UsersListScreen> {
                                   children: [
                                     Text(
                                       user.name,
+                                      textDirection: _containsArabic(user.name)
+                                          ? TextDirection.rtl
+                                          : TextDirection.ltr,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: const TextStyle(

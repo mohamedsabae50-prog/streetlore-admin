@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -94,7 +95,12 @@ class AdminService {
     if (response.status < 200 || response.status >= 300) {
       throw StateError('User list request failed (${response.status}).');
     }
-    final data = response.data;
+    final responseData = response.data;
+    final dynamic data = switch (responseData) {
+      String value => jsonDecode(value),
+      Uint8List value => jsonDecode(utf8.decode(value)),
+      _ => responseData,
+    };
     if (data is! Map<String, dynamic> || data['users'] is! List) {
       throw const FormatException('Invalid user list response.');
     }
