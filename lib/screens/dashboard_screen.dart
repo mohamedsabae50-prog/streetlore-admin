@@ -100,7 +100,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
             SizedBox(width: 10),
             Text(
-              'v1.1.1',
+              'v1.1.2',
               style: TextStyle(
                 fontWeight: FontWeight.w600,
                 fontSize: 12,
