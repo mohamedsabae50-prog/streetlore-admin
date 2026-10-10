@@ -45,22 +45,54 @@ class PopularTour {
   }
 }
 
+class PlaceCheckinCount {
+  final String placeId;
+  final String placeName;
+  final int checkinCount;
+
+  const PlaceCheckinCount({
+    required this.placeId,
+    required this.placeName,
+    required this.checkinCount,
+  });
+
+  factory PlaceCheckinCount.fromJson(Map<String, dynamic> json) {
+    final checkinCount = json['checkin_count'];
+    if (checkinCount is! num) {
+      throw const FormatException(
+        'Popular place is missing its check-in count.',
+      );
+    }
+    return PlaceCheckinCount(
+      placeId: json['place_id'] as String,
+      placeName: json['place_name'] as String,
+      checkinCount: checkinCount.toInt(),
+    );
+  }
+}
+
 class AdminAnalytics {
   final int totalAiGuideUsage;
   final int totalCheckins;
   final List<PopularTour> popularTours;
+  final List<PlaceCheckinCount> topPlacesByCheckins;
 
   const AdminAnalytics({
     required this.totalAiGuideUsage,
     required this.totalCheckins,
     required this.popularTours,
+    required this.topPlacesByCheckins,
   });
 
   factory AdminAnalytics.fromJson(Map<String, dynamic> json) {
     final aiUsage = json['total_ai_guide_usage'];
     final checkins = json['total_checkins'];
     final popularTours = json['popular_tours'];
-    if (aiUsage is! num || checkins is! num || popularTours is! List) {
+    final topPlacesByCheckins = json['top_places_by_checkins'];
+    if (aiUsage is! num ||
+        checkins is! num ||
+        popularTours is! List ||
+        topPlacesByCheckins is! List) {
       throw const FormatException('Invalid admin analytics response.');
     }
     return AdminAnalytics(
@@ -68,6 +100,12 @@ class AdminAnalytics {
       totalCheckins: checkins.toInt(),
       popularTours: popularTours
           .map((tour) => PopularTour.fromJson(tour as Map<String, dynamic>))
+          .toList(growable: false),
+      topPlacesByCheckins: topPlacesByCheckins
+          .map(
+            (place) =>
+                PlaceCheckinCount.fromJson(place as Map<String, dynamic>),
+          )
           .toList(growable: false),
     );
   }
@@ -330,8 +368,8 @@ class Tour {
       final value = candidate.trim();
       final uri = Uri.tryParse(value);
       return uri != null &&
-          (uri.scheme == 'https' || uri.scheme == 'http') &&
-          uri.host.isNotEmpty
+              (uri.scheme == 'https' || uri.scheme == 'http') &&
+              uri.host.isNotEmpty
           ? value
           : null;
     }

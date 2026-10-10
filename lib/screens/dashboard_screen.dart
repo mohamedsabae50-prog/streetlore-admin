@@ -361,6 +361,8 @@ class _AnalyticsPanel extends StatelessWidget {
               ),
               const SizedBox(height: 14),
               _PopularToursCard(tours: stats.popularTours),
+              const SizedBox(height: 14),
+              _TopPlacesByCheckinsCard(places: stats.topPlacesByCheckins),
             ],
           ),
       ],
@@ -527,6 +529,115 @@ class _PopularToursCard extends StatelessWidget {
                     const SizedBox(width: 4),
                     Text(
                       tour.viewCount.toString(),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+        ],
+      ),
+    );
+  }
+}
+
+class _TopPlacesByCheckinsCard extends StatelessWidget {
+  final List<PlaceCheckinCount> places;
+
+  const _TopPlacesByCheckinsCard({required this.places});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.035),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.place_rounded, color: AppTheme.success),
+              SizedBox(width: 8),
+              Text(
+                'Top Places by Check-ins',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w900,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (places.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                'No check-ins recorded yet',
+                style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+              ),
+            )
+          else
+            ...places.indexed.map((entry) {
+              final (index, place) = entry;
+              return Padding(
+                padding: EdgeInsets.only(top: index == 0 ? 0 : 8),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 26,
+                      height: 26,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: AppTheme.success.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        '${index + 1}',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w900,
+                          color: AppTheme.success,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        place.placeName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Icon(
+                      Icons.check_circle_outline_rounded,
+                      size: 14,
+                      color: AppTheme.textSecondary,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      place.checkinCount.toString(),
                       style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w800,

@@ -53,7 +53,15 @@ class AdminService {
   }
 
   Future<int> fetchPhotoCount() async {
-    final result = await _client.from('place_photos').select('id').count();
+    final adminId = adminUserId;
+    if (adminId.isEmpty) {
+      throw StateError('Cannot identify the signed-in admin for photo moderation.');
+    }
+    final result = await _client
+        .from('place_photos')
+        .select('id')
+        .or('user_id.is.null,user_id.neq.$adminId')
+        .count();
     final count = (result as dynamic).count;
     if (count is! int) {
       throw StateError('Supabase did not return the photo count.');
@@ -358,6 +366,24 @@ class AdminService {
     final base = _client.from('place_photos').select();
     final filtered = placeId == null ? base : base.eq('place_id', placeId);
     final res = await filtered.order('created_at', ascending: false);
+    return (res as List<dynamic>)
+        .map((e) => PlacePhoto.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<List<PlacePhoto>> fetchUserSubmittedPhotos({String? placeId}) async {
+    final adminId = adminUserId;
+    if (adminId.isEmpty) {
+      throw StateError('Cannot identify the signed-in admin for photo moderation.');
+    }
+    var query = _client
+        .from('place_photos')
+        .select()
+        .or('user_id.is.null,user_id.neq.$adminId');
+    if (placeId != null) {
+      query = query.eq('place_id', placeId);
+    }
+    final res = await query.order('created_at', ascending: false);
     return (res as List<dynamic>)
         .map((e) => PlacePhoto.fromJson(e as Map<String, dynamic>))
         .toList();

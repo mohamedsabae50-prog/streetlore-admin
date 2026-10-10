@@ -29,7 +29,7 @@ class _PhotosListScreenState extends State<PhotosListScreen> {
     });
     try {
       final places = await AdminService.instance.fetchPlaces();
-      final photos = await AdminService.instance.fetchPhotos(
+      final photos = await AdminService.instance.fetchUserSubmittedPhotos(
         placeId: widget.place?.id,
       );
       if (!mounted) return;
