@@ -413,9 +413,6 @@ class AdminService {
     }
     final imageUrl = photo['image_url'] as String? ?? '';
     final storagePath = _placeImageStoragePath(imageUrl);
-    if (storagePath != null) {
-      await _client.storage.from('place-images').remove([storagePath]);
-    }
     final deleted = await _client
         .from('place_photos')
         .delete()
@@ -423,6 +420,9 @@ class AdminService {
         .select('id');
     if ((deleted as List<dynamic>).isEmpty) {
       throw StateError('Supabase did not delete photo $id.');
+    }
+    if (storagePath != null) {
+      await _client.storage.from('place-images').remove([storagePath]);
     }
   }
 

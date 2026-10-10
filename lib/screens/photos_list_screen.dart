@@ -76,6 +76,8 @@ class _PhotosListScreenState extends State<PhotosListScreen> {
       _load();
     } catch (e) {
       if (!mounted) return;
+      await _load();
+      if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Delete failed: $e')));
