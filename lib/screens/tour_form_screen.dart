@@ -35,6 +35,8 @@ class _TourFormScreenState extends State<TourFormScreen> {
   late TextEditingController _search;
 
   String _status = 'published';
+  bool _isPremium = false;
+  bool _isHiddenGem = false;
   final _cover = _CoverDraft();
 
   List<Place> _allPlaces = [];
@@ -62,6 +64,8 @@ class _TourFormScreenState extends State<TourFormScreen> {
     _categoryAr = TextEditingController(text: t?.categoryAr ?? '');
     _imageUrl = TextEditingController(text: t?.imageUrl ?? '');
     _status = t?.status ?? 'published';
+    _isPremium = t?.isPremium ?? false;
+    _isHiddenGem = t?.isHiddenGem ?? false;
     _search = TextEditingController();
     _selectedPlaces = List<Place>.from(t?.places ?? const []);
     _load();
@@ -194,6 +198,8 @@ class _TourFormScreenState extends State<TourFormScreen> {
         categoryAr: _nullable(_categoryAr),
         imageUrl: _imageUrl.text.trim(),
         status: _status,
+        isPremium: _isPremium,
+        isHiddenGem: _isHiddenGem,
         places: _selectedPlaces,
       );
       if (_isEditing) {
@@ -485,6 +491,36 @@ class _TourFormScreenState extends State<TourFormScreen> {
                     },
                   ),
                   const SizedBox(height: 24),
+
+                  SwitchListTile.adaptive(
+                    contentPadding: EdgeInsets.zero,
+                    value: _isPremium,
+                    onChanged: (value) =>
+                        setState(() => _isPremium = value),
+                    title: const Text(
+                      'Premium Tour (Pro Users Only)',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    subtitle: const Text(
+                      'Only Streetlore Pro users can start this tour.',
+                    ),
+                    activeThumbColor: AppTheme.primary,
+                  ),
+                  SwitchListTile.adaptive(
+                    contentPadding: EdgeInsets.zero,
+                    value: _isHiddenGem,
+                    onChanged: (value) =>
+                        setState(() => _isHiddenGem = value),
+                    title: const Text(
+                      'Hidden Gem Tour',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    subtitle: const Text(
+                      'Hidden gem tours are also restricted to Pro users.',
+                    ),
+                    activeThumbColor: AppTheme.primary,
+                  ),
+                  const SizedBox(height: 12),
 
                   Row(
                     children: [

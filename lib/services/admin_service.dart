@@ -301,6 +301,8 @@ class AdminService {
       'category_ar': tour.categoryAr ?? '',
       'image_url': tour.imageUrl,
       'status': tour.status,
+      'is_premium': tour.isPremium,
+      'is_hidden_gem': tour.isHiddenGem,
     });
     if (tour.places.isNotEmpty) {
       await _replaceTourWaypoints(

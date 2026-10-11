@@ -345,6 +345,8 @@ class Tour {
   final String imageUrl;
   final String status;
   final int viewCount;
+  final bool isPremium;
+  final bool isHiddenGem;
   final List<Place> places;
 
   const Tour({
@@ -360,6 +362,8 @@ class Tour {
     required this.imageUrl,
     this.status = 'published',
     this.viewCount = 0,
+    this.isPremium = false,
+    this.isHiddenGem = false,
     this.places = const [],
   });
 
@@ -397,6 +401,8 @@ class Tour {
     imageUrl: (json['image_url'] as String?) ?? '',
     status: (json['status'] as String?) ?? 'published',
     viewCount: (json['view_count'] as num?)?.toInt() ?? 0,
+    isPremium: (json['is_premium'] as bool?) ?? false,
+    isHiddenGem: (json['is_hidden_gem'] as bool?) ?? false,
     places: ((json['places'] as List<dynamic>?) ?? const [])
         .map((e) => Place.fromJson(e as Map<String, dynamic>))
         .toList(),
@@ -415,6 +421,8 @@ class Tour {
     'image_url': imageUrl,
     'status': status,
     'view_count': viewCount,
+    'is_premium': isPremium,
+    'is_hidden_gem': isHiddenGem,
     'places': places.map((e) => e.toJson()).toList(),
   };
 
@@ -429,6 +437,8 @@ class Tour {
     'category_ar': categoryAr ?? '',
     'image_url': imageUrl,
     'status': status,
+    'is_premium': isPremium,
+    'is_hidden_gem': isHiddenGem,
   };
 
   Tour copyWith({
@@ -444,6 +454,8 @@ class Tour {
     String? imageUrl,
     String? status,
     int? viewCount,
+    bool? isPremium,
+    bool? isHiddenGem,
     List<Place>? places,
   }) => Tour(
     id: id ?? this.id,
@@ -458,6 +470,8 @@ class Tour {
     imageUrl: imageUrl ?? this.imageUrl,
     status: status ?? this.status,
     viewCount: viewCount ?? this.viewCount,
+    isPremium: isPremium ?? this.isPremium,
+    isHiddenGem: isHiddenGem ?? this.isHiddenGem,
     places: places ?? this.places,
   );
 }
