@@ -1,19 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../config/supabase_config.dart';
 import '../models/models.dart';
 import '../services/admin_service.dart';
 import '../theme.dart';
 import 'tour_form_screen.dart';
-
-const String _toursStorageBucket = 'tours';
 
 /// Resolves a stored tour image reference to a loadable URL.
 ///
 ///  - If the value is already a full http(s) URL, it is returned as-is.
 ///  - If the value looks like a storage object path (e.g.
 ///    `tours/abc123.jpg` or just `abc123.jpg`), we ask the public
-///    Supabase Storage bucket for the matching object and return
-///    its public URL.
+///    Supabase Storage bucket used by admin uploads and return its public URL.
 ///  - Empty / null / unparseable values return null so the caller
 ///    can render the placeholder instead of a broken image.
 String? resolveTourImageUrl(String? stored) {
@@ -28,9 +26,13 @@ String? resolveTourImageUrl(String? stored) {
   }
   try {
     final client = Supabase.instance.client;
+    final bucketPrefix = '${SupabaseConfig.imagesBucket}/';
+    final objectPath = value.startsWith(bucketPrefix)
+        ? value.substring(bucketPrefix.length)
+        : value;
     return client.storage
-        .from(_toursStorageBucket)
-        .getPublicUrl(value)
+        .from(SupabaseConfig.imagesBucket)
+        .getPublicUrl(objectPath)
         .trim();
   } catch (_) {
     return null;
@@ -38,16 +40,16 @@ String? resolveTourImageUrl(String? stored) {
 }
 
 Widget _tourImagePlaceholder() => Container(
-      width: 60,
-      height: 60,
-      color: AppTheme.bg,
-      alignment: Alignment.center,
-      child: const Icon(
-        Icons.image_not_supported_rounded,
-        color: AppTheme.textSecondary,
-        size: 28,
-      ),
-    );
+  width: 60,
+  height: 60,
+  color: AppTheme.bg,
+  alignment: Alignment.center,
+  child: const Icon(
+    Icons.image_not_supported_rounded,
+    color: AppTheme.textSecondary,
+    size: 28,
+  ),
+);
 
 class ToursListScreen extends StatefulWidget {
   const ToursListScreen({super.key});
@@ -77,8 +79,9 @@ class _ToursListScreenState extends State<ToursListScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _loading = false);
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Load failed: $e')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Load failed: $e')));
     }
   }
 
@@ -90,12 +93,14 @@ class _ToursListScreenState extends State<ToursListScreen> {
         content: Text('"${t.title}" and all its stops will be removed.'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel')),
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
           TextButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              style: TextButton.styleFrom(foregroundColor: AppTheme.danger),
-              child: const Text('Delete')),
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: AppTheme.danger),
+            child: const Text('Delete'),
+          ),
         ],
       ),
     );
@@ -103,13 +108,15 @@ class _ToursListScreenState extends State<ToursListScreen> {
     try {
       await AdminService.instance.deleteTour(t.id);
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Tour deleted')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Tour deleted')));
       _load();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Delete failed: $e')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Delete failed: $e')));
     }
   }
 
@@ -117,8 +124,10 @@ class _ToursListScreenState extends State<ToursListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Tours',
-            style: TextStyle(fontWeight: FontWeight.w800)),
+        title: const Text(
+          'Tours',
+          style: TextStyle(fontWeight: FontWeight.w800),
+        ),
         backgroundColor: Colors.white,
         elevation: 0,
       ),
@@ -136,141 +145,151 @@ class _ToursListScreenState extends State<ToursListScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _tours.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.tour_rounded,
-                          size: 64,
-                          color: AppTheme.textSecondary
-                              .withValues(alpha: 0.4)),
-                      const SizedBox(height: 10),
-                      const Text('No tours yet',
-                          style: TextStyle(color: AppTheme.textSecondary)),
-                    ],
+          ? Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.tour_rounded,
+                    size: 64,
+                    color: AppTheme.textSecondary.withValues(alpha: 0.4),
                   ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _load,
-                  child: ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 90),
-                    itemCount: _tours.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 8),
-                    itemBuilder: (context, i) {
-                      final t = _tours[i];
-                      final coverImageUrl = resolveTourImageUrl(t.imageUrl);
-                      return Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: AppTheme.surface,
-                          borderRadius: BorderRadius.circular(14),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.04),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
+                  const SizedBox(height: 10),
+                  const Text(
+                    'No tours yet',
+                    style: TextStyle(color: AppTheme.textSecondary),
+                  ),
+                ],
+              ),
+            )
+          : RefreshIndicator(
+              onRefresh: _load,
+              child: ListView.separated(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 90),
+                itemCount: _tours.length,
+                separatorBuilder: (_, _) => const SizedBox(height: 8),
+                itemBuilder: (context, i) {
+                  final t = _tours[i];
+                  final coverImageUrl = resolveTourImageUrl(t.imageUrl);
+                  return Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppTheme.surface,
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.04),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
                         ),
-                        child: Row(
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(10),
-                              child: coverImageUrl != null
-                                  ? Image.network(
-                                      coverImageUrl,
-                                      width: 60,
-                                      height: 60,
-                                      cacheWidth: 180,
-                                      cacheHeight: 180,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (_, _, _) =>
-                                          _tourImagePlaceholder(),
-                                      loadingBuilder: (_, _, _) =>
-                                          _tourImagePlaceholder(),
-                                    )
-                                  : _tourImagePlaceholder(),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    t.title,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w800,
-                                      color: AppTheme.textPrimary,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    '${t.duration} · ${t.places.length} stops',
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      color: AppTheme.textSecondary,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 5),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 3,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: t.status == 'published'
-                                          ? AppTheme.success.withValues(
-                                              alpha: 0.12,
-                                            )
-                                          : AppTheme.textSecondary.withValues(
-                                              alpha: 0.12,
-                                            ),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Text(
-                                      t.status == 'published'
-                                          ? 'Published'
-                                          : 'Draft',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w800,
-                                        color: t.status == 'published'
-                                            ? AppTheme.success
-                                            : AppTheme.textSecondary,
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: coverImageUrl != null
+                              ? Image.network(
+                                  coverImageUrl,
+                                  width: 60,
+                                  height: 60,
+                                  cacheWidth: 180,
+                                  cacheHeight: 180,
+                                  fit: BoxFit.cover,
+                                  webHtmlElementStrategy:
+                                      WebHtmlElementStrategy.fallback,
+                                  errorBuilder: (_, _, _) =>
+                                      _tourImagePlaceholder(),
+                                  loadingBuilder: (_, child, loadingProgress) {
+                                    if (loadingProgress == null) {
+                                      return child;
+                                    }
+                                    return _tourImagePlaceholder();
+                                  },
+                                )
+                              : _tourImagePlaceholder(),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                t.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppTheme.textPrimary,
+                                ),
                               ),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.edit_rounded,
-                                  color: AppTheme.primary),
-                              onPressed: () async {
-                                final result = await Navigator.push<Tour>(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (_) =>
-                                          TourFormScreen(tour: t)),
-                                );
-                                if (result != null) _load();
-                              },
-                            ),
-                            IconButton(
-                              icon: const Icon(
-                                  Icons.delete_outline_rounded,
-                                  color: AppTheme.danger),
-                              onPressed: () => _delete(t),
-                            ),
-                          ],
+                              const SizedBox(height: 2),
+                              Text(
+                                '${t.duration} · ${t.places.length} stops',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppTheme.textSecondary,
+                                ),
+                              ),
+                              const SizedBox(height: 5),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 3,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: t.status == 'published'
+                                      ? AppTheme.success.withValues(alpha: 0.12)
+                                      : AppTheme.textSecondary.withValues(
+                                          alpha: 0.12,
+                                        ),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  t.status == 'published'
+                                      ? 'Published'
+                                      : 'Draft',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                    color: t.status == 'published'
+                                        ? AppTheme.success
+                                        : AppTheme.textSecondary,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      );
-                    },
-                  ),
-                ),
+                        IconButton(
+                          icon: const Icon(
+                            Icons.edit_rounded,
+                            color: AppTheme.primary,
+                          ),
+                          onPressed: () async {
+                            final result = await Navigator.push<Tour>(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => TourFormScreen(tour: t),
+                              ),
+                            );
+                            if (result != null) _load();
+                          },
+                        ),
+                        IconButton(
+                          icon: const Icon(
+                            Icons.delete_outline_rounded,
+                            color: AppTheme.danger,
+                          ),
+                          onPressed: () => _delete(t),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
     );
   }
 }
