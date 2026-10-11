@@ -1,8 +1,53 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/models.dart';
 import '../services/admin_service.dart';
 import '../theme.dart';
 import 'tour_form_screen.dart';
+
+const String _toursStorageBucket = 'tours';
+
+/// Resolves a stored tour image reference to a loadable URL.
+///
+///  - If the value is already a full http(s) URL, it is returned as-is.
+///  - If the value looks like a storage object path (e.g.
+///    `tours/abc123.jpg` or just `abc123.jpg`), we ask the public
+///    Supabase Storage bucket for the matching object and return
+///    its public URL.
+///  - Empty / null / unparseable values return null so the caller
+///    can render the placeholder instead of a broken image.
+String? resolveTourImageUrl(String? stored) {
+  if (stored == null) return null;
+  final value = stored.trim();
+  if (value.isEmpty) return null;
+  final uri = Uri.tryParse(value);
+  if (uri != null &&
+      (uri.scheme == 'http' || uri.scheme == 'https') &&
+      uri.host.isNotEmpty) {
+    return value;
+  }
+  try {
+    final client = Supabase.instance.client;
+    return client.storage
+        .from(_toursStorageBucket)
+        .getPublicUrl(value)
+        .trim();
+  } catch (_) {
+    return null;
+  }
+}
+
+Widget _tourImagePlaceholder() => Container(
+      width: 60,
+      height: 60,
+      color: AppTheme.bg,
+      alignment: Alignment.center,
+      child: const Icon(
+        Icons.image_not_supported_rounded,
+        color: AppTheme.textSecondary,
+        size: 28,
+      ),
+    );
 
 class ToursListScreen extends StatefulWidget {
   const ToursListScreen({super.key});
@@ -113,7 +158,7 @@ class _ToursListScreenState extends State<ToursListScreen> {
                     separatorBuilder: (_, _) => const SizedBox(height: 8),
                     itemBuilder: (context, i) {
                       final t = _tours[i];
-                      final coverImageUrl = t.coverImageUrl;
+                      final coverImageUrl = resolveTourImageUrl(t.imageUrl);
                       return Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
@@ -139,25 +184,12 @@ class _ToursListScreenState extends State<ToursListScreen> {
                                       cacheWidth: 180,
                                       cacheHeight: 180,
                                       fit: BoxFit.cover,
-                                      errorBuilder: (_, _, _) => Container(
-                                        width: 60,
-                                        height: 60,
-                                        color: AppTheme.bg,
-                                        child: const Icon(
-                                          Icons.image_not_supported_rounded,
-                                          color: AppTheme.textSecondary,
-                                        ),
-                                      ),
+                                      errorBuilder: (_, _, _) =>
+                                          _tourImagePlaceholder(),
+                                      loadingBuilder: (_, _, _) =>
+                                          _tourImagePlaceholder(),
                                     )
-                                  : Container(
-                                      width: 60,
-                                      height: 60,
-                                      color: AppTheme.bg,
-                                      child: const Icon(
-                                        Icons.image_not_supported_rounded,
-                                        color: AppTheme.textSecondary,
-                                      ),
-                                  ),
+                                  : _tourImagePlaceholder(),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
