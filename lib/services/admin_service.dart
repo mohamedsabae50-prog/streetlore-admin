@@ -129,6 +129,52 @@ class AdminService {
     }
   }
 
+  Future<bool> setUserProStatus(String userId, bool isPro) async {
+    final response = await _client.functions.invoke(
+      'admin-user-management',
+      body: {'action': 'set_pro', 'user_id': userId, 'is_pro': isPro},
+    );
+    if (response.status < 200 || response.status >= 300) {
+      final data = response.data;
+      final detail = data is Map<String, dynamic>
+          ? data['message'] ?? data['error']
+          : null;
+      throw StateError(
+        'Pro status update failed (${response.status})'
+        '${detail == null ? '' : ': $detail'}',
+      );
+    }
+    return response.data is Map && response.data['is_pro'] == true;
+  }
+
+  Future<({List<AdminChatLog> logs, bool hasMore})> fetchAiChatLogs({
+    int page = 1,
+    int perPage = 50,
+  }) async {
+    final response = await _client.functions.invoke(
+      'admin-user-management',
+      body: {'action': 'chat_logs', 'page': page, 'per_page': perPage},
+    );
+    if (response.status < 200 || response.status >= 300) {
+      throw StateError('AI chat logs request failed (${response.status}).');
+    }
+    final responseData = response.data;
+    final dynamic data = switch (responseData) {
+      String value => jsonDecode(value),
+      Uint8List value => jsonDecode(utf8.decode(value)),
+      _ => responseData,
+    };
+    if (data is! Map<String, dynamic> || data['logs'] is! List) {
+      throw const FormatException('Invalid AI chat logs response.');
+    }
+    return (
+      logs: (data['logs'] as List<dynamic>)
+          .map((log) => AdminChatLog.fromJson(log as Map<String, dynamic>))
+          .toList(),
+      hasMore: data['has_more'] == true,
+    );
+  }
+
   Future<List<Place>> fetchPlaces() async {
     // v1.0.69 fix: sort by display_order first, then by id. Previously
     // this only ordered by id, which made the admin page always show

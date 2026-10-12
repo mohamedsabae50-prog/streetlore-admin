@@ -5,18 +5,53 @@ class AdminUser {
   final String email;
   final String name;
   final DateTime? createdAt;
+  final bool isPro;
 
   const AdminUser({
     required this.id,
     required this.email,
     required this.name,
     this.createdAt,
+    this.isPro = false,
   });
+
+  AdminUser copyWith({bool? isPro}) => AdminUser(
+    id: id,
+    email: email,
+    name: name,
+    createdAt: createdAt,
+    isPro: isPro ?? this.isPro,
+  );
 
   factory AdminUser.fromJson(Map<String, dynamic> json) => AdminUser(
     id: json['id'] as String,
     email: (json['email'] as String?) ?? '',
     name: (json['name'] as String?) ?? 'Unnamed user',
+    createdAt: DateTime.tryParse((json['created_at'] as String?) ?? ''),
+    isPro: json['is_pro'] == true,
+  );
+}
+
+class AdminChatLog {
+  final String id;
+  final String userId;
+  final String prompt;
+  final String response;
+  final DateTime? createdAt;
+
+  const AdminChatLog({
+    required this.id,
+    required this.userId,
+    required this.prompt,
+    required this.response,
+    this.createdAt,
+  });
+
+  factory AdminChatLog.fromJson(Map<String, dynamic> json) => AdminChatLog(
+    id: json['id'] as String,
+    userId: json['user_id'] as String,
+    prompt: json['user_prompt'] as String,
+    response: json['ai_response'] as String,
     createdAt: DateTime.tryParse((json['created_at'] as String?) ?? ''),
   );
 }

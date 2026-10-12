@@ -22,6 +22,7 @@ class _UsersListScreenState extends State<UsersListScreen> {
   String _query = '';
   String? _error;
   String? _deletingUserId;
+  String? _updatingProUserId;
   int _page = 1;
   bool _loading = true;
   bool _loadingMore = false;
@@ -134,6 +135,32 @@ class _UsersListScreenState extends State<UsersListScreen> {
     }
   }
 
+  Future<void> _setProStatus(AdminUser user, bool isPro) async {
+    setState(() => _updatingProUserId = user.id);
+    try {
+      await AdminService.instance.setUserProStatus(user.id, isPro);
+      if (!mounted) return;
+      setState(() {
+        final index = _users.indexWhere((item) => item.id == user.id);
+        if (index >= 0) _users[index] = user.copyWith(isPro: isPro);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            isPro ? 'Pro granted to ${user.name}' : 'Pro removed from ${user.name}',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Pro status update failed: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _updatingProUserId = null);
+    }
+  }
+
   bool _containsArabic(String value) =>
       RegExp(r'[\u0600-\u06FF]').hasMatch(value);
 
@@ -221,6 +248,7 @@ class _UsersListScreenState extends State<UsersListScreen> {
                         }
                         final user = _users[index];
                         final deleting = _deletingUserId == user.id;
+                        final updatingPro = _updatingProUserId == user.id;
                         return Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
@@ -283,23 +311,44 @@ class _UsersListScreenState extends State<UsersListScreen> {
                                   ],
                                 ),
                               ),
+                              Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    user.isPro ? 'PRO' : 'FREE',
+                                    style: TextStyle(
+                                      color: user.isPro
+                                          ? AppTheme.primary
+                                          : AppTheme.textSecondary,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                  if (updatingPro)
+                                    const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                    )
+                                  else
+                                    Switch(
+                                      value: user.isPro,
+                                      onChanged: (value) => _setProStatus(user, value),
+                                    ),
+                                ],
+                              ),
                               IconButton(
                                 tooltip: 'Delete user account',
-                                onPressed: deleting
+                                onPressed: deleting || updatingPro
                                     ? null
                                     : () => _deleteUser(user),
                                 icon: deleting
                                     ? const SizedBox(
                                         width: 18,
                                         height: 18,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                        ),
+                                        child: CircularProgressIndicator(strokeWidth: 2),
                                       )
-                                    : const Icon(
-                                        Icons.delete_outline_rounded,
-                                        color: AppTheme.danger,
-                                      ),
+                                    : const Icon(Icons.delete_outline_rounded, color: AppTheme.danger),
                               ),
                             ],
                           ),

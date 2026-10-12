@@ -8,6 +8,7 @@ import 'places_list_screen.dart';
 import 'tour_form_screen.dart';
 import 'tours_list_screen.dart';
 import 'users_list_screen.dart';
+import 'ai_chat_logs_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -250,10 +251,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 icon: Icons.people_alt_rounded,
                 color: AppTheme.warning,
                 title: 'Manage Users',
-                subtitle: 'Search users and remove inappropriate accounts',
+                subtitle: 'Search users, grant Pro, or remove accounts',
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const UsersListScreen()),
+                ),
+              ),
+              const SizedBox(height: 10),
+              _ActionCard(
+                icon: Icons.chat_bubble_outline_rounded,
+                color: AppTheme.primary,
+                title: 'AI Chat Logs',
+                subtitle: 'Review recent user prompts and AI responses',
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AiChatLogsScreen()),
                 ),
               ),
             ],
