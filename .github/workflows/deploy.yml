@@ -21,7 +21,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          persist-credentials: false
+          fetch-depth: 0
+          persist-credentials: true
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -42,12 +43,23 @@ jobs:
       - name: Disable Jekyll
         run: touch build/web/.nojekyll
 
-      - name: Deploy to gh-pages
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./build/web
-          publish_branch: gh-pages
-          user_name: 'streetlore-mavis'
-          user_email: 'streetlore-mavis@users.noreply.github.com'
-          commit_message: 'deploy: admin ${{ github.event.head_commit.message }}'
+      - name: Push build/web to gh-pages
+        run: |
+            set -e
+            BUILD_SHA="${GITHUB_SHA::7}"
+            COMMIT_MSG="${GITHUB_EVENT_HEAD_COMMIT_MESSAGE:-update}"
+            COMMIT_MSG=${COMMIT_MSG%%$'\n'*}
+            git config user.name 'streetlore-mavis'
+            git config user.email 'streetlore-mavis@users.noreply.github.com'
+            TMP_DIR=$(mktemp -d)
+            git worktree add -f "$TMP_DIR" gh-pages
+            cd "$TMP_DIR"
+            # Clear everything except .git
+            find . -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
+            cp -r $GITHUB_WORKSPACE/build/web/. .
+            touch .nojekyll
+            git add -A
+            git commit -m "deploy: admin web from $COMMIT_MSG ($BUILD_SHA)"
+            git push origin gh-pages
+            cd "$GITHUB_WORKSPACE"
+            git worktree remove --force "$TMP_DIR"
