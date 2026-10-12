@@ -1043,7 +1043,12 @@ p=new A.Q1(new A.a7e(q),new A.EK(new A.Cu(s),!1,!1,B.au,o,p,"/",r,r,r,r,r),A.b([
 p.adV()
 return p},
 b4_(a){return new A.abI($.a9,a)},
-aO8(){return []},
+aO8(){var s,r,q,p,o=v.G,n=o.window,m=A.b3x(n.navigator)
+if(m==null||m.length===0)return B.Pb
+s=A.b([],t.ss)
+for(n=m.length,r=0;r<m.length;m.length===n||(0,A.E)(m),++r){q=m[r]
+p=new o.Intl.Locale(q)
+s.push(new A.le(p.language,p.script,p.region))}return s},
 bbm(a,b){var s=a.k6(b),r=A.bdh(A.aT(s.b))
 switch(s.a){case"setDevicePixelRatio":$.dy().d=r
 $.aW().x.$0()
