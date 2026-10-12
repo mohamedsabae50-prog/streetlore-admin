@@ -129,10 +129,13 @@ class AdminService {
     }
   }
 
-  Future<bool> setUserProStatus(String userId, bool isPro) async {
+  Future<({String tier, DateTime? endDate})> setUserSubscriptionPlan(
+    String userId,
+    String plan,
+  ) async {
     final response = await _client.functions.invoke(
       'admin-user-management',
-      body: {'action': 'set_pro', 'user_id': userId, 'is_pro': isPro},
+      body: {'action': 'set_plan', 'user_id': userId, 'plan': plan},
     );
     if (response.status < 200 || response.status >= 300) {
       final data = response.data;
@@ -140,11 +143,18 @@ class AdminService {
           ? data['message'] ?? data['error']
           : null;
       throw StateError(
-        'Pro status update failed (${response.status})'
+        'Subscription plan update failed (${response.status})'
         '${detail == null ? '' : ': $detail'}',
       );
     }
-    return response.data is Map && response.data['is_pro'] == true;
+    final data = response.data;
+    if (data is! Map || data['subscription_tier'] is! String) {
+      throw const FormatException('Invalid subscription plan response.');
+    }
+    return (
+      tier: data['subscription_tier'] as String,
+      endDate: DateTime.tryParse((data['subscription_end_date'] as String?) ?? ''),
+    );
   }
 
   Future<({List<AdminChatLog> logs, bool hasMore})> fetchAiChatLogs({

@@ -135,26 +135,74 @@ class _UsersListScreenState extends State<UsersListScreen> {
     }
   }
 
-  Future<void> _setProStatus(AdminUser user, bool isPro) async {
+  Future<void> _selectSubscriptionPlan(AdminUser user) async {
+    final plan = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Subscription plan for ${user.name}'),
+        contentPadding: const EdgeInsets.symmetric(vertical: 8),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _planOption(context, 'weekly', 'Weekly'),
+            _planOption(context, 'monthly', 'Monthly'),
+            _planOption(context, 'lifetime', 'Lifetime'),
+            _planOption(context, 'free', 'Revoke Pro (Free)'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+    if (plan == null) return;
+    await _setSubscriptionPlan(user, plan);
+  }
+
+  Widget _planOption(BuildContext context, String plan, String title) =>
+      ListTile(
+        leading: Icon(
+          plan == 'free' ? Icons.person_outline_rounded : Icons.workspace_premium_rounded,
+          color: plan == 'free' ? AppTheme.textSecondary : AppTheme.primary,
+        ),
+        title: Text(title),
+        onTap: () => Navigator.pop(context, plan),
+      );
+
+  Future<void> _setSubscriptionPlan(AdminUser user, String plan) async {
     setState(() => _updatingProUserId = user.id);
     try {
-      await AdminService.instance.setUserProStatus(user.id, isPro);
+      final updated = await AdminService.instance.setUserSubscriptionPlan(
+        user.id,
+        plan,
+      );
       if (!mounted) return;
       setState(() {
         final index = _users.indexWhere((item) => item.id == user.id);
-        if (index >= 0) _users[index] = user.copyWith(isPro: isPro);
+        if (index >= 0) {
+          _users[index] = user.copyWith(
+            isPro: plan != 'free',
+            subscriptionTier: updated.tier,
+            subscriptionEndDate: updated.endDate,
+          );
+        }
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            isPro ? 'Pro granted to ${user.name}' : 'Pro removed from ${user.name}',
+            plan == 'free'
+                ? 'Pro revoked for ${user.name}'
+                : '${plan[0].toUpperCase()}${plan.substring(1)} Pro granted to ${user.name}',
           ),
         ),
       );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Pro status update failed: $e')),
+        SnackBar(content: Text('Subscription plan update failed: $e')),
       );
     } finally {
       if (mounted) setState(() => _updatingProUserId = null);
@@ -315,7 +363,9 @@ class _UsersListScreenState extends State<UsersListScreen> {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Text(
-                                    user.isPro ? 'PRO' : 'FREE',
+                                    user.isPro
+                                        ? 'PRO · ${user.subscriptionTier ?? 'legacy'}'
+                                        : 'FREE',
                                     style: TextStyle(
                                       color: user.isPro
                                           ? AppTheme.primary
@@ -324,6 +374,14 @@ class _UsersListScreenState extends State<UsersListScreen> {
                                       fontWeight: FontWeight.w800,
                                     ),
                                   ),
+                                  if (user.subscriptionEndDate != null)
+                                    Text(
+                                      'Until ${user.subscriptionEndDate!.toLocal().toString().split(' ').first}',
+                                      style: const TextStyle(
+                                        color: AppTheme.textSecondary,
+                                        fontSize: 9,
+                                      ),
+                                    ),
                                   if (updatingPro)
                                     const SizedBox(
                                       width: 18,
@@ -331,9 +389,14 @@ class _UsersListScreenState extends State<UsersListScreen> {
                                       child: CircularProgressIndicator(strokeWidth: 2),
                                     )
                                   else
-                                    Switch(
-                                      value: user.isPro,
-                                      onChanged: (value) => _setProStatus(user, value),
+                                    TextButton(
+                                      onPressed: () => _selectSubscriptionPlan(user),
+                                      style: TextButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                                        minimumSize: Size.zero,
+                                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                      ),
+                                      child: const Text('Manage plan'),
                                     ),
                                 ],
                               ),

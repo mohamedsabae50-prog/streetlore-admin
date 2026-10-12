@@ -6,6 +6,8 @@ class AdminUser {
   final String name;
   final DateTime? createdAt;
   final bool isPro;
+  final String? subscriptionTier;
+  final DateTime? subscriptionEndDate;
 
   const AdminUser({
     required this.id,
@@ -13,14 +15,22 @@ class AdminUser {
     required this.name,
     this.createdAt,
     this.isPro = false,
+    this.subscriptionTier,
+    this.subscriptionEndDate,
   });
 
-  AdminUser copyWith({bool? isPro}) => AdminUser(
+  AdminUser copyWith({
+    bool? isPro,
+    String? subscriptionTier,
+    DateTime? subscriptionEndDate,
+  }) => AdminUser(
     id: id,
     email: email,
     name: name,
     createdAt: createdAt,
     isPro: isPro ?? this.isPro,
+    subscriptionTier: subscriptionTier ?? this.subscriptionTier,
+    subscriptionEndDate: subscriptionEndDate,
   );
 
   factory AdminUser.fromJson(Map<String, dynamic> json) => AdminUser(
@@ -29,6 +39,10 @@ class AdminUser {
     name: (json['name'] as String?) ?? 'Unnamed user',
     createdAt: DateTime.tryParse((json['created_at'] as String?) ?? ''),
     isPro: json['is_pro'] == true,
+    subscriptionTier: json['subscription_tier'] as String?,
+    subscriptionEndDate: DateTime.tryParse(
+      (json['subscription_end_date'] as String?) ?? '',
+    ),
   );
 }
 
