@@ -20,6 +20,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -46,7 +48,6 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./build/web
           publish_branch: gh-pages
-          keep_files: false
-          force_orphan: true
           user_name: 'streetlore-mavis'
           user_email: 'streetlore-mavis@users.noreply.github.com'
+          commit_message: 'deploy: admin ${{ github.event.head_commit.message }}'
