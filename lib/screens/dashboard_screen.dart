@@ -9,6 +9,7 @@ import 'tour_form_screen.dart';
 import 'tours_list_screen.dart';
 import 'users_list_screen.dart';
 import 'ai_chat_logs_screen.dart';
+import 'reports_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -255,6 +256,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const UsersListScreen()),
+                ),
+              ),
+              const SizedBox(height: 10),
+              _ActionCard(
+                icon: Icons.flag_rounded,
+                color: AppTheme.danger,
+                title: 'Moderation / Reports',
+                subtitle: 'Review user reports and moderate content',
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ReportsScreen()),
                 ),
               ),
               const SizedBox(height: 10),
