@@ -56,7 +56,9 @@ class AdminService {
   Future<int> fetchPhotoCount() async {
     final adminId = adminUserId;
     if (adminId.isEmpty) {
-      throw StateError('Cannot identify the signed-in admin for photo moderation.');
+      throw StateError(
+        'Cannot identify the signed-in admin for photo moderation.',
+      );
     }
     final result = await _client
         .from('place_photos')
@@ -68,6 +70,54 @@ class AdminService {
       throw StateError('Supabase did not return the photo count.');
     }
     return count;
+  }
+
+  Future<List<Map<String, dynamic>>> fetchPendingReports() async {
+    final response = await _client.rpc(
+      'get_pending_reports',
+      params: {'p_limit': 100},
+    );
+    if (response is! List) {
+      throw const FormatException('Invalid pending reports response.');
+    }
+    return response
+        .map((row) => Map<String, dynamic>.from(row as Map))
+        .toList(growable: false);
+  }
+
+  Future<void> dismissReport(String reportId) async {
+    await _client
+        .from('reports')
+        .update({'status': 'dismissed'})
+        .eq('id', reportId)
+        .eq('status', 'pending');
+  }
+
+  Future<void> deleteReportedContent(
+    String reportId,
+    String targetType,
+    String targetId,
+  ) async {
+    switch (targetType) {
+      case 'place':
+        await _client.from('places').delete().eq('id', targetId);
+        break;
+      case 'user':
+        await deleteUser(targetId);
+        break;
+      case 'review':
+        throw StateError(
+          'Review deletion is not available because reviews are not stored '
+          'in a Supabase table yet.',
+        );
+      default:
+        throw ArgumentError.value(targetType, 'targetType');
+    }
+    await _client
+        .from('reports')
+        .update({'status': 'resolved'})
+        .eq('id', reportId)
+        .eq('status', 'pending');
   }
 
   Future<AdminAnalytics> fetchAdminAnalytics() async {
@@ -153,7 +203,9 @@ class AdminService {
     }
     return (
       tier: data['subscription_tier'] as String,
-      endDate: DateTime.tryParse((data['subscription_end_date'] as String?) ?? ''),
+      endDate: DateTime.tryParse(
+        (data['subscription_end_date'] as String?) ?? '',
+      ),
     );
   }
 
@@ -174,15 +226,45 @@ class AdminService {
       Uint8List value => jsonDecode(utf8.decode(value)),
       _ => responseData,
     };
-    if (data is! Map<String, dynamic> || data['logs'] is! List) {
-      throw const FormatException('Invalid AI chat logs response.');
+    if (data is! Map<String, dynamic>) {
+      // Defensive: return an empty page instead of throwing so the
+      // chat-logs screen can still render "no logs yet" instead of a
+      // hard error.
+      return (logs: const <AdminChatLog>[], hasMore: false);
     }
-    return (
-      logs: (data['logs'] as List<dynamic>)
-          .map((log) => AdminChatLog.fromJson(log as Map<String, dynamic>))
-          .toList(),
-      hasMore: data['has_more'] == true,
+    // Prefer the new grouped shape (`threads` / `sessions`). Each thread
+    // contains an array of `messages`; we flatten those into the legacy
+    // AdminChatLog list so the existing screen renders them unchanged.
+    if (data['threads'] is List) {
+      final flattened = <AdminChatLog>[];
+      for (final thread in (data['threads'] as List<dynamic>)) {
+        if (thread is! Map<String, dynamic>) continue;
+        final messages = thread['messages'];
+        if (messages is! List) continue;
+        for (final message in messages) {
+          if (message is! Map<String, dynamic>) continue;
+          flattened.add(AdminChatLog.fromJson(message));
+        }
+      }
+      return (logs: flattened, hasMore: data['has_more'] == true);
+    }
+    // Backwards-compatible: a flat list of logs (older deployments).
+    if (data['logs'] is List) {
+      return (
+        logs: (data['logs'] as List<dynamic>)
+            .map((log) => AdminChatLog.fromJson(log as Map<String, dynamic>))
+            .toList(),
+        hasMore: data['has_more'] == true,
+      );
+    }
+    // Edge Function returned an object we don't recognise yet (could be a
+    // paginated cursor, an empty page, or a future schema). Don't crash;
+    // surface the raw object as an empty list so the user can reload.
+    debugPrint(
+      'AdminService.fetchAiChatLogs: unrecognised payload, '
+      'showing empty page. keys=${data.keys.toList()}',
     );
+    return (logs: const <AdminChatLog>[], hasMore: false);
   }
 
   Future<List<Place>> fetchPlaces() async {
@@ -438,7 +520,9 @@ class AdminService {
   Future<List<PlacePhoto>> fetchUserSubmittedPhotos({String? placeId}) async {
     final adminId = adminUserId;
     if (adminId.isEmpty) {
-      throw StateError('Cannot identify the signed-in admin for photo moderation.');
+      throw StateError(
+        'Cannot identify the signed-in admin for photo moderation.',
+      );
     }
     var query = _client
         .from('place_photos')
