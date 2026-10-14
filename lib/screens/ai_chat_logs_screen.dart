@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import '../models/models.dart';
 import '../services/admin_service.dart';
@@ -72,6 +74,7 @@ class _AiChatLogsScreenState extends State<AiChatLogsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final threads = groupAdminChatLogs(_logs);
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -112,18 +115,18 @@ class _AiChatLogsScreenState extends State<AiChatLogsScreen> {
                 controller: _scrollController,
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.all(16),
-                itemCount: _logs.isEmpty && !_loading && _error == null
+                itemCount: threads.isEmpty && !_loading && _error == null
                     ? 1
-                    : _logs.length + (_loading || _hasMore ? 1 : 0),
+                    : threads.length + (_loading || _hasMore ? 1 : 0),
                 separatorBuilder: (_, _) => const SizedBox(height: 10),
                 itemBuilder: (context, index) {
-                  if (_logs.isEmpty && !_loading && _error == null) {
+                  if (threads.isEmpty && !_loading && _error == null) {
                     return const Padding(
                       padding: EdgeInsets.only(top: 48),
                       child: Center(child: Text('No AI chat logs yet.')),
                     );
                   }
-                  if (index == _logs.length) {
+                  if (index == threads.length) {
                     if (_error != null) {
                       return TextButton(
                         onPressed: _loadMore,
@@ -137,7 +140,7 @@ class _AiChatLogsScreenState extends State<AiChatLogsScreen> {
                       ),
                     );
                   }
-                  return _LogCard(log: _logs[index]);
+                  return _ThreadCard(thread: threads[index]);
                 },
               ),
             ),
@@ -145,46 +148,194 @@ class _AiChatLogsScreenState extends State<AiChatLogsScreen> {
   }
 }
 
-class _LogCard extends StatelessWidget {
-  final AdminChatLog log;
+class _ThreadCard extends StatelessWidget {
+  final AdminChatThread thread;
 
-  const _LogCard({required this.log});
+  const _ThreadCard({required this.thread});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppTheme.surface,
+    final firstPrompt = thread.messages
+        .firstWhere(
+          (message) => message.prompt.trim().isNotEmpty,
+          orElse: () => thread.messages.first,
+        )
+        .prompt;
+    final identifier = thread.userEmail?.isNotEmpty == true
+        ? thread.userEmail!
+        : thread.userId;
+    return Card(
+      margin: EdgeInsets.zero,
+      clipBehavior: Clip.antiAlias,
+      color: AppTheme.surface,
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppTheme.border),
+        side: const BorderSide(color: AppTheme.border),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: ExpansionTile(
+        tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(
+                identifier.isEmpty ? 'Unknown user' : identifier,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w800),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+              decoration: BoxDecoration(
+                color: AppTheme.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                '${thread.messages.length} ${thread.messages.length == 1 ? 'message' : 'messages'}',
+                style: const TextStyle(
+                  color: AppTheme.primary,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ],
+        ),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 5),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '${_formatTime(thread.startedAt)}  →  ${_formatTime(thread.lastMessageAt)}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: AppTheme.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                firstPrompt.isEmpty ? 'No prompt recorded' : firstPrompt,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 12),
+              ),
+            ],
+          ),
+        ),
         children: [
-          Text(
-            log.createdAt?.toLocal().toString().split('.').first ??
-                'Unknown time',
-            style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
-          ),
-          const SizedBox(height: 4),
-          SelectableText(
-            'User: ${log.userId}',
-            style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
-          ),
-          const SizedBox(height: 12),
-          const Text('Prompt', style: TextStyle(fontWeight: FontWeight.w800)),
-          const SizedBox(height: 4),
-          SelectableText(log.prompt),
-          const SizedBox(height: 12),
-          const Text(
-            'AI response',
-            style: TextStyle(fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 4),
-          SelectableText(log.response),
+          for (var index = 0; index < thread.messages.length; index++) ...[
+            if (index > 0) const Divider(height: 20),
+            _TranscriptMessage(message: thread.messages[index]),
+          ],
         ],
       ),
     );
+  }
+
+  String _formatTime(DateTime? value) =>
+      value?.toLocal().toString().split('.').first ?? 'Unknown time';
+}
+
+class _TranscriptMessage extends StatelessWidget {
+  final AdminChatLog message;
+
+  const _TranscriptMessage({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          _formatTime(message.createdAt),
+          style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+        ),
+        const SizedBox(height: 10),
+        const Text('Prompt', style: TextStyle(fontWeight: FontWeight.w800)),
+        const SizedBox(height: 4),
+        _TranscriptBubble(text: message.prompt),
+        const SizedBox(height: 10),
+        const Text(
+          'AI response',
+          style: TextStyle(fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 4),
+        _AiResponse(response: message.response),
+      ],
+    );
+  }
+
+  String _formatTime(DateTime? value) =>
+      value?.toLocal().toString().split('.').first ?? 'Unknown time';
+}
+
+class _TranscriptBubble extends StatelessWidget {
+  final String text;
+
+  const _TranscriptBubble({required this.text});
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      color: AppTheme.bg,
+      borderRadius: BorderRadius.circular(10),
+      border: Border.all(color: AppTheme.border),
+    ),
+    child: SelectableText(text.isEmpty ? 'No content recorded' : text),
+  );
+}
+
+class _AiResponse extends StatelessWidget {
+  final String response;
+
+  const _AiResponse({required this.response});
+
+  @override
+  Widget build(BuildContext context) {
+    final statusCode = _jsonErrorStatusCode(response);
+    if (statusCode != null) {
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+          decoration: BoxDecoration(
+            color: Colors.orange.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.orange.withValues(alpha: 0.35)),
+          ),
+          child: Text(
+            '⚠️ AI Service Unavailable ($statusCode)',
+            style: const TextStyle(
+              color: Colors.deepOrange,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      );
+    }
+    return _TranscriptBubble(text: response);
+  }
+
+  int? _jsonErrorStatusCode(String value) {
+    try {
+      final decoded = jsonDecode(value);
+      if (decoded is! Map) return null;
+      final error = decoded['error'];
+      if (error is! Map) return null;
+      final code = error['code'] ?? decoded['code'] ?? error['status'];
+      final statusCode = code is num ? code.toInt() : int.tryParse('$code');
+      return statusCode != null && statusCode >= 400 && statusCode < 600
+          ? statusCode
+          : null;
+    } on FormatException {
+      return null;
+    }
   }
 }

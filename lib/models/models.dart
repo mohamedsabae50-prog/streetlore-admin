@@ -49,6 +49,8 @@ class AdminUser {
 class AdminChatLog {
   final String id;
   final String userId;
+  final String? userEmail;
+  final String? sessionId;
   final String prompt;
   final String response;
   final DateTime? createdAt;
@@ -56,18 +58,115 @@ class AdminChatLog {
   const AdminChatLog({
     required this.id,
     required this.userId,
+    this.userEmail,
+    this.sessionId,
     required this.prompt,
     required this.response,
     this.createdAt,
   });
 
-  factory AdminChatLog.fromJson(Map<String, dynamic> json) => AdminChatLog(
-    id: json['id'] as String,
-    userId: json['user_id'] as String,
-    prompt: json['user_prompt'] as String,
-    response: json['ai_response'] as String,
-    createdAt: DateTime.tryParse((json['created_at'] as String?) ?? ''),
-  );
+  factory AdminChatLog.fromJson(Map<String, dynamic> json) {
+    final rawEmail = json['user_email'] ?? json['email'];
+    final rawSessionId = json['session_id'] ?? json['sessionId'];
+    return AdminChatLog(
+      id: (json['id'] ?? json['log_id'] ?? '').toString(),
+      userId: (json['user_id'] ?? json['userId'] ?? '').toString(),
+      userEmail: rawEmail?.toString(),
+      sessionId: rawSessionId?.toString(),
+      prompt:
+          (json['user_prompt'] ?? json['prompt'] ?? json['user_message'] ?? '')
+              .toString(),
+      response:
+          (json['ai_response'] ??
+                  json['response'] ??
+                  json['assistant_message'] ??
+                  '')
+              .toString(),
+      createdAt: DateTime.tryParse(
+        (json['created_at'] ?? json['timestamp'] ?? '').toString(),
+      ),
+    );
+  }
+}
+
+class AdminChatThread {
+  final String id;
+  final String userId;
+  final String? userEmail;
+  final String? sessionId;
+  final DateTime? startedAt;
+  final DateTime? lastMessageAt;
+  final List<AdminChatLog> messages;
+
+  const AdminChatThread({
+    required this.id,
+    required this.userId,
+    required this.messages,
+    this.userEmail,
+    this.sessionId,
+    this.startedAt,
+    this.lastMessageAt,
+  });
+}
+
+List<AdminChatThread> groupAdminChatLogs(List<AdminChatLog> logs) {
+  final sortedLogs = logs.toList()
+    ..sort((left, right) {
+      final leftTime = left.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+      final rightTime =
+          right.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+      return leftTime.compareTo(rightTime);
+    });
+  final threadMessages = <String, List<AdminChatLog>>{};
+  final legacyThreadByUser = <String, String>{};
+  final legacyLastMessageByUser = <String, DateTime>{};
+
+  for (final log in sortedLogs) {
+    final sessionId = log.sessionId?.trim();
+    if (sessionId != null && sessionId.isNotEmpty) {
+      final threadId = 'session:${log.userId}:$sessionId';
+      threadMessages.putIfAbsent(threadId, () => []).add(log);
+      legacyThreadByUser.remove(log.userId);
+      legacyLastMessageByUser.remove(log.userId);
+      continue;
+    }
+
+    final time = log.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+    final previousTime = legacyLastMessageByUser[log.userId];
+    final previousThreadId = legacyThreadByUser[log.userId];
+    final canAppendToLegacyThread =
+        previousTime != null &&
+        previousThreadId != null &&
+        time.difference(previousTime) <= const Duration(minutes: 30);
+    final threadId = canAppendToLegacyThread
+        ? previousThreadId
+        : 'legacy:${log.userId}:${log.id}';
+    threadMessages.putIfAbsent(threadId, () => []).add(log);
+    legacyThreadByUser[log.userId] = threadId;
+    legacyLastMessageByUser[log.userId] = time;
+  }
+
+  final threads = threadMessages.entries.map((entry) {
+    final messages = entry.value;
+    final first = messages.first;
+    return AdminChatThread(
+      id: entry.key,
+      userId: first.userId,
+      userEmail: first.userEmail,
+      sessionId: first.sessionId,
+      startedAt: first.createdAt,
+      lastMessageAt: messages.last.createdAt,
+      messages: List.unmodifiable(messages),
+    );
+  }).toList();
+  threads.sort((left, right) {
+    final leftTime =
+        left.lastMessageAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+    final rightTime =
+        right.lastMessageAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+    return rightTime.compareTo(leftTime);
+  });
+  return threads;
 }
 
 class PopularTour {

@@ -226,45 +226,66 @@ class AdminService {
       Uint8List value => jsonDecode(utf8.decode(value)),
       _ => responseData,
     };
-    if (data is! Map<String, dynamic>) {
-      // Defensive: return an empty page instead of throwing so the
-      // chat-logs screen can still render "no logs yet" instead of a
-      // hard error.
-      return (logs: const <AdminChatLog>[], hasMore: false);
-    }
-    // Prefer the new grouped shape (`threads` / `sessions`). Each thread
-    // contains an array of `messages`; we flatten those into the legacy
-    // AdminChatLog list so the existing screen renders them unchanged.
-    if (data['threads'] is List) {
-      final flattened = <AdminChatLog>[];
-      for (final thread in (data['threads'] as List<dynamic>)) {
-        if (thread is! Map<String, dynamic>) continue;
-        final messages = thread['messages'];
-        if (messages is! List) continue;
+    final envelope = data is Map
+        ? Map<String, dynamic>.fromEntries(
+            data.entries
+                .where((entry) => entry.key is String)
+                .map((entry) => MapEntry(entry.key as String, entry.value)),
+          )
+        : const <String, dynamic>{};
+    final rawItems = data is List
+        ? data
+        : envelope['threads'] is List
+        ? envelope['threads']
+        : envelope['sessions'] is List
+        ? envelope['sessions']
+        : envelope['logs'] is List
+        ? envelope['logs']
+        : envelope['items'] is List
+        ? envelope['items']
+        : const <dynamic>[];
+    final logs = <AdminChatLog>[];
+    for (final item in rawItems as List) {
+      final row = _stringKeyedMap(item);
+      if (row == null) continue;
+      final messages = row['messages'];
+      if (messages is List) {
         for (final message in messages) {
-          if (message is! Map<String, dynamic>) continue;
-          flattened.add(AdminChatLog.fromJson(message));
+          final messageRow = _stringKeyedMap(message);
+          if (messageRow == null) continue;
+          logs.add(
+            AdminChatLog.fromJson({
+              ...messageRow,
+              'user_id': messageRow['user_id'] ?? row['user_id'],
+              'user_email':
+                  messageRow['user_email'] ??
+                  messageRow['email'] ??
+                  row['user_email'] ??
+                  row['email'],
+              'session_id': messageRow['session_id'] ?? row['session_id'],
+            }),
+          );
         }
+      } else {
+        logs.add(AdminChatLog.fromJson(row));
       }
-      return (logs: flattened, hasMore: data['has_more'] == true);
     }
-    // Backwards-compatible: a flat list of logs (older deployments).
-    if (data['logs'] is List) {
-      return (
-        logs: (data['logs'] as List<dynamic>)
-            .map((log) => AdminChatLog.fromJson(log as Map<String, dynamic>))
-            .toList(),
-        hasMore: data['has_more'] == true,
+    if (data is! List && envelope.isEmpty && data is! Map) {
+      debugPrint(
+        'AdminService.fetchAiChatLogs: unrecognised payload type '
+        '${data.runtimeType}.',
       );
     }
-    // Edge Function returned an object we don't recognise yet (could be a
-    // paginated cursor, an empty page, or a future schema). Don't crash;
-    // surface the raw object as an empty list so the user can reload.
-    debugPrint(
-      'AdminService.fetchAiChatLogs: unrecognised payload, '
-      'showing empty page. keys=${data.keys.toList()}',
+    return (logs: logs, hasMore: envelope['has_more'] == true);
+  }
+
+  Map<String, dynamic>? _stringKeyedMap(Object? value) {
+    if (value is! Map) return null;
+    return Map<String, dynamic>.fromEntries(
+      value.entries
+          .where((entry) => entry.key is String)
+          .map((entry) => MapEntry(entry.key as String, entry.value)),
     );
-    return (logs: const <AdminChatLog>[], hasMore: false);
   }
 
   Future<List<Place>> fetchPlaces() async {
