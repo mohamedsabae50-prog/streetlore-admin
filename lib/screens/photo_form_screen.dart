@@ -25,7 +25,6 @@ class _PhotoFormScreenState extends State<PhotoFormScreen> {
   bool _loading = true;
   bool _saving = false;
   Uint8List? _pickedBytes;
-  String _pickedExt = 'jpg';
 
   bool get _isEditing => widget.photo != null;
 
@@ -34,7 +33,8 @@ class _PhotoFormScreenState extends State<PhotoFormScreen> {
     super.initState();
     final ph = widget.photo;
     _id = TextEditingController(
-        text: ph?.id ?? 'ph_${DateTime.now().millisecondsSinceEpoch}');
+      text: ph?.id ?? 'ph_${DateTime.now().millisecondsSinceEpoch}',
+    );
     _userName = TextEditingController(text: ph?.userName ?? 'Streetlore');
     _captionAr = TextEditingController(text: ph?.captionAr ?? '');
     _captionEn = TextEditingController(text: ph?.captionEn ?? '');
@@ -58,26 +58,32 @@ class _PhotoFormScreenState extends State<PhotoFormScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _loading = false);
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Failed to load places: $e')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to load places: $e')));
     }
   }
 
   Future<void> _pickImage() async {
     final picker = ImagePicker();
-    final picked = await picker.pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 1600,
-    );
-    if (picked == null) return;
-    final bytes = await picked.readAsBytes();
-    final ext = picked.name.contains('.')
-        ? picked.name.split('.').last.toLowerCase()
-        : 'jpg';
-    setState(() {
-      _pickedBytes = bytes;
-      _pickedExt = ext;
-    });
+    try {
+      final picked = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1280,
+        maxHeight: 1280,
+        imageQuality: 80,
+      );
+      if (picked == null) return;
+      final bytes = await picked.readAsBytes();
+      if (bytes.isEmpty) throw StateError('Selected image file is empty.');
+      if (!mounted) return;
+      setState(() => _pickedBytes = bytes);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not read selected image: $error')),
+      );
+    }
   }
 
   Future<void> _save() async {
@@ -85,8 +91,7 @@ class _PhotoFormScreenState extends State<PhotoFormScreen> {
     final existingUrl = widget.photo?.imageUrl ?? '';
     if (_pickedBytes == null && existingUrl.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Upload a photo from your device first')),
+        const SnackBar(content: Text('Upload a photo from your device first')),
       );
       return;
     }
@@ -94,12 +99,11 @@ class _PhotoFormScreenState extends State<PhotoFormScreen> {
     try {
       String imageUrl = existingUrl;
       if (_pickedBytes != null) {
-        final fileName = '${_id.text.trim()}.$_pickedExt';
+        final fileName = '${_id.text.trim()}.jpg';
         imageUrl = await AdminService.instance.uploadImageBytes(
           _pickedBytes!,
           'place-photos',
           fileName,
-          contentType: _pickedExt == 'png' ? 'image/png' : 'image/jpeg',
         );
       }
       final photo = PlacePhoto(
@@ -124,8 +128,9 @@ class _PhotoFormScreenState extends State<PhotoFormScreen> {
       Navigator.pop(context, photo);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Save failed: $e')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Save failed: $e')));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -135,8 +140,10 @@ class _PhotoFormScreenState extends State<PhotoFormScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isEditing ? 'Edit Photo' : 'New Photo',
-            style: const TextStyle(fontWeight: FontWeight.w800)),
+        title: Text(
+          _isEditing ? 'Edit Photo' : 'New Photo',
+          style: const TextStyle(fontWeight: FontWeight.w800),
+        ),
         backgroundColor: Colors.white,
         elevation: 0,
         actions: [
@@ -148,9 +155,13 @@ class _PhotoFormScreenState extends State<PhotoFormScreen> {
                     height: 18,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : Text(_isEditing ? 'Update' : 'Create',
+                : Text(
+                    _isEditing ? 'Update' : 'Create',
                     style: const TextStyle(
-                        fontWeight: FontWeight.w800, color: AppTheme.primary)),
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.primary,
+                    ),
+                  ),
           ),
         ],
       ),
@@ -166,9 +177,9 @@ class _PhotoFormScreenState extends State<PhotoFormScreen> {
                   ElevatedButton.icon(
                     onPressed: _pickImage,
                     icon: const Icon(Icons.add_a_photo_rounded, size: 18),
-                    label: Text(_pickedBytes == null
-                        ? 'Upload image'
-                        : 'Replace image'),
+                    label: Text(
+                      _pickedBytes == null ? 'Upload image' : 'Replace image',
+                    ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.surface,
                       foregroundColor: AppTheme.primary,
@@ -181,16 +192,21 @@ class _PhotoFormScreenState extends State<PhotoFormScreen> {
                   DropdownButtonFormField<String>(
                     initialValue: _selectedPlaceId,
                     items: _places
-                        .map((p) => DropdownMenuItem(
-                              value: p.id,
-                              child: Text(p.name,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis),
-                            ))
+                        .map(
+                          (p) => DropdownMenuItem(
+                            value: p.id,
+                            child: Text(
+                              p.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        )
                         .toList(),
                     onChanged: (v) => setState(() => _selectedPlaceId = v),
-                    decoration:
-                        const InputDecoration(hintText: 'Choose a place'),
+                    decoration: const InputDecoration(
+                      hintText: 'Choose a place',
+                    ),
                     validator: (v) =>
                         (v == null || v.isEmpty) ? 'Place is required' : null,
                   ),
@@ -247,7 +263,9 @@ class _PhotoFormScreenState extends State<PhotoFormScreen> {
                             height: 18,
                             width: 18,
                             child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Colors.white),
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
                           )
                         : Text(_isEditing ? 'Update Photo' : 'Create Photo'),
                   ),
@@ -262,7 +280,12 @@ class _PhotoFormScreenState extends State<PhotoFormScreen> {
     if (_pickedBytes != null) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(12),
-        child: Image.memory(_pickedBytes!, height: 180, fit: BoxFit.cover),
+        child: Image.memory(
+          _pickedBytes!,
+          height: 180,
+          cacheWidth: 600,
+          fit: BoxFit.cover,
+        ),
       );
     }
     final existingUrl = widget.photo?.imageUrl ?? '';
@@ -272,13 +295,16 @@ class _PhotoFormScreenState extends State<PhotoFormScreen> {
         child: Image.network(
           existingUrl,
           height: 180,
+          cacheWidth: 600,
           fit: BoxFit.cover,
           errorBuilder: (_, _, _) => Container(
             height: 180,
             color: AppTheme.bg,
             child: const Center(
-              child: Text('Image failed to load',
-                  style: TextStyle(color: AppTheme.textSecondary)),
+              child: Text(
+                'Image failed to load',
+                style: TextStyle(color: AppTheme.textSecondary),
+              ),
             ),
           ),
         ),
@@ -295,11 +321,9 @@ class _PhotoFormScreenState extends State<PhotoFormScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.image_outlined,
-                size: 56, color: AppTheme.textSecondary),
+            Icon(Icons.image_outlined, size: 56, color: AppTheme.textSecondary),
             SizedBox(height: 6),
-            Text('No image',
-                style: TextStyle(color: AppTheme.textSecondary)),
+            Text('No image', style: TextStyle(color: AppTheme.textSecondary)),
           ],
         ),
       ),
@@ -307,14 +331,14 @@ class _PhotoFormScreenState extends State<PhotoFormScreen> {
   }
 
   Widget _label(String text) => Padding(
-        padding: const EdgeInsets.only(bottom: 6),
-        child: Text(
-          text,
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w800,
-            color: AppTheme.textPrimary,
-          ),
-        ),
-      );
+    padding: const EdgeInsets.only(bottom: 6),
+    child: Text(
+      text,
+      style: const TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w800,
+        color: AppTheme.textPrimary,
+      ),
+    ),
+  );
 }

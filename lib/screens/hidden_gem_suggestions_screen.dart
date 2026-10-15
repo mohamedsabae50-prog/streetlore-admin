@@ -124,6 +124,7 @@ class _HiddenGemSuggestionsScreenState
                             imageUrl!,
                             height: 190,
                             width: double.infinity,
+                            cacheWidth: 640,
                             fit: BoxFit.cover,
                             errorBuilder: (_, _, _) => const SizedBox(
                               height: 80,

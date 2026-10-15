@@ -1,9 +1,30 @@
 import 'dart:convert';
+import 'dart:math' as math;
 import 'dart:typed_data';
-import 'package:flutter/foundation.dart' show debugPrint;
+import 'package:flutter/foundation.dart' show compute, debugPrint;
+import 'package:image/image.dart' as img;
+import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/supabase_config.dart';
 import '../models/models.dart';
+
+Uint8List _compressImageToJpeg(Uint8List bytes) {
+  final decoded = img.decodeImage(bytes);
+  if (decoded == null) {
+    throw const FormatException('The selected file is not a supported image.');
+  }
+  final normalized = img.bakeOrientation(decoded);
+  final longestSide = math.max(normalized.width, normalized.height);
+  final resized = longestSide > 1280
+      ? img.copyResize(
+          normalized,
+          width: (normalized.width * 1280 / longestSide).round(),
+          height: (normalized.height * 1280 / longestSide).round(),
+          interpolation: img.Interpolation.average,
+        )
+      : normalized;
+  return img.encodeJpg(resized, quality: 80, chroma: img.JpegChroma.yuv420);
+}
 
 class AdminService {
   static AdminService? _instance;
@@ -19,6 +40,9 @@ class AdminService {
       return false;
     }
   }
+
+  String get currentUserEmail =>
+      _client.auth.currentUser?.email ?? 'Unknown account';
 
   /// v1.0.72 — the signed-in admin's auth.uid() (JWT subject). Required
   /// for the RLS policy `user_id::text = auth.uid()::text` to admit
@@ -242,7 +266,14 @@ class AdminService {
       body: {'action': 'chat_logs', 'page': page, 'per_page': perPage},
     );
     if (response.status < 200 || response.status >= 300) {
-      throw StateError('AI chat logs request failed (${response.status}).');
+      final data = response.data;
+      final detail = data is Map<String, dynamic>
+          ? data['message'] ?? data['error']
+          : null;
+      throw StateError(
+        'AI chat logs request failed (${response.status})'
+        '${detail == null ? '' : ': $detail'}',
+      );
     }
     final responseData = response.data;
     final dynamic data = switch (responseData) {
@@ -536,18 +567,49 @@ class AdminService {
   Future<String> uploadImageBytes(
     Uint8List bytes,
     String folder,
-    String fileName, {
-    String contentType = 'image/jpeg',
-  }) async {
-    final path = '$folder/$fileName';
+    String fileName,
+  ) async {
+    final compressedBytes = await _compressImage(bytes);
+    final jpegName = fileName.replaceFirst(RegExp(r'\.[^.]+$'), '.jpg');
+    final path = '$folder/$jpegName';
     await _client.storage
         .from(SupabaseConfig.imagesBucket)
         .uploadBinary(
           path,
-          bytes,
-          fileOptions: FileOptions(contentType: contentType, upsert: true),
+          compressedBytes,
+          fileOptions: FileOptions(contentType: 'image/jpeg', upsert: true),
         );
-    return _client.storage.from(SupabaseConfig.imagesBucket).getPublicUrl(path);
+    final publicUrl = _client.storage
+        .from(SupabaseConfig.imagesBucket)
+        .getPublicUrl(path);
+    final parsedPublicUrl = Uri.parse(publicUrl);
+    final verificationUrl = parsedPublicUrl.replace(
+      queryParameters: {
+        ...parsedPublicUrl.queryParameters,
+        'verify': DateTime.now().microsecondsSinceEpoch.toString(),
+      },
+    );
+    final response = await http
+        .get(verificationUrl)
+        .timeout(const Duration(seconds: 20));
+    if (response.statusCode != 200) {
+      throw StateError(
+        'Uploaded image is not publicly reachable '
+        '(HTTP ${response.statusCode}).',
+      );
+    }
+    return publicUrl;
+  }
+
+  Future<Uint8List> _compressImage(Uint8List bytes) async {
+    if (bytes.isEmpty) {
+      throw ArgumentError.value(bytes, 'bytes', 'Image file is empty.');
+    }
+    return compute(
+      _compressImageToJpeg,
+      bytes,
+      debugLabel: 'Compress admin upload image',
+    );
   }
 
   String publicImageUrl(String path) =>

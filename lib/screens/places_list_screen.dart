@@ -43,7 +43,6 @@ class _PlacesListScreenState extends State<PlacesListScreen> {
   }
 
   Future<void> _persistOrder(int oldIndex, int newIndex) async {
-    if (newIndex > oldIndex) newIndex -= 1;
     final moved = _places.removeAt(oldIndex);
     _places.insert(newIndex, moved);
     setState(() {});
@@ -266,7 +265,7 @@ class _PlacesListScreenState extends State<PlacesListScreen> {
                             padding: const EdgeInsets.fromLTRB(16, 8, 16, 90),
                             itemCount: filtered.length,
                             buildDefaultDragHandles: false,
-                            onReorder: _persistOrder,
+                            onReorderItem: _persistOrder,
                             itemBuilder: (context, i) {
                               final p = filtered[i];
                               return Padding(

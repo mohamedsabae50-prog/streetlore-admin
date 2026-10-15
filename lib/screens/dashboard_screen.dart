@@ -96,18 +96,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Row(
-          children: const [
+          children: [
             Text(
               'Streetlore Admin',
               style: TextStyle(fontWeight: FontWeight.w800),
             ),
             SizedBox(width: 10),
-            Text(
-              'v2.1.4',
+            const Text(
+              'v2.1.5',
               style: TextStyle(
                 fontWeight: FontWeight.w600,
                 fontSize: 12,
                 color: Colors.black54,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Flexible(
+              child: Text(
+                AdminService.instance.currentUserEmail,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w500,
+                  fontSize: 12,
+                  color: Colors.black54,
+                ),
               ),
             ),
           ],

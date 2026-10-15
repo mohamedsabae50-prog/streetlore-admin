@@ -103,8 +103,9 @@ class _TourFormScreenState extends State<TourFormScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _loading = false);
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Failed to load places: $e')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to load places: $e')));
     }
   }
 
@@ -113,29 +114,32 @@ class _TourFormScreenState extends State<TourFormScreen> {
     final picker = ImagePicker();
     XFile? picked;
     try {
-      picked = await picker.pickImage(source: ImageSource.gallery);
+      picked = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1280,
+        maxHeight: 1280,
+        imageQuality: 80,
+      );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not open file picker: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not open file picker: $e')));
       return;
     }
     if (picked == null) return;
     try {
       final bytes = await picked.readAsBytes();
       if (bytes.isEmpty) throw Exception('Picked file is empty');
-      final ext = picked.name.toLowerCase().endsWith('.png') ? 'png' : 'jpg';
       if (!mounted) return;
       setState(() {
         _cover.bytes = bytes;
-        _cover.ext = ext;
         _uploadingCover = true;
       });
       final publicUrl = await AdminService.instance.uploadImageBytes(
         bytes,
         'tours',
-        '${_id.text.trim()}.$ext',
+        '${_id.text.trim()}.jpg',
       );
       if (!mounted) return;
       setState(() {
@@ -146,9 +150,9 @@ class _TourFormScreenState extends State<TourFormScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _uploadingCover = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Cover upload failed: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Cover upload failed: $e')));
     }
   }
 
@@ -174,7 +178,6 @@ class _TourFormScreenState extends State<TourFormScreen> {
 
   void _movePlace(int oldIndex, int newIndex) {
     setState(() {
-      if (newIndex > oldIndex) newIndex -= 1;
       final p = _selectedPlaces.removeAt(oldIndex);
       _selectedPlaces.insert(newIndex, p);
     });
@@ -212,9 +215,9 @@ class _TourFormScreenState extends State<TourFormScreen> {
     } catch (e) {
       if (!mounted) return;
       debugPrint('TourFormScreen save error: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Save failed: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Save failed: $e')));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -225,8 +228,10 @@ class _TourFormScreenState extends State<TourFormScreen> {
     final coverPreview = _cover.uploadedUrl ?? _imageUrl.text.trim();
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isEditing ? 'Edit Tour' : 'New Tour',
-            style: const TextStyle(fontWeight: FontWeight.w800)),
+        title: Text(
+          _isEditing ? 'Edit Tour' : 'New Tour',
+          style: const TextStyle(fontWeight: FontWeight.w800),
+        ),
         backgroundColor: Colors.white,
         elevation: 0,
         actions: [
@@ -238,10 +243,13 @@ class _TourFormScreenState extends State<TourFormScreen> {
                     height: 18,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : Text(_isEditing ? 'Update' : 'Create',
+                : Text(
+                    _isEditing ? 'Update' : 'Create',
                     style: const TextStyle(
-                        fontWeight: FontWeight.w800,
-                        color: AppTheme.primary)),
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.primary,
+                    ),
+                  ),
           ),
         ],
       ),
@@ -400,28 +408,32 @@ class _TourFormScreenState extends State<TourFormScreen> {
                                   ),
                                 )
                               : (kIsWeb
-                                  ? Image.network(
-                                      coverPreview,
-                                      width: 80,
-                                      height: 80,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (_, _, _) => Container(
-                                              color: AppTheme.bg,
-                                              child: const Icon(
-                                                  Icons.broken_image_outlined),
-                                            ),
-                                    )
-                                  : Image.network(
-                                      coverPreview,
-                                      width: 80,
-                                      height: 80,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (_, _, _) => Container(
-                                              color: AppTheme.bg,
-                                              child: const Icon(
-                                                  Icons.broken_image_outlined),
-                                            ),
-                                    )),
+                                    ? Image.network(
+                                        coverPreview,
+                                        width: 80,
+                                        height: 80,
+                                        cacheWidth: 180,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (_, _, _) => Container(
+                                          color: AppTheme.bg,
+                                          child: const Icon(
+                                            Icons.broken_image_outlined,
+                                          ),
+                                        ),
+                                      )
+                                    : Image.network(
+                                        coverPreview,
+                                        width: 80,
+                                        height: 80,
+                                        cacheWidth: 180,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (_, _, _) => Container(
+                                          color: AppTheme.bg,
+                                          child: const Icon(
+                                            Icons.broken_image_outlined,
+                                          ),
+                                        ),
+                                      )),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -430,19 +442,23 @@ class _TourFormScreenState extends State<TourFormScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             OutlinedButton.icon(
-                              onPressed:
-                                  _uploadingCover ? null : _pickAndUploadCover,
+                              onPressed: _uploadingCover
+                                  ? null
+                                  : _pickAndUploadCover,
                               icon: _uploadingCover
                                   ? const SizedBox(
                                       width: 16,
                                       height: 16,
                                       child: CircularProgressIndicator(
-                                          strokeWidth: 2),
+                                        strokeWidth: 2,
+                                      ),
                                     )
                                   : const Icon(Icons.upload_rounded, size: 18),
-                              label: Text(_uploadingCover
-                                  ? 'Uploading…'
-                                  : 'Upload to Supabase'),
+                              label: Text(
+                                _uploadingCover
+                                    ? 'Uploading…'
+                                    : 'Upload to Supabase',
+                              ),
                             ),
                             const SizedBox(height: 6),
                             Text(
@@ -477,10 +493,7 @@ class _TourFormScreenState extends State<TourFormScreen> {
                       border: OutlineInputBorder(),
                     ),
                     items: const [
-                      DropdownMenuItem(
-                        value: 'draft',
-                        child: Text('Draft'),
-                      ),
+                      DropdownMenuItem(value: 'draft', child: Text('Draft')),
                       DropdownMenuItem(
                         value: 'published',
                         child: Text('Published'),
@@ -495,8 +508,7 @@ class _TourFormScreenState extends State<TourFormScreen> {
                   SwitchListTile.adaptive(
                     contentPadding: EdgeInsets.zero,
                     value: _isPremium,
-                    onChanged: (value) =>
-                        setState(() => _isPremium = value),
+                    onChanged: (value) => setState(() => _isPremium = value),
                     title: const Text(
                       'Premium Tour (Pro Users Only)',
                       style: TextStyle(fontWeight: FontWeight.w700),
@@ -509,8 +521,7 @@ class _TourFormScreenState extends State<TourFormScreen> {
                   SwitchListTile.adaptive(
                     contentPadding: EdgeInsets.zero,
                     value: _isHiddenGem,
-                    onChanged: (value) =>
-                        setState(() => _isHiddenGem = value),
+                    onChanged: (value) => setState(() => _isHiddenGem = value),
                     title: const Text(
                       'Hidden Gem Tour',
                       style: TextStyle(fontWeight: FontWeight.w700),
@@ -528,8 +539,10 @@ class _TourFormScreenState extends State<TourFormScreen> {
                       const Spacer(),
                       TextButton.icon(
                         onPressed: _pickPlaces,
-                        icon: const Icon(Icons.add_location_alt_outlined,
-                            size: 18),
+                        icon: const Icon(
+                          Icons.add_location_alt_outlined,
+                          size: 18,
+                        ),
                         label: const Text('Add stops'),
                       ),
                     ],
@@ -541,8 +554,9 @@ class _TourFormScreenState extends State<TourFormScreen> {
                         color: AppTheme.bg,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                            color: AppTheme.border,
-                            style: BorderStyle.solid),
+                          color: AppTheme.border,
+                          style: BorderStyle.solid,
+                        ),
                       ),
                       child: const Center(
                         child: Text(
@@ -557,7 +571,7 @@ class _TourFormScreenState extends State<TourFormScreen> {
                       physics: const NeverScrollableScrollPhysics(),
                       buildDefaultDragHandles: false,
                       itemCount: _selectedPlaces.length,
-                      onReorder: _movePlace,
+                      onReorderItem: _movePlace,
                       itemBuilder: (context, i) {
                         final p = _selectedPlaces[i];
                         return Container(
@@ -575,32 +589,42 @@ class _TourFormScreenState extends State<TourFormScreen> {
                                 index: i,
                                 child: const Padding(
                                   padding: EdgeInsets.only(right: 8),
-                                  child: Icon(Icons.drag_indicator_rounded,
-                                      color: AppTheme.textSecondary),
+                                  child: Icon(
+                                    Icons.drag_indicator_rounded,
+                                    color: AppTheme.textSecondary,
+                                  ),
                                 ),
                               ),
                               CircleAvatar(
                                 radius: 14,
                                 backgroundColor: AppTheme.primary,
-                                child: Text('${i + 1}',
-                                    style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w800)),
+                                child: Text(
+                                  '${i + 1}',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
                               ),
                               const SizedBox(width: 10),
                               Expanded(
-                                child: Text(p.name,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w700,
-                                        color: AppTheme.textPrimary)),
+                                child: Text(
+                                  p.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppTheme.textPrimary,
+                                  ),
+                                ),
                               ),
                               IconButton(
-                                icon: const Icon(Icons.close_rounded,
-                                    color: AppTheme.danger),
+                                icon: const Icon(
+                                  Icons.close_rounded,
+                                  color: AppTheme.danger,
+                                ),
                                 onPressed: () => _removePlace(p),
                               ),
                             ],
@@ -616,10 +640,11 @@ class _TourFormScreenState extends State<TourFormScreen> {
                             height: 18,
                             width: 18,
                             child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Colors.white),
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
                           )
-                        : Text(
-                            _isEditing ? 'Update Tour' : 'Create Tour'),
+                        : Text(_isEditing ? 'Update Tour' : 'Create Tour'),
                   ),
                   const SizedBox(height: 32),
                 ],
@@ -629,13 +654,16 @@ class _TourFormScreenState extends State<TourFormScreen> {
   }
 
   Widget _label(String text) => Padding(
-        padding: const EdgeInsets.only(bottom: 6),
-        child: Text(text,
-            style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-                color: AppTheme.textPrimary)),
-      );
+    padding: const EdgeInsets.only(bottom: 6),
+    child: Text(
+      text,
+      style: const TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w800,
+        color: AppTheme.textPrimary,
+      ),
+    ),
+  );
 }
 
 class _PlacePickerSheet extends StatefulWidget {
@@ -688,11 +716,13 @@ class _PlacePickerSheetState extends State<_PlacePickerSheet> {
     final filtered = q.isEmpty
         ? widget.all
         : widget.all
-            .where((p) =>
-                p.name.toLowerCase().contains(q) ||
-                p.category.toLowerCase().contains(q) ||
-                (p.nameAr?.toLowerCase().contains(q) ?? false))
-            .toList();
+              .where(
+                (p) =>
+                    p.name.toLowerCase().contains(q) ||
+                    p.category.toLowerCase().contains(q) ||
+                    (p.nameAr?.toLowerCase().contains(q) ?? false),
+              )
+              .toList();
     return DraggableScrollableSheet(
       initialChildSize: 0.85,
       minChildSize: 0.5,
@@ -719,15 +749,22 @@ class _PlacePickerSheetState extends State<_PlacePickerSheet> {
                 padding: const EdgeInsets.all(16),
                 child: Row(
                   children: [
-                    const Text('Pick places',
-                        style: TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.w800)),
+                    const Text(
+                      'Pick places',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
                     const Spacer(),
-                    Text('${_selected.length} selected',
-                        style: const TextStyle(
-                            color: AppTheme.textSecondary,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600)),
+                    Text(
+                      '${_selected.length} selected',
+                      style: const TextStyle(
+                        color: AppTheme.textSecondary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -758,14 +795,19 @@ class _PlacePickerSheetState extends State<_PlacePickerSheet> {
                           _selected.add(p.id);
                         }
                       }),
-                      title: Text(_localizedName(p),
-                          style: const TextStyle(
-                              fontWeight: FontWeight.w700,
-                              color: AppTheme.textPrimary)),
+                      title: Text(
+                        _localizedName(p),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
                       subtitle: Text(
                         '${p.category} · ${p.id}',
                         style: const TextStyle(
-                            fontSize: 12, color: AppTheme.textSecondary),
+                          fontSize: 12,
+                          color: AppTheme.textSecondary,
+                        ),
                       ),
                     );
                   },

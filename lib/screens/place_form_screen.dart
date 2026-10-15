@@ -18,7 +18,6 @@ class PlaceFormScreen extends StatefulWidget {
 
 class _PhotoDraft {
   Uint8List? bytes;
-  String ext = 'jpg';
   String captionAr = '';
   String captionEn = '';
   String userName = 'Streetlore';
@@ -124,7 +123,9 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
       text: p?.priceForeignerEgp?.toString() ?? '',
     );
     _rating = TextEditingController(text: (p?.rating ?? 0).toString());
-    _displayOrder = TextEditingController(text: (p?.displayOrder ?? 999).toString());
+    _displayOrder = TextEditingController(
+      text: (p?.displayOrder ?? 999).toString(),
+    );
     _priceLevel = p?.priceLevel ?? PriceLevel.free;
     _isHiddenGem = p?.isHiddenGem ?? false;
     _isFeatured = p?.isFeatured ?? false;
@@ -144,8 +145,9 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
   Future<void> _loadPhotos() async {
     setState(() => _loadingPhotos = true);
     try {
-      final photos =
-          await AdminService.instance.fetchPhotos(placeId: widget.place!.id);
+      final photos = await AdminService.instance.fetchPhotos(
+        placeId: widget.place!.id,
+      );
       if (mounted) {
         setState(() {
           _existingPhotos
@@ -164,7 +166,6 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
     return 'p_$ts';
   }
 
-  
   String? _nullable(TextEditingController c) {
     final t = c.text.trim();
     return t.isEmpty ? null : t;
@@ -176,30 +177,30 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
     try {
       picked = await picker.pickImage(
         source: ImageSource.gallery,
-        maxWidth: 1600,
+        maxWidth: 1280,
+        maxHeight: 1280,
+        imageQuality: 80,
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not open file picker: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not open file picker: $e')));
       return;
     }
     if (picked == null) return;
     try {
       final bytes = await picked.readAsBytes();
       if (bytes.isEmpty) throw Exception('Picked file is empty');
-      final ext = picked.name.toLowerCase().endsWith('.png') ? 'png' : 'jpg';
       if (!mounted) return;
       setState(() {
         draft.bytes = bytes;
-        draft.ext = ext;
       });
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not read file: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not read file: $e')));
     }
   }
 
@@ -208,14 +209,15 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
     final List<XFile> picked;
     try {
       picked = await picker.pickMultiImage(
-        maxWidth: 1600,
-        imageQuality: 85,
+        maxWidth: 1280,
+        maxHeight: 1280,
+        imageQuality: 80,
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not open file picker: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not open file picker: $e')));
       return;
     }
     if (picked.isEmpty) return;
@@ -235,17 +237,29 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
 
   Future<List<_PhotoDraft>> _readPickedFiles(List<XFile> files) async {
     final out = <_PhotoDraft>[];
+    final failures = <String>[];
     for (final file in files) {
       try {
         final bytes = await file.readAsBytes();
-        if (bytes.isEmpty) continue;
-        final ext = file.name.toLowerCase().endsWith('.png') ? 'png' : 'jpg';
-        out.add(_PhotoDraft()
-          ..bytes = bytes
-          ..ext = ext);
-      } catch (_) {
-        continue;
+        if (bytes.isEmpty) {
+          failures.add('${file.name}: selected file was empty');
+          continue;
+        }
+        out.add(_PhotoDraft()..bytes = bytes);
+      } catch (error) {
+        failures.add('${file.name}: $error');
       }
+    }
+    if (failures.isNotEmpty && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Could not read ${failures.length} selected image(s): '
+            '${failures.join('; ')}',
+          ),
+          duration: const Duration(seconds: 8),
+        ),
+      );
     }
     return out;
   }
@@ -267,14 +281,15 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
     final List<XFile> picked;
     try {
       picked = await picker.pickMultiImage(
-        maxWidth: 1600,
-        imageQuality: 85,
+        maxWidth: 1280,
+        maxHeight: 1280,
+        imageQuality: 80,
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not open file picker: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not open file picker: $e')));
       return;
     }
     if (picked.isEmpty) return;
@@ -293,12 +308,17 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
     final picker = ImagePicker();
     final XFile? picked;
     try {
-      picked = await picker.pickImage(source: ImageSource.gallery);
+      picked = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1280,
+        maxHeight: 1280,
+        imageQuality: 80,
+      );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not open file picker: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not open file picker: $e')));
       return;
     }
     if (picked == null) return;
@@ -306,14 +326,12 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
     try {
       final bytes = await picked.readAsBytes();
       if (bytes.isEmpty) throw Exception('Picked file is empty');
-      final ext = picked.name.toLowerCase().endsWith('.png') ? 'png' : 'jpg';
       final ts = DateTime.now().millisecondsSinceEpoch;
       final id = 'ph_${ts}_off';
       final url = await AdminService.instance.uploadImageBytes(
         bytes,
         'places',
-        '$id.$ext',
-        contentType: ext == 'png' ? 'image/png' : 'image/jpeg',
+        '$id.jpg',
       );
       if (!mounted) return;
       setState(() {
@@ -321,9 +339,9 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
       });
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Upload failed: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Upload failed: $e')));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -403,9 +421,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
               TextField(
                 controller: captionEnCtrl,
                 maxLines: 2,
-                decoration: const InputDecoration(
-                  labelText: 'Caption (EN)',
-                ),
+                decoration: const InputDecoration(labelText: 'Caption (EN)'),
               ),
             ],
           ),
@@ -472,15 +488,15 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
         final url = await AdminService.instance.uploadImageBytes(
           draft.bytes!,
           'place-photos',
-          '$photoId.${draft.ext}',
-          contentType: draft.ext == 'png' ? 'image/png' : 'image/jpeg',
+          '$photoId.jpg',
         );
-        primaryUploaded.add(_PhotoDraft()
-          ..bytes = draft.bytes
-          ..ext = draft.ext
-          ..userName = 'Streetlore'
-          .._uploadedUrl = url
-          .._uploadedId = photoId);
+        primaryUploaded.add(
+          _PhotoDraft()
+            ..bytes = draft.bytes
+            ..userName = 'Streetlore'
+            .._uploadedUrl = url
+            .._uploadedId = photoId,
+        );
         pIdx++;
       } catch (e) {
         errors.add('Upload primary #${pIdx + 1}: $e');
@@ -592,8 +608,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
         final url = await AdminService.instance.uploadImageBytes(
           draft.bytes!,
           'place-photos',
-          '$photoId.${draft.ext}',
-          contentType: draft.ext == 'png' ? 'image/png' : 'image/jpeg',
+          '$photoId.jpg',
         );
         await AdminService.instance.createPhoto(
           PlacePhoto(
@@ -626,9 +641,9 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
         ),
       );
     } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Place saved successfully')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Place saved successfully')));
     }
 
     if (!mounted) return;
@@ -688,10 +703,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                       Expanded(
                         child: ElevatedButton.icon(
                           onPressed: _addPrimaryImage,
-                          icon: const Icon(
-                            Icons.add_a_photo_rounded,
-                            size: 18,
-                          ),
+                          icon: const Icon(Icons.add_a_photo_rounded, size: 18),
                           label: const Text('Add image'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppTheme.primary,
@@ -741,21 +753,15 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                   ),
                   const SizedBox(height: 12),
                   ..._imageUrls.asMap().entries.map(
-                        (entry) => _buildOfficialUrlRow(
-                          entry.key,
-                          entry.value,
-                        ),
-                      ),
+                    (entry) => _buildOfficialUrlRow(entry.key, entry.value),
+                  ),
                   const SizedBox(height: 8),
                   Row(
                     children: [
                       Expanded(
                         child: OutlinedButton.icon(
                           onPressed: _addOfficialUrlRow,
-                          icon: const Icon(
-                            Icons.add_link_rounded,
-                            size: 18,
-                          ),
+                          icon: const Icon(Icons.add_link_rounded, size: 18),
                           label: const Text('Add image URL'),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppTheme.primary,
@@ -770,10 +776,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                       Expanded(
                         child: OutlinedButton.icon(
                           onPressed: _addOfficialUrlFromPicked,
-                          icon: const Icon(
-                            Icons.upload_file_rounded,
-                            size: 18,
-                          ),
+                          icon: const Icon(Icons.upload_file_rounded, size: 18),
                           label: const Text('Upload as URL'),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppTheme.success,
@@ -817,8 +820,8 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                               controller: _rating,
                               keyboardType:
                                   const TextInputType.numberWithOptions(
-                                decimal: true,
-                              ),
+                                    decimal: true,
+                                  ),
                               validator: _validateNumber,
                             ),
                           ],
@@ -838,7 +841,9 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                                 hintText: '1, 2, 3… (lower = first)',
                                 helperText:
                                     '1 appears first, 2 second, etc. Default 999.',
-                                prefixIcon: Icon(Icons.format_list_numbered_rounded),
+                                prefixIcon: Icon(
+                                  Icons.format_list_numbered_rounded,
+                                ),
                               ),
                             ),
                           ],
@@ -870,8 +875,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                             _labelBilingual('Featured', isEn: true),
                             SwitchListTile.adaptive(
                               value: _isFeatured,
-                              onChanged: (v) =>
-                                  setState(() => _isFeatured = v),
+                              onChanged: (v) => setState(() => _isFeatured = v),
                               contentPadding: EdgeInsets.zero,
                               dense: true,
                             ),
@@ -888,25 +892,33 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                         : _category.text,
                     items: const [
                       DropdownMenuItem(
-                          value: 'Historical', child: Text('Historical')),
+                        value: 'Historical',
+                        child: Text('Historical'),
+                      ),
                       DropdownMenuItem(
-                          value: 'Culture', child: Text('Culture')),
+                        value: 'Culture',
+                        child: Text('Culture'),
+                      ),
+                      DropdownMenuItem(value: 'Nature', child: Text('Nature')),
+                      DropdownMenuItem(value: 'Food', child: Text('Food')),
                       DropdownMenuItem(
-                          value: 'Nature', child: Text('Nature')),
+                        value: 'Shopping',
+                        child: Text('Shopping'),
+                      ),
                       DropdownMenuItem(
-                          value: 'Food', child: Text('Food')),
+                        value: 'Mosques',
+                        child: Text('Mosques'),
+                      ),
                       DropdownMenuItem(
-                          value: 'Shopping', child: Text('Shopping')),
+                        value: 'Churches',
+                        child: Text('Churches'),
+                      ),
                       DropdownMenuItem(
-                          value: 'Mosques', child: Text('Mosques')),
-                      DropdownMenuItem(
-                          value: 'Churches', child: Text('Churches')),
-                      DropdownMenuItem(
-                          value: 'Streets', child: Text('Streets')),
-                      DropdownMenuItem(
-                          value: 'ATM', child: Text('ATM')),
-                      DropdownMenuItem(
-                          value: 'Hotel', child: Text('Hotel')),
+                        value: 'Streets',
+                        child: Text('Streets'),
+                      ),
+                      DropdownMenuItem(value: 'ATM', child: Text('ATM')),
+                      DropdownMenuItem(value: 'Hotel', child: Text('Hotel')),
                     ],
                     onChanged: (v) {
                       if (v != null) {
@@ -922,7 +934,6 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
               ),
             ),
 
-            
             Container(
               margin: const EdgeInsets.only(bottom: 18),
               padding: const EdgeInsets.all(18),
@@ -950,8 +961,9 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                         width: 40,
                         height: 40,
                         decoration: BoxDecoration(
-                          color:
-                              const Color(0xFF3B82F6).withValues(alpha: 0.15),
+                          color: const Color(
+                            0xFF3B82F6,
+                          ).withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         alignment: Alignment.center,
@@ -1074,9 +1086,6 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
               ),
             ),
 
-            
-            
-            
             _section(
               icon: Icons.map_rounded,
               title: 'Location (lat / lng)',
@@ -1259,8 +1268,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppTheme.warning,
                             side: BorderSide(
-                              color:
-                                  AppTheme.warning.withValues(alpha: 0.5),
+                              color: AppTheme.warning.withValues(alpha: 0.5),
                             ),
                             minimumSize: const Size.fromHeight(44),
                           ),
@@ -1285,9 +1293,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
 
             const SizedBox(height: 22),
             if (_isEditing && (widget.place?.id ?? _id.text).isNotEmpty)
-              _ModerationSection(
-                placeId: widget.place?.id ?? _id.text,
-              ),
+              _ModerationSection(placeId: widget.place?.id ?? _id.text),
             const SizedBox(height: 22),
             ElevatedButton(
               onPressed: _saving ? null : _save,
@@ -1382,6 +1388,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
               photo.imageUrl,
               width: 70,
               height: 70,
+              cacheWidth: 160,
               fit: BoxFit.cover,
               gaplessPlayback: true,
               errorBuilder: (_, _, _) => Container(
@@ -1474,9 +1481,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
       decoration: BoxDecoration(
         color: AppTheme.warning.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: AppTheme.warning.withValues(alpha: 0.3),
-        ),
+        border: Border.all(color: AppTheme.warning.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1490,6 +1495,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                         draft.bytes!,
                         width: 70,
                         height: 70,
+                        cacheWidth: 160,
                         fit: BoxFit.cover,
                         gaplessPlayback: true,
                         filterQuality: FilterQuality.medium,
@@ -1652,9 +1658,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
               style: TextStyle(
                 fontSize: 9,
                 fontWeight: FontWeight.w900,
-                color: isEn
-                    ? const Color(0xFF3B82F6)
-                    : const Color(0xFF22C55E),
+                color: isEn ? const Color(0xFF3B82F6) : const Color(0xFF22C55E),
                 letterSpacing: 0.5,
               ),
             ),
@@ -1759,6 +1763,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                               )
                             : Image.network(
                                 url,
+                                cacheWidth: 96,
                                 fit: BoxFit.cover,
                                 gaplessPlayback: true,
                                 errorBuilder: (_, _, _) => Container(
@@ -1801,12 +1806,16 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                       IconButton(
                         icon: const Icon(Icons.arrow_upward_rounded, size: 16),
                         visualDensity: VisualDensity.compact,
-                        onPressed:
-                            index == 0 ? null : () => _moveOfficialUrlRow(index, -1),
+                        onPressed: index == 0
+                            ? null
+                            : () => _moveOfficialUrlRow(index, -1),
                         tooltip: 'Move up',
                       ),
                       IconButton(
-                        icon: const Icon(Icons.arrow_downward_rounded, size: 16),
+                        icon: const Icon(
+                          Icons.arrow_downward_rounded,
+                          size: 16,
+                        ),
                         visualDensity: VisualDensity.compact,
                         onPressed: index == _imageUrls.length - 1
                             ? null
@@ -1871,8 +1880,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
     }
 
     for (var i = 0; i < _primaryImageDrafts.length; i++) {
-      final isFirst =
-          !hasCover && i == 0;
+      final isFirst = !hasCover && i == 0;
       children.add(_buildPrimaryDraftTile(i, isFirst));
     }
 
@@ -1910,6 +1918,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
             if (_imageUrl.text.isNotEmpty)
               Image.network(
                 _imageUrl.text,
+                cacheWidth: 480,
                 fit: BoxFit.cover,
                 gaplessPlayback: true,
                 loadingBuilder: (context, child, progress) {
@@ -1926,7 +1935,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                             color: AppTheme.primary,
                             value: progress.expectedTotalBytes != null
                                 ? progress.cumulativeBytesLoaded /
-                                    progress.expectedTotalBytes!
+                                      progress.expectedTotalBytes!
                                 : null,
                           ),
                         ),
@@ -2012,11 +2021,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                   ],
                 ),
               ),
-            const Positioned(
-              top: 8,
-              left: 8,
-              child: _CoverBadge(),
-            ),
+            const Positioned(top: 8, left: 8, child: _CoverBadge()),
             Positioned(
               top: 4,
               right: 4,
@@ -2046,6 +2051,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
             child: draft.bytes != null
                 ? Image.memory(
                     draft.bytes!,
+                    cacheWidth: 320,
                     fit: BoxFit.cover,
                     gaplessPlayback: true,
                     filterQuality: FilterQuality.medium,
@@ -2068,12 +2074,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                   ),
           ),
         ),
-        if (isCover)
-          const Positioned(
-            top: 6,
-            left: 6,
-            child: _CoverBadge(),
-          ),
+        if (isCover) const Positioned(top: 6, left: 6, child: _CoverBadge()),
         Positioned(
           top: 4,
           right: 4,
@@ -2143,8 +2144,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
               ),
               children: [
                 TileLayer(
-                  urlTemplate:
-                      'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                   userAgentPackageName: 'com.streetlore.admin',
                 ),
                 MarkerLayer(
@@ -2153,15 +2153,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                       point: point,
                       width: 44,
                       height: 44,
-                      
-                      
-                      
-                      
-                      
-                      
-                      
-                      
-                      
+
                       child: const Icon(
                         Icons.location_on_rounded,
                         color: AppTheme.danger,
@@ -2199,32 +2191,29 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
   }
 
   Widget _priceLevelDropdown() => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _labelBilingual('Price level', isEn: true),
-          DropdownButtonFormField<PriceLevel>(
-            initialValue: _priceLevel,
-            items: const [
-              DropdownMenuItem(value: PriceLevel.free, child: Text('Free')),
-              DropdownMenuItem(value: PriceLevel.cheap, child: Text('Cheap')),
-              DropdownMenuItem(
-                value: PriceLevel.moderate,
-                child: Text('Moderate'),
-              ),
-              DropdownMenuItem(
-                value: PriceLevel.expensive,
-                child: Text('Expensive'),
-              ),
-            ],
-            onChanged: (v) {
-              if (v != null) {
-                setState(() => _priceLevel = v);
-              }
-            },
-            decoration: const InputDecoration(),
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      _labelBilingual('Price level', isEn: true),
+      DropdownButtonFormField<PriceLevel>(
+        initialValue: _priceLevel,
+        items: const [
+          DropdownMenuItem(value: PriceLevel.free, child: Text('Free')),
+          DropdownMenuItem(value: PriceLevel.cheap, child: Text('Cheap')),
+          DropdownMenuItem(value: PriceLevel.moderate, child: Text('Moderate')),
+          DropdownMenuItem(
+            value: PriceLevel.expensive,
+            child: Text('Expensive'),
           ),
         ],
-      );
+        onChanged: (v) {
+          if (v != null) {
+            setState(() => _priceLevel = v);
+          }
+        },
+        decoration: const InputDecoration(),
+      ),
+    ],
+  );
 
   String? _validateNumber(String? v) {
     if (v == null || v.trim().isEmpty) return null;
@@ -2331,9 +2320,9 @@ class _ModerationSectionState extends State<_ModerationSection> {
       await _refresh();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not delete message: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not delete message: $e')));
     }
   }
 
@@ -2371,9 +2360,9 @@ class _ModerationSectionState extends State<_ModerationSection> {
       await _refresh();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not delete photo: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not delete photo: $e')));
     }
   }
 
@@ -2402,11 +2391,7 @@ class _ModerationSectionState extends State<_ModerationSection> {
         children: [
           Row(
             children: [
-              Icon(
-                Icons.shield_outlined,
-                color: AppTheme.danger,
-                size: 18,
-              ),
+              Icon(Icons.shield_outlined, color: AppTheme.danger, size: 18),
               const SizedBox(width: 8),
               Text(
                 'Moderation',
@@ -2433,10 +2418,7 @@ class _ModerationSectionState extends State<_ModerationSection> {
           const SizedBox(height: 4),
           Text(
             'Granular per-room moderation. Delete any chat message or user-uploaded photo from this place.',
-            style: TextStyle(
-              fontSize: 12,
-              color: AppTheme.textSecondary,
-            ),
+            style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
           ),
           if (_lastFetched != null)
             Padding(
@@ -2468,10 +2450,7 @@ class _ModerationSectionState extends State<_ModerationSection> {
                   Expanded(
                     child: Text(
                       _error!,
-                      style: TextStyle(
-                        color: AppTheme.danger,
-                        fontSize: 12,
-                      ),
+                      style: TextStyle(color: AppTheme.danger, fontSize: 12),
                     ),
                   ),
                 ],
@@ -2482,9 +2461,7 @@ class _ModerationSectionState extends State<_ModerationSection> {
             count: _messages.length,
             icon: Icons.chat_bubble_outline_rounded,
             child: _messages.isEmpty
-                ? _EmptyHint(
-                    text: 'No chat messages yet for this place.',
-                  )
+                ? _EmptyHint(text: 'No chat messages yet for this place.')
                 : Column(
                     children: [
                       for (final m in _messages)
@@ -2553,10 +2530,7 @@ class _Subsection extends StatelessWidget {
             ),
             const SizedBox(width: 6),
             Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 6,
-                vertical: 1,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
               decoration: BoxDecoration(
                 color: AppTheme.border,
                 borderRadius: BorderRadius.circular(8),
@@ -2607,11 +2581,7 @@ class _EmptyHint extends StatelessWidget {
 class _MessageRow extends StatelessWidget {
   final ChatMessage message;
   final VoidCallback onDelete;
-  const _MessageRow({
-    super.key,
-    required this.message,
-    required this.onDelete,
-  });
+  const _MessageRow({super.key, required this.message, required this.onDelete});
 
   @override
   Widget build(BuildContext context) {
@@ -2687,11 +2657,7 @@ class _MessageRow extends StatelessWidget {
 class _PhotoRow extends StatelessWidget {
   final PlacePhoto photo;
   final VoidCallback onDelete;
-  const _PhotoRow({
-    super.key,
-    required this.photo,
-    required this.onDelete,
-  });
+  const _PhotoRow({super.key, required this.photo, required this.onDelete});
 
   @override
   Widget build(BuildContext context) {
@@ -2714,12 +2680,14 @@ class _PhotoRow extends StatelessWidget {
               child: photo.imageUrl.startsWith('data:')
                   ? Image.memory(
                       _decodeDataUri(photo.imageUrl),
+                      cacheWidth: 128,
                       fit: BoxFit.cover,
                       gaplessPlayback: true,
                       errorBuilder: (_, _, _) => _brokenThumb(),
                     )
                   : Image.network(
                       photo.imageUrl,
+                      cacheWidth: 128,
                       fit: BoxFit.cover,
                       gaplessPlayback: true,
                       errorBuilder: (_, _, _) => _brokenThumb(),
@@ -2754,10 +2722,7 @@ class _PhotoRow extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   '${photo.likes} ❤',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: AppTheme.textSecondary,
-                  ),
+                  style: TextStyle(fontSize: 11, color: AppTheme.textSecondary),
                 ),
               ],
             ),
@@ -2778,13 +2743,13 @@ class _PhotoRow extends StatelessWidget {
   }
 
   Widget _brokenThumb() => Container(
-        color: const Color(0xFF1C2433),
-        child: const Icon(
-          Icons.image_not_supported_outlined,
-          color: Colors.white24,
-          size: 24,
-        ),
-      );
+    color: const Color(0xFF1C2433),
+    child: const Icon(
+      Icons.image_not_supported_outlined,
+      color: Colors.white24,
+      size: 24,
+    ),
+  );
 
   Uint8List _decodeDataUri(String uri) {
     try {

@@ -208,6 +208,7 @@ class _PhotoCard extends StatelessWidget {
                     UriData.parse(photo.imageUrl).contentAsBytes(),
                     width: 72,
                     height: 72,
+                    cacheWidth: 160,
                     fit: BoxFit.cover,
                     errorBuilder: (_, _, _) => Container(
                       width: 72,
@@ -223,6 +224,7 @@ class _PhotoCard extends StatelessWidget {
                     photo.imageUrl,
                     width: 72,
                     height: 72,
+                    cacheWidth: 160,
                     fit: BoxFit.cover,
                     errorBuilder: (_, _, _) => Container(
                       width: 72,
