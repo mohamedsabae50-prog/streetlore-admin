@@ -85,6 +85,30 @@ class AdminService {
         .toList(growable: false);
   }
 
+  Future<List<Map<String, dynamic>>> fetchPendingHiddenGems() async {
+    final rows = await _client
+        .from('suggested_places')
+        .select(
+          'id,user_id,title,name_ar,description,category,category_ar,'
+          'lat,lng,address,image_url,created_at',
+        )
+        .eq('status', 'pending')
+        .order('created_at', ascending: false);
+    return rows
+        .map((row) => Map<String, dynamic>.from(row))
+        .toList(growable: false);
+  }
+
+  Future<void> moderateHiddenGem(String suggestionId, String action) async {
+    if (action != 'approve' && action != 'reject') {
+      throw ArgumentError.value(action, 'action');
+    }
+    await _client.rpc(
+      'moderate_hidden_gem',
+      params: {'p_suggestion_id': suggestionId, 'p_action': action},
+    );
+  }
+
   Future<void> dismissReport(String reportId) async {
     await _client
         .from('reports')

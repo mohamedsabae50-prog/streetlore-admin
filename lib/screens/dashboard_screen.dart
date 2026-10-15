@@ -10,6 +10,7 @@ import 'tours_list_screen.dart';
 import 'users_list_screen.dart';
 import 'ai_chat_logs_screen.dart';
 import 'reports_screen.dart';
+import 'hidden_gem_suggestions_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -102,7 +103,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
             SizedBox(width: 10),
             Text(
-              'v2.1.3',
+              'v2.1.4',
               style: TextStyle(
                 fontWeight: FontWeight.w600,
                 fontSize: 12,
@@ -267,6 +268,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const ReportsScreen()),
+                ),
+              ),
+              const SizedBox(height: 10),
+              _ActionCard(
+                icon: Icons.auto_awesome_rounded,
+                color: AppTheme.primary,
+                title: 'Hidden Gem Suggestions',
+                subtitle: 'Review, approve, or reject submitted places',
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const HiddenGemSuggestionsScreen(),
+                  ),
                 ),
               ),
               const SizedBox(height: 10),
