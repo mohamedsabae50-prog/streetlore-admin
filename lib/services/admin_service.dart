@@ -389,34 +389,16 @@ class AdminService {
     String placeId, {
     required String coverImageUrl,
     required List<String> preferredUrls,
-    Set<String> removedPhotoUrls = const <String>{},
   }) async {
-    final rows = await _client
-        .from('place_photos')
-        .select('image_url')
-        .eq('place_id', placeId)
-        .order('created_at', ascending: true)
-        .order('id', ascending: true);
-    final photoUrls = rows
-        .map((row) => row['image_url'] as String? ?? '')
-        .where((url) => url.trim().isNotEmpty)
-        .toList(growable: false);
-    final activePhotoUrls = photoUrls.map((url) => url.trim()).toSet();
-    final staleRemovedUrls = removedPhotoUrls.difference(activePhotoUrls);
     final merged = <String>[];
     final seen = <String>{};
     void add(String value) {
       final url = value.trim();
-      if (url.isNotEmpty && !staleRemovedUrls.contains(url) && seen.add(url)) {
-        merged.add(url);
-      }
+      if (url.isNotEmpty && seen.add(url)) merged.add(url);
     }
 
     add(coverImageUrl);
     for (final url in preferredUrls) {
-      add(url);
-    }
-    for (final url in photoUrls) {
       add(url);
     }
     final cover = merged.isEmpty ? '' : merged.first;

@@ -103,7 +103,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
             SizedBox(width: 10),
             const Text(
-              'v2.1.6',
+              'v2.1.7',
               style: TextStyle(
                 fontWeight: FontWeight.w600,
                 fontSize: 12,

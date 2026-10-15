@@ -18,11 +18,6 @@ class PlaceFormScreen extends StatefulWidget {
 
 class _PhotoDraft {
   Uint8List? bytes;
-  String captionAr = '';
-  String captionEn = '';
-  String userName = 'Streetlore';
-  String? _uploadedUrl;
-  String? _uploadedId;
 }
 
 class _CoverBadge extends StatelessWidget {
@@ -76,14 +71,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
   bool _enableChat = true;
   bool _enableGallery = true;
   bool _saving = false;
-  bool _loadingPhotos = false;
-
-  final List<PlacePhoto> _existingPhotos = [];
-  final List<_PhotoDraft> _newPhotos = [];
-  final Set<String> _removedPhotoIds = {};
-
   final List<_PhotoDraft> _primaryImageDrafts = [];
-  bool _primaryImageRemoved = false;
 
   bool get _isEditing => widget.place != null;
 
@@ -96,10 +84,17 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
     _nameAr = TextEditingController(text: p?.nameAr ?? '');
     _description = TextEditingController(text: p?.description ?? '');
     _descriptionAr = TextEditingController(text: p?.descriptionAr ?? '');
-    _imageUrl = TextEditingController(text: p?.imageUrl ?? '');
-    final initialUrls = (p?.imageUrls.isNotEmpty ?? false)
-        ? p!.imageUrls
-        : (p?.imageUrl.isNotEmpty == true ? <String>[p!.imageUrl] : <String>[]);
+    final initialUrls = <String>[];
+    final seenInitialUrls = <String>{};
+    for (final value in [p?.imageUrl ?? '', ...?p?.imageUrls]) {
+      final url = value.trim();
+      if (url.isNotEmpty && seenInitialUrls.add(url)) {
+        initialUrls.add(url);
+      }
+    }
+    _imageUrl = TextEditingController(
+      text: initialUrls.isNotEmpty ? initialUrls.first : '',
+    );
     _imageUrls = initialUrls
         .map((u) => TextEditingController(text: u))
         .toList(growable: true);
@@ -133,32 +128,10 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
     _enableGallery = p?.enableGallery ?? true;
     _lat.addListener(_onCoordFieldChanged);
     _lng.addListener(_onCoordFieldChanged);
-    if (_isEditing) {
-      _loadPhotos();
-    }
   }
 
   void _onCoordFieldChanged() {
     if (mounted) setState(() {});
-  }
-
-  Future<void> _loadPhotos() async {
-    setState(() => _loadingPhotos = true);
-    try {
-      final photos = await AdminService.instance.fetchPhotos(
-        placeId: widget.place!.id,
-      );
-      if (mounted) {
-        setState(() {
-          _existingPhotos
-            ..clear()
-            ..addAll(photos);
-        });
-      }
-    } catch (_) {
-    } finally {
-      if (mounted) setState(() => _loadingPhotos = false);
-    }
   }
 
   String _suggestId() {
@@ -169,70 +142,6 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
   String? _nullable(TextEditingController c) {
     final t = c.text.trim();
     return t.isEmpty ? null : t;
-  }
-
-  Future<void> _pickPhotoForDraft(_PhotoDraft draft) async {
-    final picker = ImagePicker();
-    final XFile? picked;
-    try {
-      picked = await picker.pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 1280,
-        maxHeight: 1280,
-        imageQuality: 80,
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Could not open file picker: $e')));
-      return;
-    }
-    if (picked == null) return;
-    try {
-      final bytes = await picked.readAsBytes();
-      if (bytes.isEmpty) throw Exception('Picked file is empty');
-      if (!mounted) return;
-      setState(() {
-        draft.bytes = bytes;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Could not read file: $e')));
-    }
-  }
-
-  Future<void> _pickMultiplePhotos() async {
-    final picker = ImagePicker();
-    final List<XFile> picked;
-    try {
-      picked = await picker.pickMultiImage(
-        maxWidth: 1280,
-        maxHeight: 1280,
-        imageQuality: 80,
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Could not open file picker: $e')));
-      return;
-    }
-    if (picked.isEmpty) return;
-    final drafts = await _readPickedFiles(picked);
-    if (drafts.isEmpty || !mounted) return;
-    setState(() {
-      _newPhotos.addAll(drafts);
-    });
-    // Force a second rebuild on the next frame in case the first setState
-    // didn't flush all pending frames (Flutter web workaround for the
-    // "double-pick to see the image" issue caused by stale paint state).
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      setState(() {});
-    });
   }
 
   Future<List<_PhotoDraft>> _readPickedFiles(List<XFile> files) async {
@@ -264,16 +173,27 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
     return out;
   }
 
-  void _addPhotoDraft() {
-    setState(() {
-      _newPhotos.add(_PhotoDraft());
-    });
-  }
-
-  void _addPrimaryImage() {
-    setState(() {
-      _primaryImageDrafts.add(_PhotoDraft());
-    });
+  Future<void> _addPrimaryImage() async {
+    final picker = ImagePicker();
+    final XFile? picked;
+    try {
+      picked = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1280,
+        maxHeight: 1280,
+        imageQuality: 80,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not open file picker: $e')));
+      return;
+    }
+    if (picked == null) return;
+    final drafts = await _readPickedFiles([picked]);
+    if (drafts.isEmpty || !mounted) return;
+    setState(() => _primaryImageDrafts.addAll(drafts));
   }
 
   Future<void> _addMultiplePrimaryImages() async {
@@ -326,7 +246,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
     try {
       final bytes = await picked.readAsBytes();
       if (bytes.isEmpty) throw Exception('Picked file is empty');
-      final ts = DateTime.now().millisecondsSinceEpoch;
+      final ts = DateTime.now().microsecondsSinceEpoch;
       final id = 'ph_${ts}_off';
       final url = await AdminService.instance.uploadImageBytes(
         bytes,
@@ -336,6 +256,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
       if (!mounted) return;
       setState(() {
         _imageUrls.add(TextEditingController(text: url));
+        if (_imageUrl.text.trim().isEmpty) _imageUrl.text = url;
       });
     } catch (e) {
       if (!mounted) return;
@@ -355,111 +276,17 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
 
   void _removeExistingCover() {
     setState(() {
-      _primaryImageRemoved = true;
+      final currentCover = _imageUrl.text.trim();
+      final coverIndex = _imageUrls.indexWhere(
+        (controller) => controller.text.trim() == currentCover,
+      );
+      if (coverIndex >= 0) {
+        _imageUrls.removeAt(coverIndex).dispose();
+      }
+      _imageUrl.text = _imageUrls
+          .map((controller) => controller.text.trim())
+          .firstWhere((url) => url.isNotEmpty, orElse: () => '');
     });
-  }
-
-  void _removePhotoDraft(int index) {
-    setState(() {
-      _newPhotos.removeAt(index);
-    });
-  }
-
-  void _markExistingPhotoRemoved(String id) {
-    setState(() {
-      _removedPhotoIds.add(id);
-      _existingPhotos.removeWhere((p) => p.id == id);
-    });
-  }
-
-  void _showEditExistingPhoto(PlacePhoto photo) async {
-    final captionArCtrl = TextEditingController(text: photo.captionAr);
-    final captionEnCtrl = TextEditingController(text: photo.captionEn);
-    final userNameCtrl = TextEditingController(text: photo.userName);
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Edit photo details'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.network(
-                  photo.imageUrl,
-                  height: 140,
-                  fit: BoxFit.cover,
-                  gaplessPlayback: true,
-                  errorBuilder: (_, _, _) => Container(
-                    height: 140,
-                    color: AppTheme.bg,
-                    child: const Center(child: Icon(Icons.broken_image)),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: userNameCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Username',
-                  prefixIcon: Icon(Icons.person_outline_rounded),
-                ),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: captionArCtrl,
-                maxLines: 2,
-                textDirection: TextDirection.rtl,
-                textAlign: TextAlign.right,
-                decoration: const InputDecoration(
-                  labelText: 'Caption (AR)',
-                  hintText: 'اكتب الكابشن بالعربي...',
-                ),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: captionEnCtrl,
-                maxLines: 2,
-                decoration: const InputDecoration(labelText: 'Caption (EN)'),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
-    if (result == true) {
-      setState(() {
-        final idx = _existingPhotos.indexWhere((p) => p.id == photo.id);
-        if (idx >= 0) {
-          _existingPhotos[idx] = PlacePhoto(
-            id: photo.id,
-            placeId: photo.placeId,
-            userId: photo.userId.isEmpty
-                ? AdminService.instance.adminUserId
-                : photo.userId,
-            userName: userNameCtrl.text.trim().isEmpty
-                ? 'Streetlore'
-                : userNameCtrl.text.trim(),
-            imageUrl: photo.imageUrl,
-            captionAr: captionArCtrl.text.trim(),
-            captionEn: captionEnCtrl.text.trim(),
-            likes: photo.likes,
-            createdAt: photo.createdAt,
-          );
-        }
-      });
-    }
   }
 
   Future<void> _save() async {
@@ -467,58 +294,40 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
     setState(() => _saving = true);
 
     final errors = <String>[];
-    String imageUrl = _imageUrl.text.trim();
-    if (_primaryImageRemoved) {
-      imageUrl = '';
-    }
     final imageUrlsList = _imageUrls
         .map((c) => c.text.trim())
         .where((s) => s.isNotEmpty)
-        .toSet()
-        .toList(growable: false);
+        .fold<List<String>>(<String>[], (urls, url) {
+          if (!urls.contains(url)) urls.add(url);
+          return urls;
+        });
 
-    // 1) Upload primary image drafts FIRST so the very first one can become the
-    // new cover. Captures (id, ext, uploadedUrl) per draft that succeeded.
-    final primaryUploaded = <_PhotoDraft>[];
-    final ts = DateTime.now().millisecondsSinceEpoch;
+    final uploadedUrls = <String>[];
+    final ts = DateTime.now().microsecondsSinceEpoch;
     var pIdx = 0;
     for (final draft in _primaryImageDrafts) {
       if (draft.bytes == null) continue;
       try {
-        final photoId = 'ph_${ts}_p$pIdx';
         final url = await AdminService.instance.uploadImageBytes(
           draft.bytes!,
-          'place-photos',
-          '$photoId.jpg',
+          'places',
+          'place_${ts}_$pIdx.jpg',
         );
-        primaryUploaded.add(
-          _PhotoDraft()
-            ..bytes = draft.bytes
-            ..userName = 'Streetlore'
-            .._uploadedUrl = url
-            .._uploadedId = photoId,
-        );
+        uploadedUrls.add(url);
         pIdx++;
       } catch (e) {
         errors.add('Upload primary #${pIdx + 1}: $e');
       }
     }
 
-    // 2) Decide the final imageUrl: keep existing, OR use the first new primary
-    // upload as the new cover when no existing cover is set.
-    var finalImageUrl = imageUrl;
-    if (finalImageUrl.isEmpty) {
-      if (primaryUploaded.isNotEmpty) {
-        finalImageUrl = primaryUploaded.first._uploadedUrl!;
-      } else if (imageUrlsList.isNotEmpty) {
-        finalImageUrl = imageUrlsList.first;
-      }
+    final orderedImageUrls = <String>[];
+    final seenImageUrls = <String>{};
+    for (final url in [...imageUrlsList, ...uploadedUrls]) {
+      if (seenImageUrls.add(url)) orderedImageUrls.add(url);
     }
-    final initialImageUrls = <String>{
-      if (finalImageUrl.isNotEmpty) finalImageUrl,
-      ...primaryUploaded.map((draft) => draft._uploadedUrl!),
-      ...imageUrlsList,
-    }.toList(growable: false);
+    final finalImageUrl = orderedImageUrls.isEmpty
+        ? ''
+        : orderedImageUrls.first;
 
     // 3) Build the place object with the resolved cover imageUrl.
     final place = Place(
@@ -528,7 +337,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
       description: _description.text.trim(),
       descriptionAr: _nullable(_descriptionAr),
       imageUrl: finalImageUrl,
-      imageUrls: initialImageUrls,
+      imageUrls: orderedImageUrls,
       rating: double.tryParse(_rating.text) ?? 0,
       category: _category.text.trim(),
       categoryAr: _nullable(_categoryAr),
@@ -564,112 +373,6 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
           SnackBar(
             content: Text('Save failed: $e'),
             duration: const Duration(seconds: 8),
-          ),
-        );
-      }
-      return;
-    }
-
-    // 5) Remove deleted existing photos.
-    for (final id in _removedPhotoIds) {
-      try {
-        await AdminService.instance.deletePhoto(id);
-      } catch (e) {
-        errors.add('Delete photo $id: $e');
-      }
-    }
-
-    // 6) Persist edits to existing photos.
-    for (final updated in _existingPhotos) {
-      try {
-        await AdminService.instance.updatePhoto(updated);
-      } catch (e) {
-        errors.add('Update photo ${updated.id}: $e');
-      }
-    }
-
-    // 7) Insert the primary uploads as PlacePhoto rows.
-    for (final up in primaryUploaded) {
-      try {
-        await AdminService.instance.createPhoto(
-          PlacePhoto(
-            id: up._uploadedId!,
-            placeId: place.id,
-            // v1.0.72 — required by RLS policy user_id::text = auth.uid().
-            // The admin's auth.uid() is the JWT subject.
-            userId: AdminService.instance.adminUserId,
-            userName: 'Streetlore',
-            imageUrl: up._uploadedUrl!,
-            captionAr: '',
-            captionEn: '',
-          ),
-        );
-      } catch (e) {
-        errors.add('Create photo ${up._uploadedId}: $e');
-      }
-    }
-
-    // 8) Upload + insert gallery drafts.
-    final uploadedGalleryUrls = <String>[];
-    var gIdx = 0;
-    for (final draft in _newPhotos) {
-      if (draft.bytes == null) continue;
-      try {
-        final photoId = 'ph_${ts}_g$gIdx';
-        final url = await AdminService.instance.uploadImageBytes(
-          draft.bytes!,
-          'place-photos',
-          '$photoId.jpg',
-        );
-        uploadedGalleryUrls.add(url);
-        await AdminService.instance.createPhoto(
-          PlacePhoto(
-            id: photoId,
-            placeId: place.id,
-            userId: AdminService.instance.adminUserId,
-            userName: draft.userName.trim().isEmpty
-                ? 'Streetlore'
-                : draft.userName.trim(),
-            imageUrl: url,
-            captionAr: draft.captionAr.trim(),
-            captionEn: draft.captionEn.trim(),
-          ),
-        );
-      } catch (e) {
-        errors.add('Upload gallery #${gIdx + 1}: $e');
-      }
-      gIdx++;
-    }
-
-    // 9) Keep the public place row as the complete, ordered gallery source
-    // for mobile clients, while retaining each image as a place_photos row.
-    final removedPhotoUrls = _existingPhotos
-        .where((photo) => _removedPhotoIds.contains(photo.id))
-        .map((photo) => photo.imageUrl.trim())
-        .where((url) => url.isNotEmpty)
-        .toSet();
-    final preferredGalleryUrls = <String>[
-      ...primaryUploaded.map((draft) => draft._uploadedUrl!),
-      ...imageUrlsList,
-      ..._existingPhotos
-          .where((photo) => !_removedPhotoIds.contains(photo.id))
-          .map((photo) => photo.imageUrl),
-      ...uploadedGalleryUrls,
-    ];
-    try {
-      await AdminService.instance.syncPlaceImageUrls(
-        place.id,
-        coverImageUrl: finalImageUrl,
-        preferredUrls: preferredGalleryUrls,
-        removedPhotoUrls: removedPhotoUrls,
-      );
-    } catch (e) {
-      if (mounted) {
-        setState(() => _saving = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Place saved, but gallery sync failed: $e'),
-            duration: const Duration(seconds: 10),
           ),
         );
       }
@@ -1284,60 +987,6 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
               ),
             ),
 
-            _section(
-              icon: Icons.photo_library_rounded,
-              title: 'Photo Gallery',
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Primary image goes in the Image section above. Add multiple additional gallery photos here. Each can have an Arabic & English caption.",
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: AppTheme.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  if (_isEditing) _buildExistingPhotos(),
-                  const SizedBox(height: 12),
-                  _buildNewPhotos(),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: _pickMultiplePhotos,
-                          icon: const Icon(
-                            Icons.add_photo_alternate_rounded,
-                            size: 18,
-                          ),
-                          label: const Text('Upload multiple'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppTheme.warning,
-                            side: BorderSide(
-                              color: AppTheme.warning.withValues(alpha: 0.5),
-                            ),
-                            minimumSize: const Size.fromHeight(44),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      OutlinedButton.icon(
-                        onPressed: _addPhotoDraft,
-                        icon: const Icon(Icons.add_rounded, size: 18),
-                        label: const Text('One'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppTheme.textSecondary,
-                          side: const BorderSide(color: AppTheme.border),
-                          minimumSize: const Size.fromHeight(44),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
             const SizedBox(height: 22),
             if (_isEditing && (widget.place?.id ?? _id.text).isNotEmpty)
               _ModerationSection(placeId: widget.place?.id ?? _id.text),
@@ -1369,259 +1018,6 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
             const SizedBox(height: 32),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildExistingPhotos() {
-    if (_loadingPhotos) {
-      return const Padding(
-        padding: EdgeInsets.all(20),
-        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-      );
-    }
-    if (_existingPhotos.isEmpty && !_isEditing) {
-      return Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: AppTheme.bg,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppTheme.border),
-        ),
-        child: const Center(
-          child: Text(
-            'No photos yet. Add the first one below.',
-            style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
-          ),
-        ),
-      );
-    }
-    if (_existingPhotos.isEmpty) {
-      return const SizedBox.shrink();
-    }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(bottom: 8, left: 4),
-          child: Text(
-            'Existing photos (${_existingPhotos.length})',
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-              color: AppTheme.textPrimary,
-            ),
-          ),
-        ),
-        ..._existingPhotos.map(_buildExistingPhotoCard),
-      ],
-    );
-  }
-
-  Widget _buildExistingPhotoCard(PlacePhoto photo) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: AppTheme.bg,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.border),
-      ),
-      child: Row(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: Image.network(
-              photo.imageUrl,
-              width: 70,
-              height: 70,
-              cacheWidth: 160,
-              fit: BoxFit.cover,
-              gaplessPlayback: true,
-              errorBuilder: (_, _, _) => Container(
-                width: 70,
-                height: 70,
-                color: AppTheme.bg,
-                child: const Icon(Icons.broken_image),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  photo.userName,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                if (photo.captionAr.isNotEmpty)
-                  Text(
-                    photo.captionAr,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: AppTheme.textSecondary,
-                    ),
-                  ),
-                if (photo.captionEn.isNotEmpty)
-                  Text(
-                    photo.captionEn,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: AppTheme.textSecondary,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.edit_rounded, size: 18),
-            color: AppTheme.primary,
-            onPressed: () => _showEditExistingPhoto(photo),
-            tooltip: 'Edit captions',
-          ),
-          IconButton(
-            icon: const Icon(Icons.delete_outline_rounded, size: 18),
-            color: AppTheme.danger,
-            onPressed: () => _markExistingPhotoRemoved(photo.id),
-            tooltip: 'Remove',
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNewPhotos() {
-    if (_newPhotos.isEmpty) return const SizedBox.shrink();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(bottom: 8, left: 4),
-          child: Text(
-            'New photos (${_newPhotos.length}) — saved on Submit',
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-              color: AppTheme.warning,
-            ),
-          ),
-        ),
-        for (var i = 0; i < _newPhotos.length; i++)
-          _buildNewPhotoCard(i, _newPhotos[i]),
-      ],
-    );
-  }
-
-  Widget _buildNewPhotoCard(int index, _PhotoDraft draft) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppTheme.warning.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.warning.withValues(alpha: 0.3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: draft.bytes != null
-                    ? Image.memory(
-                        draft.bytes!,
-                        width: 70,
-                        height: 70,
-                        cacheWidth: 160,
-                        fit: BoxFit.cover,
-                        gaplessPlayback: true,
-                        filterQuality: FilterQuality.medium,
-                        errorBuilder: (_, _, _) => Container(
-                          width: 70,
-                          height: 70,
-                          color: AppTheme.bg,
-                          child: const Icon(
-                            Icons.broken_image_outlined,
-                            color: AppTheme.textSecondary,
-                          ),
-                        ),
-                      )
-                    : Container(
-                        width: 70,
-                        height: 70,
-                        color: AppTheme.bg,
-                        child: const Icon(
-                          Icons.add_photo_alternate_outlined,
-                          color: AppTheme.textSecondary,
-                        ),
-                      ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () => _pickPhotoForDraft(draft),
-                  icon: const Icon(Icons.upload_rounded, size: 16),
-                  label: Text(
-                    draft.bytes == null ? 'Pick image' : 'Replace image',
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.surface,
-                    foregroundColor: AppTheme.primary,
-                    elevation: 0,
-                    side: const BorderSide(color: AppTheme.border),
-                  ),
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.close_rounded),
-                color: AppTheme.danger,
-                onPressed: () => _removePhotoDraft(index),
-                tooltip: 'Remove from new list',
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          TextField(
-            onChanged: (v) => draft.userName = v,
-            controller: TextEditingController(text: draft.userName),
-            decoration: const InputDecoration(
-              labelText: 'Username',
-              prefixIcon: Icon(Icons.person_outline_rounded),
-              isDense: true,
-            ),
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            onChanged: (v) => draft.captionAr = v,
-            maxLines: 2,
-            textDirection: TextDirection.rtl,
-            textAlign: TextAlign.right,
-            decoration: const InputDecoration(
-              labelText: 'Caption (AR)',
-              hintText: 'اكتب الكابشن بالعربي...',
-              isDense: true,
-            ),
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            onChanged: (v) => draft.captionEn = v,
-            maxLines: 2,
-            decoration: const InputDecoration(
-              labelText: 'Caption (EN)',
-              isDense: true,
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -1728,6 +1124,9 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
   void _removeOfficialUrlRow(int index) {
     setState(() {
       _imageUrls.removeAt(index).dispose();
+      _imageUrl.text = _imageUrls
+          .map((controller) => controller.text.trim())
+          .firstWhere((url) => url.isNotEmpty, orElse: () => '');
     });
   }
 
@@ -1737,6 +1136,9 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
     setState(() {
       final c = _imageUrls.removeAt(index);
       _imageUrls.insert(newIndex, c);
+      _imageUrl.text = _imageUrls
+          .map((controller) => controller.text.trim())
+          .firstWhere((url) => url.isNotEmpty, orElse: () => '');
     });
   }
 
@@ -1828,7 +1230,10 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                     Expanded(
                       child: TextFormField(
                         controller: controller,
-                        onChanged: (_) => setState(() {}),
+                        onChanged: (value) {
+                          if (index == 0) _imageUrl.text = value.trim();
+                          setState(() {});
+                        },
                         decoration: InputDecoration(
                           hintText: 'https://.../image.jpg',
                           isDense: true,
@@ -1891,7 +1296,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
   }
 
   Widget _buildImageGrid() {
-    final hasCover = _imageUrl.text.isNotEmpty && !_primaryImageRemoved;
+    final hasCover = _imageUrl.text.isNotEmpty;
     final children = <Widget>[];
 
     if (hasCover) {
