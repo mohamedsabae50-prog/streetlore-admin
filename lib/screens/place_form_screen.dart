@@ -474,6 +474,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
     final imageUrlsList = _imageUrls
         .map((c) => c.text.trim())
         .where((s) => s.isNotEmpty)
+        .toSet()
         .toList(growable: false);
 
     // 1) Upload primary image drafts FIRST so the very first one can become the
@@ -506,9 +507,18 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
     // 2) Decide the final imageUrl: keep existing, OR use the first new primary
     // upload as the new cover when no existing cover is set.
     var finalImageUrl = imageUrl;
-    if (imageUrl.isEmpty && primaryUploaded.isNotEmpty) {
-      finalImageUrl = primaryUploaded.first._uploadedUrl!;
+    if (finalImageUrl.isEmpty) {
+      if (primaryUploaded.isNotEmpty) {
+        finalImageUrl = primaryUploaded.first._uploadedUrl!;
+      } else if (imageUrlsList.isNotEmpty) {
+        finalImageUrl = imageUrlsList.first;
+      }
     }
+    final initialImageUrls = <String>{
+      if (finalImageUrl.isNotEmpty) finalImageUrl,
+      ...primaryUploaded.map((draft) => draft._uploadedUrl!),
+      ...imageUrlsList,
+    }.toList(growable: false);
 
     // 3) Build the place object with the resolved cover imageUrl.
     final place = Place(
@@ -518,7 +528,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
       description: _description.text.trim(),
       descriptionAr: _nullable(_descriptionAr),
       imageUrl: finalImageUrl,
-      imageUrls: imageUrlsList,
+      imageUrls: initialImageUrls,
       rating: double.tryParse(_rating.text) ?? 0,
       category: _category.text.trim(),
       categoryAr: _nullable(_categoryAr),
@@ -600,6 +610,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
     }
 
     // 8) Upload + insert gallery drafts.
+    final uploadedGalleryUrls = <String>[];
     var gIdx = 0;
     for (final draft in _newPhotos) {
       if (draft.bytes == null) continue;
@@ -610,6 +621,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
           'place-photos',
           '$photoId.jpg',
         );
+        uploadedGalleryUrls.add(url);
         await AdminService.instance.createPhoto(
           PlacePhoto(
             id: photoId,
@@ -627,6 +639,41 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
         errors.add('Upload gallery #${gIdx + 1}: $e');
       }
       gIdx++;
+    }
+
+    // 9) Keep the public place row as the complete, ordered gallery source
+    // for mobile clients, while retaining each image as a place_photos row.
+    final removedPhotoUrls = _existingPhotos
+        .where((photo) => _removedPhotoIds.contains(photo.id))
+        .map((photo) => photo.imageUrl.trim())
+        .where((url) => url.isNotEmpty)
+        .toSet();
+    final preferredGalleryUrls = <String>[
+      ...primaryUploaded.map((draft) => draft._uploadedUrl!),
+      ...imageUrlsList,
+      ..._existingPhotos
+          .where((photo) => !_removedPhotoIds.contains(photo.id))
+          .map((photo) => photo.imageUrl),
+      ...uploadedGalleryUrls,
+    ];
+    try {
+      await AdminService.instance.syncPlaceImageUrls(
+        place.id,
+        coverImageUrl: finalImageUrl,
+        preferredUrls: preferredGalleryUrls,
+        removedPhotoUrls: removedPhotoUrls,
+      );
+    } catch (e) {
+      if (mounted) {
+        setState(() => _saving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Place saved, but gallery sync failed: $e'),
+            duration: const Duration(seconds: 10),
+          ),
+        );
+      }
+      return;
     }
 
     if (mounted) setState(() => _saving = false);
@@ -745,7 +792,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Add direct image URLs for the swipeable photo gallery shown in the app. The first URL is shown first; URLs are also saved to the places.image_urls text[] column. User-uploaded photos below are separate.',
+                    'Add direct image URLs for the swipeable gallery shown in the app. These URLs are merged with the uploaded images below and saved to places.image_urls.',
                     style: TextStyle(
                       fontSize: 12,
                       color: AppTheme.textSecondary,
