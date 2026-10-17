@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../models/models.dart';
 import '../services/admin_service.dart';
 import '../theme.dart';
@@ -133,6 +134,19 @@ class _UsersListScreenState extends State<UsersListScreen> {
     } finally {
       if (mounted) setState(() => _deletingUserId = null);
     }
+  }
+
+  Future<void> _copyEmail(String email) async {
+    await Clipboard.setData(ClipboardData(text: email));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        const SnackBar(
+          content: Text('Copied to clipboard'),
+          duration: Duration(seconds: 2),
+        ),
+      );
   }
 
   Future<void> _selectSubscriptionPlan(AdminUser user) async {
@@ -339,14 +353,30 @@ class _UsersListScreenState extends State<UsersListScreen> {
                                       ),
                                     ),
                                     const SizedBox(height: 2),
-                                    Text(
-                                      user.email,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        color: AppTheme.textSecondary,
-                                      ),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            user.email,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              color: AppTheme.textSecondary,
+                                            ),
+                                          ),
+                                        ),
+                                        IconButton(
+                                          tooltip: 'Copy email',
+                                          visualDensity: VisualDensity.compact,
+                                          onPressed: () =>
+                                              _copyEmail(user.email),
+                                          icon: const Icon(
+                                            Icons.copy_rounded,
+                                            size: 16,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                     if (user.createdAt != null)
                                       Text(
