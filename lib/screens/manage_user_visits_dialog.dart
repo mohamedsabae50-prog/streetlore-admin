@@ -32,6 +32,7 @@ class _ManageUserVisitsDialogState extends State<_ManageUserVisitsDialog> {
   String? _error;
   bool _loading = true;
   bool _saving = false;
+  Map<String, dynamic>? _lastResult;
 
   @override
   void initState() {
@@ -76,16 +77,18 @@ class _ManageUserVisitsDialogState extends State<_ManageUserVisitsDialog> {
 
   List<Place> get _filteredPlaces {
     final query = _searchController.text.trim().toLowerCase();
-    return _places.where((place) {
-      if (_category != 'All' && place.category != _category) return false;
-      if (query.isEmpty) return true;
-      return [
-        place.name,
-        place.nameAr ?? '',
-        place.category,
-        place.categoryAr ?? '',
-      ].any((value) => value.toLowerCase().contains(query));
-    }).toList(growable: false);
+    return _places
+        .where((place) {
+          if (_category != 'All' && place.category != _category) return false;
+          if (query.isEmpty) return true;
+          return [
+            place.name,
+            place.nameAr ?? '',
+            place.category,
+            place.categoryAr ?? '',
+          ].any((value) => value.toLowerCase().contains(query));
+        })
+        .toList(growable: false);
   }
 
   Future<void> _removeVisit(Place place) async {
@@ -98,6 +101,7 @@ class _ManageUserVisitsDialogState extends State<_ManageUserVisitsDialog> {
       );
       if (!mounted) return;
       setState(() {
+        _lastResult = result;
         _visitState = result;
         _visitedPlaceIds = (result['visited_place_ids'] as List)
             .map((id) => id.toString())
@@ -105,14 +109,16 @@ class _ManageUserVisitsDialogState extends State<_ManageUserVisitsDialog> {
         _saving = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Removed visit to ${place.name}. Stats synced.')),
+        SnackBar(
+          content: Text('Removed visit to ${place.name}. Stats synced.'),
+        ),
       );
     } catch (error) {
       if (!mounted) return;
       setState(() => _saving = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not remove visit: $error')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not remove visit: $error')));
     }
   }
 
@@ -126,13 +132,24 @@ class _ManageUserVisitsDialogState extends State<_ManageUserVisitsDialog> {
         add: true,
       );
       if (!mounted) return;
-      Navigator.of(context).pop(result);
+      setState(() {
+        _lastResult = result;
+        _visitState = result;
+        _visitedPlaceIds = (result['visited_place_ids'] as List)
+            .map((id) => id.toString())
+            .toSet();
+        _selectedPlaceIds.clear();
+        _saving = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Visits, XP, and badges synced.')),
+      );
     } catch (error) {
       if (!mounted) return;
       setState(() => _saving = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not add visits: $error')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not add visits: $error')));
     }
   }
 
@@ -180,10 +197,7 @@ class _ManageUserVisitsDialogState extends State<_ManageUserVisitsDialog> {
                 Icons.stars_rounded,
                 '${_visitState['total_points'] ?? 0} XP',
               ),
-              _statChip(
-                Icons.military_tech_rounded,
-                '${badges.length} badges',
-              ),
+              _statChip(Icons.military_tech_rounded, '${badges.length} badges'),
             ],
           ),
           if (badges.isNotEmpty) ...[
@@ -232,17 +246,25 @@ class _ManageUserVisitsDialogState extends State<_ManageUserVisitsDialog> {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.location_on_outlined, color: AppTheme.primary),
+                  const Icon(
+                    Icons.location_on_outlined,
+                    color: AppTheme.primary,
+                  ),
                   const SizedBox(width: 10),
                   const Expanded(
                     child: Text(
                       'Manage User Visits & Badges',
-                      style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800),
+                      style: TextStyle(
+                        fontSize: 19,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                   ),
                   IconButton(
                     tooltip: 'Close',
-                    onPressed: _saving ? null : () => Navigator.pop(context),
+                    onPressed: _saving
+                        ? null
+                        : () => Navigator.pop(context, _lastResult),
                     icon: const Icon(Icons.close),
                   ),
                 ],
@@ -280,7 +302,10 @@ class _ManageUserVisitsDialogState extends State<_ManageUserVisitsDialog> {
                           .map(
                             (category) => DropdownMenuItem(
                               value: category,
-                              child: Text(category, overflow: TextOverflow.ellipsis),
+                              child: Text(
+                                category,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
                           )
                           .toList(growable: false),
@@ -309,7 +334,10 @@ class _ManageUserVisitsDialogState extends State<_ManageUserVisitsDialog> {
                           children: [
                             Text('Could not load user visits: $_error'),
                             const SizedBox(height: 8),
-                            TextButton(onPressed: _load, child: const Text('Retry')),
+                            TextButton(
+                              onPressed: _load,
+                              child: const Text('Retry'),
+                            ),
                           ],
                         ),
                       )
@@ -325,7 +353,10 @@ class _ManageUserVisitsDialogState extends State<_ManageUserVisitsDialog> {
                           return ListTile(
                             dense: true,
                             leading: visited
-                                ? const Icon(Icons.check_circle, color: Colors.green)
+                                ? const Icon(
+                                    Icons.check_circle,
+                                    color: Colors.green,
+                                  )
                                 : Checkbox(
                                     value: selected,
                                     onChanged: _saving
@@ -334,7 +365,9 @@ class _ManageUserVisitsDialogState extends State<_ManageUserVisitsDialog> {
                                             if (value == true) {
                                               _selectedPlaceIds.add(place.id);
                                             } else {
-                                              _selectedPlaceIds.remove(place.id);
+                                              _selectedPlaceIds.remove(
+                                                place.id,
+                                              );
                                             }
                                           }),
                                   ),
@@ -360,7 +393,9 @@ class _ManageUserVisitsDialogState extends State<_ManageUserVisitsDialog> {
                             trailing: visited
                                 ? IconButton(
                                     tooltip: 'Remove this visit',
-                                    onPressed: _saving ? null : () => _removeVisit(place),
+                                    onPressed: _saving
+                                        ? null
+                                        : () => _removeVisit(place),
                                     icon: const Icon(
                                       Icons.remove_circle_outline,
                                       color: AppTheme.danger,
@@ -390,7 +425,10 @@ class _ManageUserVisitsDialogState extends State<_ManageUserVisitsDialog> {
                   const Spacer(),
                   FilledButton.icon(
                     onPressed:
-                        _loading || _error != null || _saving || _selectedPlaceIds.isEmpty
+                        _loading ||
+                            _error != null ||
+                            _saving ||
+                            _selectedPlaceIds.isEmpty
                         ? null
                         : _addSelectedVisits,
                     icon: _saving

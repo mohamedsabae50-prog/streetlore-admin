@@ -227,15 +227,30 @@ class AdminService {
     required List<String> placeIds,
     required bool add,
   }) async {
-    final response = await _client.functions.invoke(
-      'admin-user-management',
-      body: {
-        'action': add ? 'add_visits' : 'remove_visits',
-        'user_id': userId,
-        'place_ids': placeIds,
-      },
-    );
-    final data = _functionResponseData(response, 'User visits update');
+    late final Map<String, dynamic> data;
+    if (add) {
+      final response = await _client.rpc(
+        'admin_add_visits_and_sync',
+        params: {
+          'target_user_id': userId,
+          'place_ids': placeIds,
+        },
+      );
+      if (response is! Map) {
+        throw const FormatException('Invalid user visits update response.');
+      }
+      data = Map<String, dynamic>.from(response);
+    } else {
+      final response = await _client.functions.invoke(
+        'admin-user-management',
+        body: {
+          'action': 'remove_visits',
+          'user_id': userId,
+          'place_ids': placeIds,
+        },
+      );
+      data = _functionResponseData(response, 'User visits update');
+    }
     if (data['visited_place_ids'] is! List ||
         data['badges'] is! List ||
         data['newly_unlocked'] is! List) {
