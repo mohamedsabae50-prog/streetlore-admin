@@ -138,7 +138,7 @@ class _PlacesListScreenState extends State<PlacesListScreen> {
         ],
       ),
     );
-    if (confirm != true) return;
+    if (!mounted || confirm != true) return;
     try {
       await AdminService.instance.deletePlace(p.id);
       if (!mounted) return;
@@ -157,6 +157,7 @@ class _PlacesListScreenState extends State<PlacesListScreen> {
       context,
       MaterialPageRoute(builder: (_) => PlaceFormScreen(place: p)),
     );
+    if (!mounted) return;
     if (result != null) _load();
   }
 
@@ -165,6 +166,7 @@ class _PlacesListScreenState extends State<PlacesListScreen> {
       context,
       MaterialPageRoute(builder: (_) => PhotosListScreen(place: p)),
     );
+    if (!mounted) return;
   }
 
   @override
@@ -201,6 +203,7 @@ class _PlacesListScreenState extends State<PlacesListScreen> {
             context,
             MaterialPageRoute(builder: (_) => const PlaceFormScreen()),
           );
+          if (!mounted) return;
           if (result != null) _load();
         },
         icon: const Icon(Icons.add),

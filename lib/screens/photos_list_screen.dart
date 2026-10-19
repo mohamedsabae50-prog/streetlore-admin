@@ -66,7 +66,7 @@ class _PhotosListScreenState extends State<PhotosListScreen> {
         ],
       ),
     );
-    if (confirm != true) return;
+    if (!mounted || confirm != true) return;
     try {
       await AdminService.instance.deletePhoto(p.id);
       if (!mounted) return;

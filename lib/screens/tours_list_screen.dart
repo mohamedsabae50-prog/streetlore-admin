@@ -104,7 +104,7 @@ class _ToursListScreenState extends State<ToursListScreen> {
         ],
       ),
     );
-    if (confirm != true) return;
+    if (!mounted || confirm != true) return;
     try {
       await AdminService.instance.deleteTour(t.id);
       if (!mounted) return;
@@ -137,6 +137,7 @@ class _ToursListScreenState extends State<ToursListScreen> {
             context,
             MaterialPageRoute(builder: (_) => const TourFormScreen()),
           );
+          if (!mounted) return;
           if (result != null) _load();
         },
         icon: const Icon(Icons.add),
@@ -274,6 +275,7 @@ class _ToursListScreenState extends State<ToursListScreen> {
                                 builder: (_) => TourFormScreen(tour: t),
                               ),
                             );
+                            if (!mounted) return;
                             if (result != null) _load();
                           },
                         ),

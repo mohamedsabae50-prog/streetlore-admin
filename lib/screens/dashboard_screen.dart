@@ -171,6 +171,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             builder: (_) => const PlacesListScreen(),
                           ),
                         );
+                        if (!mounted) return;
                         _refreshCounts();
                       },
                     ),
@@ -190,6 +191,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             builder: (_) => const ToursListScreen(),
                           ),
                         );
+                        if (!mounted) return;
                         _refreshCounts();
                       },
                     ),
@@ -211,6 +213,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             builder: (_) => const PhotosListScreen(),
                           ),
                         );
+                        if (!mounted) return;
                         _refreshCounts();
                       },
                     ),
@@ -244,6 +247,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     context,
                     MaterialPageRoute(builder: (_) => const PlaceFormScreen()),
                   );
+                  if (!mounted) return;
                   if (result != null) _refreshCounts();
                 },
               ),
@@ -258,6 +262,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     context,
                     MaterialPageRoute(builder: (_) => const TourFormScreen()),
                   );
+                  if (!mounted) return;
                   if (result != null) _refreshCounts();
                 },
               ),

@@ -64,7 +64,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
         ],
       ),
     );
-    if (confirmed != true) return;
+    if (!mounted || confirmed != true) return;
     await _runReportAction(report, () async {
       await AdminService.instance.deleteReportedContent(
         report['id'] as String,

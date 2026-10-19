@@ -116,7 +116,7 @@ class _UsersListScreenState extends State<UsersListScreen> {
         ],
       ),
     );
-    if (confirmed != true) return;
+    if (!mounted || confirmed != true) return;
 
     setState(() => _deletingUserId = user.id);
     try {
@@ -172,7 +172,7 @@ class _UsersListScreenState extends State<UsersListScreen> {
         ],
       ),
     );
-    if (plan == null) return;
+    if (!mounted || plan == null) return;
     await _setSubscriptionPlan(user, plan);
   }
 
