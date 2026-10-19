@@ -91,6 +91,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
     Navigator.pushReplacementNamed(context, '/login');
   }
 
+  Future<void> _toggleTheme() async {
+    try {
+      await AppTheme.setDarkMode(AppTheme.themeMode.value != ThemeMode.dark);
+    } catch (error, stackTrace) {
+      debugPrint('DashboardScreen: failed to save theme preference: $error');
+      debugPrint('$stackTrace');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Theme changed, but could not be saved: $error'),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -102,12 +117,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
               style: TextStyle(fontWeight: FontWeight.w800),
             ),
             SizedBox(width: 10),
-            const Text(
+            Text(
               'v2.1.7',
               style: TextStyle(
                 fontWeight: FontWeight.w600,
                 fontSize: 12,
-                color: Colors.black54,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
             const SizedBox(width: 10),
@@ -116,18 +131,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 AdminService.instance.currentUserEmail,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   fontWeight: FontWeight.w500,
                   fontSize: 12,
-                  color: Colors.black54,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
             ),
           ],
         ),
-        backgroundColor: Colors.white,
-        elevation: 0,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         actions: [
+          IconButton(
+            icon: Icon(
+              AppTheme.themeMode.value == ThemeMode.dark
+                  ? Icons.light_mode_rounded
+                  : Icons.dark_mode_rounded,
+            ),
+            onPressed: _toggleTheme,
+            tooltip: AppTheme.themeMode.value == ThemeMode.dark
+                ? 'Switch to light mode'
+                : 'Switch to dark mode',
+          ),
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
             onPressed: _refreshCounts,
@@ -146,7 +171,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text(
+              Text(
                 'Overview',
                 style: TextStyle(
                   fontSize: 22,
@@ -228,7 +253,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 onRetry: _refreshCounts,
               ),
               const SizedBox(height: 28),
-              const Text(
+              Text(
                 'Quick Actions',
                 style: TextStyle(
                   fontSize: 22,
@@ -338,7 +363,7 @@ class _AnalyticsPanel extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text(
+        Text(
           'Analytics',
           style: TextStyle(
             fontSize: 22,
@@ -347,7 +372,7 @@ class _AnalyticsPanel extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 4),
-        const Text(
+        Text(
           'Usage and engagement at a glance',
           style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
         ),
@@ -374,7 +399,7 @@ class _AnalyticsPanel extends StatelessWidget {
                 Expanded(
                   child: Text(
                     'Analytics unavailable: $error',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
                       color: AppTheme.textSecondary,
                     ),
@@ -452,7 +477,7 @@ class _AnalyticsMetricCard extends StatelessWidget {
         border: Border.all(color: color.withValues(alpha: 0.2)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.035),
+            color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.12),
             blurRadius: 10,
             offset: const Offset(0, 3),
           ),
@@ -467,7 +492,7 @@ class _AnalyticsMetricCard extends StatelessWidget {
             value.toString(),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 25,
               fontWeight: FontWeight.w900,
               color: AppTheme.textPrimary,
@@ -475,7 +500,7 @@ class _AnalyticsMetricCard extends StatelessWidget {
           ),
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w800,
               color: AppTheme.textPrimary,
@@ -484,7 +509,7 @@ class _AnalyticsMetricCard extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             caption,
-            style: const TextStyle(fontSize: 10, color: AppTheme.textSecondary),
+            style: TextStyle(fontSize: 10, color: AppTheme.textSecondary),
           ),
         ],
       ),
@@ -507,7 +532,7 @@ class _PopularToursCard extends StatelessWidget {
         border: Border.all(color: AppTheme.border),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.035),
+            color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.12),
             blurRadius: 10,
             offset: const Offset(0, 3),
           ),
@@ -516,7 +541,7 @@ class _PopularToursCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
               Icon(Icons.trending_up_rounded, color: AppTheme.warning),
               SizedBox(width: 8),
@@ -532,7 +557,7 @@ class _PopularToursCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           if (tours.isEmpty)
-            const Padding(
+            Padding(
               padding: EdgeInsets.symmetric(vertical: 8),
               child: Text(
                 'No published tours yet',
@@ -569,7 +594,7 @@ class _PopularToursCard extends StatelessWidget {
                         tour.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
                           color: AppTheme.textPrimary,
@@ -577,7 +602,7 @@ class _PopularToursCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    const Icon(
+                    Icon(
                       Icons.visibility_outlined,
                       size: 14,
                       color: AppTheme.textSecondary,
@@ -585,7 +610,7 @@ class _PopularToursCard extends StatelessWidget {
                     const SizedBox(width: 4),
                     Text(
                       tour.viewCount.toString(),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w800,
                         color: AppTheme.textSecondary,
@@ -616,7 +641,7 @@ class _TopPlacesByCheckinsCard extends StatelessWidget {
         border: Border.all(color: AppTheme.border),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.035),
+            color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.12),
             blurRadius: 10,
             offset: const Offset(0, 3),
           ),
@@ -625,7 +650,7 @@ class _TopPlacesByCheckinsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
               Icon(Icons.place_rounded, color: AppTheme.success),
               SizedBox(width: 8),
@@ -641,7 +666,7 @@ class _TopPlacesByCheckinsCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           if (places.isEmpty)
-            const Padding(
+            Padding(
               padding: EdgeInsets.symmetric(vertical: 8),
               child: Text(
                 'No check-ins recorded yet',
@@ -678,7 +703,7 @@ class _TopPlacesByCheckinsCard extends StatelessWidget {
                         place.placeName,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
                           color: AppTheme.textPrimary,
@@ -686,7 +711,7 @@ class _TopPlacesByCheckinsCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    const Icon(
+                    Icon(
                       Icons.check_circle_outline_rounded,
                       size: 14,
                       color: AppTheme.textSecondary,
@@ -694,7 +719,7 @@ class _TopPlacesByCheckinsCard extends StatelessWidget {
                     const SizedBox(width: 4),
                     Text(
                       place.checkinCount.toString(),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w800,
                         color: AppTheme.textSecondary,
@@ -737,7 +762,9 @@ class _StatCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
+              color: Theme.of(
+                context,
+              ).colorScheme.shadow.withValues(alpha: 0.12),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -758,7 +785,7 @@ class _StatCard extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               loading ? '...' : '$count',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.w900,
                 color: AppTheme.textPrimary,
@@ -766,7 +793,7 @@ class _StatCard extends StatelessWidget {
             ),
             Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
                 color: AppTheme.textSecondary,
                 fontWeight: FontWeight.w600,
@@ -837,7 +864,7 @@ class _ActionCard extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w800,
                       color: AppTheme.textPrimary,
@@ -846,7 +873,7 @@ class _ActionCard extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     subtitle,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
                       color: AppTheme.textSecondary,
                     ),

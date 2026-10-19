@@ -81,8 +81,7 @@ class _AiChatLogsScreenState extends State<AiChatLogsScreen> {
           'AI Chat Logs',
           style: TextStyle(fontWeight: FontWeight.w800),
         ),
-        backgroundColor: Colors.white,
-        elevation: 0,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         actions: [
           IconButton(
             tooltip: 'Refresh logs',
@@ -170,7 +169,7 @@ class _ThreadCard extends StatelessWidget {
       color: AppTheme.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
-        side: const BorderSide(color: AppTheme.border),
+        side: BorderSide(color: AppTheme.border),
       ),
       child: ExpansionTile(
         tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -212,10 +211,7 @@ class _ThreadCard extends StatelessWidget {
                 '${_formatTime(thread.startedAt)}  →  ${_formatTime(thread.lastMessageAt)}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: AppTheme.textSecondary,
-                ),
+                style: TextStyle(fontSize: 11, color: AppTheme.textSecondary),
               ),
               const SizedBox(height: 5),
               Text(
@@ -253,7 +249,7 @@ class _TranscriptMessage extends StatelessWidget {
       children: [
         Text(
           _formatTime(message.createdAt),
-          style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+          style: TextStyle(fontSize: 11, color: AppTheme.textSecondary),
         ),
         const SizedBox(height: 10),
         const Text('Prompt', style: TextStyle(fontWeight: FontWeight.w800)),

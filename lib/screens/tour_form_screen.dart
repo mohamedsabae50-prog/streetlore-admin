@@ -232,8 +232,7 @@ class _TourFormScreenState extends State<TourFormScreen> {
           _isEditing ? 'Edit Tour' : 'New Tour',
           style: const TextStyle(fontWeight: FontWeight.w800),
         ),
-        backgroundColor: Colors.white,
-        elevation: 0,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         actions: [
           TextButton(
             onPressed: _saving ? null : _save,
@@ -401,7 +400,7 @@ class _TourFormScreenState extends State<TourFormScreen> {
                           child: coverPreview.isEmpty
                               ? Container(
                                   color: AppTheme.bg,
-                                  child: const Icon(
+                                  child: Icon(
                                     Icons.image_outlined,
                                     color: AppTheme.textSecondary,
                                     size: 28,
@@ -558,7 +557,7 @@ class _TourFormScreenState extends State<TourFormScreen> {
                           style: BorderStyle.solid,
                         ),
                       ),
-                      child: const Center(
+                      child: Center(
                         child: Text(
                           'No stops yet — tap "Add stops"',
                           style: TextStyle(color: AppTheme.textSecondary),
@@ -587,7 +586,7 @@ class _TourFormScreenState extends State<TourFormScreen> {
                             children: [
                               ReorderableDragStartListener(
                                 index: i,
-                                child: const Padding(
+                                child: Padding(
                                   padding: EdgeInsets.only(right: 8),
                                   child: Icon(
                                     Icons.drag_indicator_rounded,
@@ -613,7 +612,7 @@ class _TourFormScreenState extends State<TourFormScreen> {
                                   p.name,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w700,
                                     color: AppTheme.textPrimary,
@@ -657,7 +656,7 @@ class _TourFormScreenState extends State<TourFormScreen> {
     padding: const EdgeInsets.only(bottom: 6),
     child: Text(
       text,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 12,
         fontWeight: FontWeight.w800,
         color: AppTheme.textPrimary,
@@ -730,7 +729,7 @@ class _PlacePickerSheetState extends State<_PlacePickerSheet> {
       expand: false,
       builder: (ctx, scrollCtrl) {
         return Container(
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             color: AppTheme.surface,
             borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
           ),
@@ -759,7 +758,7 @@ class _PlacePickerSheetState extends State<_PlacePickerSheet> {
                     const Spacer(),
                     Text(
                       '${_selected.length} selected',
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: AppTheme.textSecondary,
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
@@ -797,14 +796,14 @@ class _PlacePickerSheetState extends State<_PlacePickerSheet> {
                       }),
                       title: Text(
                         _localizedName(p),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.w700,
                           color: AppTheme.textPrimary,
                         ),
                       ),
                       subtitle: Text(
                         '${p.category} · ${p.id}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
                           color: AppTheme.textSecondary,
                         ),

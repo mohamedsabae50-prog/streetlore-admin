@@ -37,8 +37,9 @@ class _PlacesListScreenState extends State<PlacesListScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _loading = false);
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Load failed: $e')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Load failed: $e')));
     }
   }
 
@@ -68,17 +69,15 @@ class _PlacesListScreenState extends State<PlacesListScreen> {
     try {
       await AdminService.instance.updateDisplayOrders(entries);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('New order saved')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('New order saved')));
     } catch (e) {
       if (!mounted) return;
       final msg = e.toString().replaceFirst('Exception: ', '');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'Order save FAILED — reverted. Tap for details.',
-          ),
+          content: Text('Order save FAILED — reverted. Tap for details.'),
           duration: const Duration(seconds: 8),
           backgroundColor: AppTheme.danger,
           action: SnackBarAction(
@@ -129,12 +128,14 @@ class _PlacesListScreenState extends State<PlacesListScreen> {
         content: Text('"${p.name}" will be permanently removed.'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel')),
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
           TextButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              style: TextButton.styleFrom(foregroundColor: AppTheme.danger),
-              child: const Text('Delete')),
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: AppTheme.danger),
+            child: const Text('Delete'),
+          ),
         ],
       ),
     );
@@ -142,13 +143,15 @@ class _PlacesListScreenState extends State<PlacesListScreen> {
     try {
       await AdminService.instance.deletePlace(p.id);
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Place deleted')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Place deleted')));
       _load();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Delete failed: $e')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Delete failed: $e')));
     }
   }
 
@@ -174,20 +177,25 @@ class _PlacesListScreenState extends State<PlacesListScreen> {
     final filtered = _filter.isEmpty
         ? _places
         : _places
-            .where((p) =>
-                p.name.toLowerCase().contains(_filter.toLowerCase()) ||
-                p.category.toLowerCase().contains(_filter.toLowerCase()))
-            .toList();
+              .where(
+                (p) =>
+                    p.name.toLowerCase().contains(_filter.toLowerCase()) ||
+                    p.category.toLowerCase().contains(_filter.toLowerCase()),
+              )
+              .toList();
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Places',
-            style: TextStyle(fontWeight: FontWeight.w800)),
-        backgroundColor: Colors.white,
-        elevation: 0,
+        title: const Text(
+          'Places',
+          style: TextStyle(fontWeight: FontWeight.w800),
+        ),
+        backgroundColor: Theme.of(context).colorScheme.surface,
         actions: [
           IconButton(
             icon: Icon(
-              _editOrder ? Icons.drag_indicator_rounded : Icons.list_alt_rounded,
+              _editOrder
+                  ? Icons.drag_indicator_rounded
+                  : Icons.list_alt_rounded,
               color: _editOrder ? AppTheme.primary : null,
             ),
             onPressed: () => setState(() => _editOrder = !_editOrder),
@@ -227,8 +235,7 @@ class _PlacesListScreenState extends State<PlacesListScreen> {
               ),
             ),
           ),
-          if (_savingOrder)
-            const LinearProgressIndicator(minHeight: 2),
+          if (_savingOrder) const LinearProgressIndicator(minHeight: 2),
           if (_editOrder && !_loading && _places.isNotEmpty)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
@@ -248,74 +255,75 @@ class _PlacesListScreenState extends State<PlacesListScreen> {
             child: _loading
                 ? const Center(child: CircularProgressIndicator())
                 : filtered.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.inbox_rounded,
-                                size: 64,
-                                color: AppTheme.textSecondary
-                                    .withValues(alpha: 0.4)),
-                            const SizedBox(height: 10),
-                            const Text('No places found',
-                                style: TextStyle(
-                                    color: AppTheme.textSecondary)),
-                          ],
+                ? Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.inbox_rounded,
+                          size: 64,
+                          color: AppTheme.textSecondary.withValues(alpha: 0.4),
                         ),
-                      )
-                    : _editOrder
-                        ? ReorderableListView.builder(
-                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 90),
-                            itemCount: filtered.length,
-                            buildDefaultDragHandles: false,
-                            onReorderItem: _persistOrder,
-                            itemBuilder: (context, i) {
-                              final p = filtered[i];
-                              return Padding(
-                                key: ValueKey('place_${p.id}'),
-                                padding:
-                                    const EdgeInsets.only(bottom: 8),
-                                child: _PlaceRow(
-                                  place: p,
-                                  orderPosition: i + 1,
-                                  onPhotos: () => _openPhotos(p),
-                                  onEdit: () => _openEdit(p),
-                                  onDelete: () => _delete(p),
-                                  dragHandle: ReorderableDragStartListener(
-                                    index: i,
-                                    child: const Padding(
-                                      padding: EdgeInsets.all(8),
-                                      child: Icon(
-                                        Icons.drag_handle_rounded,
-                                        color: Colors.black45,
-                                        size: 22,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
-                          )
-                        : RefreshIndicator(
-                            onRefresh: _load,
-                            child: ListView.separated(
-                              padding:
-                                  const EdgeInsets.fromLTRB(16, 0, 16, 90),
-                              itemCount: filtered.length,
-                              separatorBuilder: (_, _) =>
-                                  const SizedBox(height: 8),
-                              itemBuilder: (context, i) {
-                                final p = filtered[i];
-                                return _PlaceRow(
-                                  place: p,
-                                  orderPosition: i + 1,
-                                  onPhotos: () => _openPhotos(p),
-                                  onEdit: () => _openEdit(p),
-                                  onDelete: () => _delete(p),
-                                );
-                              },
+                        const SizedBox(height: 10),
+                        Text(
+                          'No places found',
+                          style: TextStyle(color: AppTheme.textSecondary),
+                        ),
+                      ],
+                    ),
+                  )
+                : _editOrder
+                ? ReorderableListView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 90),
+                    itemCount: filtered.length,
+                    buildDefaultDragHandles: false,
+                    onReorderItem: _persistOrder,
+                    itemBuilder: (context, i) {
+                      final p = filtered[i];
+                      return Padding(
+                        key: ValueKey('place_${p.id}'),
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: _PlaceRow(
+                          place: p,
+                          orderPosition: i + 1,
+                          onPhotos: () => _openPhotos(p),
+                          onEdit: () => _openEdit(p),
+                          onDelete: () => _delete(p),
+                          dragHandle: ReorderableDragStartListener(
+                            index: i,
+                            child: Padding(
+                              padding: EdgeInsets.all(8),
+                              child: Icon(
+                                Icons.drag_handle_rounded,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                                size: 22,
+                              ),
                             ),
                           ),
+                        ),
+                      );
+                    },
+                  )
+                : RefreshIndicator(
+                    onRefresh: _load,
+                    child: ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 90),
+                      itemCount: filtered.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: 8),
+                      itemBuilder: (context, i) {
+                        final p = filtered[i];
+                        return _PlaceRow(
+                          place: p,
+                          orderPosition: i + 1,
+                          onPhotos: () => _openPhotos(p),
+                          onEdit: () => _openEdit(p),
+                          onDelete: () => _delete(p),
+                        );
+                      },
+                    ),
+                  ),
           ),
         ],
       ),
@@ -349,7 +357,7 @@ class _PlaceRow extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.12),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -371,7 +379,7 @@ class _PlaceRow extends StatelessWidget {
                 width: 60,
                 height: 60,
                 color: AppTheme.bg,
-                child: const Icon(
+                child: Icon(
                   Icons.image_not_supported_rounded,
                   color: AppTheme.textSecondary,
                 ),
@@ -387,7 +395,9 @@ class _PlaceRow extends StatelessWidget {
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 2),
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: AppTheme.primary.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(4),
@@ -407,7 +417,7 @@ class _PlaceRow extends StatelessWidget {
                         place.name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w800,
                           color: AppTheme.textPrimary,
@@ -419,17 +429,16 @@ class _PlaceRow extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   '${place.category} · ${place.priceLevel.name}',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppTheme.textSecondary,
-                  ),
+                  style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
                 ),
                 if (place.isHiddenGem)
                   Padding(
                     padding: const EdgeInsets.only(top: 4),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 2),
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: AppTheme.primary.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(4),
@@ -449,8 +458,10 @@ class _PlaceRow extends StatelessWidget {
           ),
           ?dragHandle,
           IconButton(
-            icon: const Icon(Icons.photo_library_outlined,
-                color: AppTheme.success),
+            icon: const Icon(
+              Icons.photo_library_outlined,
+              color: AppTheme.success,
+            ),
             onPressed: onPhotos,
             tooltip: 'Photos',
           ),
@@ -460,8 +471,10 @@ class _PlaceRow extends StatelessWidget {
             tooltip: 'Edit',
           ),
           IconButton(
-            icon: const Icon(Icons.delete_outline_rounded,
-                color: AppTheme.danger),
+            icon: const Icon(
+              Icons.delete_outline_rounded,
+              color: AppTheme.danger,
+            ),
             onPressed: onDelete,
             tooltip: 'Delete',
           ),

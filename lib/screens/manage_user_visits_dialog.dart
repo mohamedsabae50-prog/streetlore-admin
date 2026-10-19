@@ -182,7 +182,7 @@ class _ManageUserVisitsDialogState extends State<_ManageUserVisitsDialog> {
           ),
           Text(
             widget.user.email,
-            style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+            style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
           ),
           const SizedBox(height: 12),
           Wrap(
@@ -321,7 +321,7 @@ class _ManageUserVisitsDialogState extends State<_ManageUserVisitsDialog> {
                   alignment: Alignment.centerLeft,
                   child: Text(
                     '${_selectedPlaceIds.length} unvisited place(s) selected',
-                    style: const TextStyle(color: AppTheme.primary),
+                    style: TextStyle(color: AppTheme.primary),
                   ),
                 ),
               Expanded(
@@ -355,7 +355,7 @@ class _ManageUserVisitsDialogState extends State<_ManageUserVisitsDialog> {
                             leading: visited
                                 ? const Icon(
                                     Icons.check_circle,
-                                    color: Colors.green,
+                                    color: AppTheme.success,
                                   )
                                 : Checkbox(
                                     value: selected,

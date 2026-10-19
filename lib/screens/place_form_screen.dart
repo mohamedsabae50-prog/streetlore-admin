@@ -30,10 +30,10 @@ class _CoverBadge extends StatelessWidget {
         color: AppTheme.primary,
         borderRadius: BorderRadius.circular(8),
       ),
-      child: const Text(
+      child: Text(
         'Cover',
         style: TextStyle(
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.surface,
           fontSize: 10,
           fontWeight: FontWeight.w900,
           letterSpacing: 0.5,
@@ -408,8 +408,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
           _isEditing ? 'Edit Place' : 'New Place',
           style: const TextStyle(fontWeight: FontWeight.w800),
         ),
-        backgroundColor: Colors.white,
-        elevation: 0,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         actions: [
           TextButton(
             onPressed: _saving ? null : _save,
@@ -444,7 +443,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                     'Add one or more images. The first one is the cover.',
                     style: TextStyle(
                       fontSize: 12,
-                      color: AppTheme.textSecondary,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -498,7 +497,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                     'Add direct image URLs for the swipeable gallery shown in the app. These URLs are merged with the uploaded images below and saved to places.image_urls.',
                     style: TextStyle(
                       fontSize: 12,
-                      color: AppTheme.textSecondary,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -688,7 +687,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
               margin: const EdgeInsets.only(bottom: 18),
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                color: const Color(0xFFFFFFFF),
+                color: Theme.of(context).colorScheme.surface,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: const Color(0xFF3B82F6).withValues(alpha: 0.45),
@@ -728,13 +727,13 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                         ),
                       ),
                       const SizedBox(width: 12),
-                      const Expanded(
+                      Expanded(
                         child: Text(
                           'English Content',
                           style: TextStyle(
                             fontSize: 17,
                             fontWeight: FontWeight.w900,
-                            color: Color(0xFF0F172A),
+                            color: AppTheme.textPrimary,
                           ),
                         ),
                       ),
@@ -999,12 +998,12 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                 foregroundColor: Colors.white,
               ),
               child: _saving
-                  ? const SizedBox(
+                  ? SizedBox(
                       height: 18,
                       width: 18,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.surface,
                       ),
                     )
                   : Text(
@@ -1031,12 +1030,12 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
       margin: const EdgeInsets.only(bottom: 18),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppTheme.border),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
+            color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.12),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
@@ -1059,7 +1058,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
               const SizedBox(width: 10),
               Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w800,
                   color: AppTheme.textPrimary,
@@ -1081,7 +1080,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
         children: [
           Text(
             text,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w800,
               color: AppTheme.textPrimary,
@@ -1204,10 +1203,10 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                         child: url.isEmpty
                             ? Container(
                                 color: AppTheme.border,
-                                child: const Icon(
+                                child: Icon(
                                   Icons.image_outlined,
                                   size: 18,
-                                  color: Colors.black38,
+                                  color: AppTheme.textSecondary,
                                 ),
                               )
                             : Image.network(
@@ -1217,10 +1216,10 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                                 gaplessPlayback: true,
                                 errorBuilder: (_, _, _) => Container(
                                   color: AppTheme.border,
-                                  child: const Icon(
+                                  child: Icon(
                                     Icons.broken_image_outlined,
                                     size: 18,
-                                    color: Colors.black38,
+                                    color: AppTheme.textSecondary,
                                   ),
                                 ),
                               ),
@@ -1310,7 +1309,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: AppTheme.border),
           ),
-          child: const Center(
+          child: Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -1409,13 +1408,13 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.broken_image_outlined,
                           size: 40,
                           color: AppTheme.textSecondary,
                         ),
                         const SizedBox(height: 6),
-                        const Text(
+                        Text(
                           'Image failed to load',
                           style: TextStyle(
                             color: AppTheme.textSecondary,
@@ -1452,7 +1451,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                 ),
               )
             else
-              const Center(
+              Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -1509,7 +1508,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                     filterQuality: FilterQuality.medium,
                     errorBuilder: (_, _, _) => Container(
                       color: AppTheme.bg,
-                      child: const Center(
+                      child: Center(
                         child: Icon(
                           Icons.broken_image_outlined,
                           color: AppTheme.textSecondary,
@@ -1553,7 +1552,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
       children: [
         Row(
           children: [
-            const Text(
+            Text(
               'Pick location on map',
               style: TextStyle(
                 fontSize: 12,
@@ -1562,13 +1561,13 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
               ),
             ),
             const Spacer(),
-            const Icon(
+            Icon(
               Icons.touch_app_rounded,
               size: 14,
               color: AppTheme.textSecondary,
             ),
             const SizedBox(width: 4),
-            const Text(
+            Text(
               'tap to set coordinates',
               style: TextStyle(fontSize: 11, color: AppTheme.textSecondary),
             ),
@@ -1606,7 +1605,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                       width: 44,
                       height: 44,
 
-                      child: const Icon(
+                      child: Icon(
                         Icons.location_on_rounded,
                         color: AppTheme.danger,
                         size: 40,
@@ -1621,7 +1620,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
         const SizedBox(height: 8),
         Row(
           children: [
-            const Icon(
+            Icon(
               Icons.my_location_rounded,
               size: 13,
               color: AppTheme.textSecondary,
@@ -1629,7 +1628,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
             const SizedBox(width: 6),
             Text(
               '${lat.toStringAsFixed(6)}, ${lng.toStringAsFixed(6)}',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
                 color: AppTheme.textSecondary,
@@ -1824,7 +1823,7 @@ class _ModerationSectionState extends State<_ModerationSection> {
       margin: const EdgeInsets.only(bottom: 18),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: AppTheme.danger.withValues(alpha: 0.4),
@@ -1832,7 +1831,7 @@ class _ModerationSectionState extends State<_ModerationSection> {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
+            color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.12),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
@@ -2135,14 +2134,14 @@ class _PhotoRow extends StatelessWidget {
                       cacheWidth: 128,
                       fit: BoxFit.cover,
                       gaplessPlayback: true,
-                      errorBuilder: (_, _, _) => _brokenThumb(),
+                      errorBuilder: (context, _, _) => _brokenThumb(context),
                     )
                   : Image.network(
                       photo.imageUrl,
                       cacheWidth: 128,
                       fit: BoxFit.cover,
                       gaplessPlayback: true,
-                      errorBuilder: (_, _, _) => _brokenThumb(),
+                      errorBuilder: (context, _, _) => _brokenThumb(context),
                     ),
             ),
           ),
@@ -2194,11 +2193,11 @@ class _PhotoRow extends StatelessWidget {
     );
   }
 
-  Widget _brokenThumb() => Container(
+  Widget _brokenThumb(BuildContext context) => Container(
     color: const Color(0xFF1C2433),
-    child: const Icon(
+    child: Icon(
       Icons.image_not_supported_outlined,
-      color: Colors.white24,
+      color: Theme.of(context).colorScheme.onSurfaceVariant,
       size: 24,
     ),
   );

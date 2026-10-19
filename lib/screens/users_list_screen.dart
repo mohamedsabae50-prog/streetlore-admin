@@ -180,7 +180,9 @@ class _UsersListScreenState extends State<UsersListScreen> {
   Widget _planOption(BuildContext context, String plan, String title) =>
       ListTile(
         leading: Icon(
-          plan == 'free' ? Icons.person_outline_rounded : Icons.workspace_premium_rounded,
+          plan == 'free'
+              ? Icons.person_outline_rounded
+              : Icons.workspace_premium_rounded,
           color: plan == 'free' ? AppTheme.textSecondary : AppTheme.primary,
         ),
         title: Text(title),
@@ -233,7 +235,9 @@ class _UsersListScreenState extends State<UsersListScreen> {
         : const <dynamic>[];
     final badgeNames = badges
         .whereType<Map>()
-        .map((badge) => (badge['name'] ?? badge['id'] ?? 'Achievement').toString())
+        .map(
+          (badge) => (badge['name'] ?? badge['id'] ?? 'Achievement').toString(),
+        )
         .map(
           (name) => name
               .replaceFirst('ach_', '')
@@ -271,8 +275,7 @@ class _UsersListScreenState extends State<UsersListScreen> {
           'Users',
           style: TextStyle(fontWeight: FontWeight.w800),
         ),
-        backgroundColor: Colors.white,
-        elevation: 0,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         actions: [
           IconButton(
             onPressed: () => _loadUsers(reset: true),
@@ -313,7 +316,7 @@ class _UsersListScreenState extends State<UsersListScreen> {
                 : _error != null && _users.isEmpty
                 ? _errorState()
                 : _users.isEmpty
-                ? const Center(
+                ? Center(
                     child: Text(
                       'No users found',
                       style: TextStyle(color: AppTheme.textSecondary),
@@ -356,9 +359,7 @@ class _UsersListScreenState extends State<UsersListScreen> {
                                   user.name.isEmpty
                                       ? '?'
                                       : user.name.substring(0, 1).toUpperCase(),
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w800,
-                                  ),
+                                  style: TextStyle(fontWeight: FontWeight.w800),
                                 ),
                               ),
                               const SizedBox(width: 12),
@@ -373,7 +374,7 @@ class _UsersListScreenState extends State<UsersListScreen> {
                                           : TextDirection.ltr,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 14,
                                         fontWeight: FontWeight.w800,
                                         color: AppTheme.textPrimary,
@@ -387,7 +388,7 @@ class _UsersListScreenState extends State<UsersListScreen> {
                                             user.email,
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
-                                            style: const TextStyle(
+                                            style: TextStyle(
                                               fontSize: 12,
                                               color: AppTheme.textSecondary,
                                             ),
@@ -408,7 +409,7 @@ class _UsersListScreenState extends State<UsersListScreen> {
                                     if (user.createdAt != null)
                                       Text(
                                         'Joined ${user.createdAt!.toLocal().toString().split(' ').first}',
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontSize: 11,
                                           color: AppTheme.textSecondary,
                                         ),
@@ -434,7 +435,7 @@ class _UsersListScreenState extends State<UsersListScreen> {
                                   if (user.subscriptionEndDate != null)
                                     Text(
                                       'Until ${user.subscriptionEndDate!.toLocal().toString().split(' ').first}',
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         color: AppTheme.textSecondary,
                                         fontSize: 9,
                                       ),
@@ -443,15 +444,21 @@ class _UsersListScreenState extends State<UsersListScreen> {
                                     const SizedBox(
                                       width: 18,
                                       height: 18,
-                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
                                     )
                                   else
                                     TextButton(
-                                      onPressed: () => _selectSubscriptionPlan(user),
+                                      onPressed: () =>
+                                          _selectSubscriptionPlan(user),
                                       style: TextButton.styleFrom(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                        ),
                                         minimumSize: Size.zero,
-                                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                        tapTargetSize:
+                                            MaterialTapTargetSize.shrinkWrap,
                                       ),
                                       child: const Text('Manage plan'),
                                     ),
@@ -476,9 +483,14 @@ class _UsersListScreenState extends State<UsersListScreen> {
                                     ? const SizedBox(
                                         width: 18,
                                         height: 18,
-                                        child: CircularProgressIndicator(strokeWidth: 2),
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
                                       )
-                                    : const Icon(Icons.delete_outline_rounded, color: AppTheme.danger),
+                                    : const Icon(
+                                        Icons.delete_outline_rounded,
+                                        color: AppTheme.danger,
+                                      ),
                               ),
                             ],
                           ),
@@ -502,7 +514,7 @@ class _UsersListScreenState extends State<UsersListScreen> {
             Text(
               'Could not load users: $_error',
               textAlign: TextAlign.center,
-              style: const TextStyle(color: AppTheme.textSecondary),
+              style: TextStyle(color: AppTheme.textSecondary),
             ),
             const SizedBox(height: 12),
             OutlinedButton.icon(

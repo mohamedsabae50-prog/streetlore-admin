@@ -94,8 +94,7 @@ class _PhotosListScreenState extends State<PhotosListScreen> {
               : 'User Photos — ${widget.place!.name}',
           style: const TextStyle(fontWeight: FontWeight.w800),
         ),
-        backgroundColor: Colors.white,
-        elevation: 0,
+        backgroundColor: Theme.of(context).colorScheme.surface,
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -112,7 +111,7 @@ class _PhotosListScreenState extends State<PhotosListScreen> {
                     color: AppTheme.textSecondary.withValues(alpha: 0.4),
                   ),
                   const SizedBox(height: 10),
-                  const Text(
+                  Text(
                     'No photos yet',
                     style: TextStyle(color: AppTheme.textSecondary),
                   ),
@@ -147,7 +146,7 @@ class _PhotosListScreenState extends State<PhotosListScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
+            Icon(
               Icons.cloud_off_rounded,
               size: 56,
               color: AppTheme.textSecondary,
@@ -158,7 +157,7 @@ class _PhotosListScreenState extends State<PhotosListScreen> {
                   ? 'The "place_photos" table does not exist yet.\nRun supabase/migrations/2026_10_08_mobile_admin_sync.sql in the Supabase SQL Editor, then retry.'
                   : 'Load failed: $_error',
               textAlign: TextAlign.center,
-              style: const TextStyle(color: AppTheme.textSecondary),
+              style: TextStyle(color: AppTheme.textSecondary),
             ),
             const SizedBox(height: 14),
             OutlinedButton.icon(
@@ -192,7 +191,7 @@ class _PhotoCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.12),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -214,7 +213,7 @@ class _PhotoCard extends StatelessWidget {
                       width: 72,
                       height: 72,
                       color: AppTheme.bg,
-                      child: const Icon(
+                      child: Icon(
                         Icons.image_not_supported_rounded,
                         color: AppTheme.textSecondary,
                       ),
@@ -230,7 +229,7 @@ class _PhotoCard extends StatelessWidget {
                       width: 72,
                       height: 72,
                       color: AppTheme.bg,
-                      child: const Icon(
+                      child: Icon(
                         Icons.image_not_supported_rounded,
                         color: AppTheme.textSecondary,
                       ),
@@ -244,7 +243,7 @@ class _PhotoCard extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.person_outline_rounded,
                       size: 14,
                       color: AppTheme.textSecondary,
@@ -255,7 +254,7 @@ class _PhotoCard extends StatelessWidget {
                         photo.userName,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w800,
                           color: AppTheme.textPrimary,
@@ -270,7 +269,7 @@ class _PhotoCard extends StatelessWidget {
                     'User ID: ${photo.userId}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 10,
                       color: AppTheme.textSecondary,
                     ),
@@ -296,7 +295,7 @@ class _PhotoCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       textDirection: TextDirection.rtl,
                       textAlign: TextAlign.right,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         color: AppTheme.textPrimary,
                       ),
@@ -309,7 +308,7 @@ class _PhotoCard extends StatelessWidget {
                       photo.captionEn,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         color: AppTheme.textSecondary,
                       ),
@@ -326,7 +325,7 @@ class _PhotoCard extends StatelessWidget {
                     const SizedBox(width: 3),
                     Text(
                       '${photo.likes}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11,
                         color: AppTheme.textSecondary,
                         fontWeight: FontWeight.w700,

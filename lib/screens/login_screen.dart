@@ -49,10 +49,13 @@ class _LoginScreenState extends State<LoginScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Icon(Icons.admin_panel_settings_rounded,
-                    size: 64, color: AppTheme.primary),
+                const Icon(
+                  Icons.admin_panel_settings_rounded,
+                  size: 64,
+                  color: AppTheme.primary,
+                ),
                 const SizedBox(height: 16),
-                const Text(
+                Text(
                   'Streetlore Admin',
                   textAlign: TextAlign.center,
                   style: TextStyle(
@@ -62,7 +65,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 4),
-                const Text(
+                Text(
                   'Sign in with your Supabase admin account',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: AppTheme.textSecondary),
@@ -94,8 +97,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       color: AppTheme.danger.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Text(_error!,
-                        style: const TextStyle(color: AppTheme.danger)),
+                    child: Text(
+                      _error!,
+                      style: const TextStyle(color: AppTheme.danger),
+                    ),
                   ),
                 ElevatedButton(
                   onPressed: _loading ? null : _submit,
@@ -104,7 +109,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           height: 18,
                           width: 18,
                           child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white),
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
                         )
                       : const Text('Sign In'),
                 ),

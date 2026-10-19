@@ -44,7 +44,7 @@ Widget _tourImagePlaceholder() => Container(
   height: 60,
   color: AppTheme.bg,
   alignment: Alignment.center,
-  child: const Icon(
+  child: Icon(
     Icons.image_not_supported_rounded,
     color: AppTheme.textSecondary,
     size: 28,
@@ -128,8 +128,7 @@ class _ToursListScreenState extends State<ToursListScreen> {
           'Tours',
           style: TextStyle(fontWeight: FontWeight.w800),
         ),
-        backgroundColor: Colors.white,
-        elevation: 0,
+        backgroundColor: Theme.of(context).colorScheme.surface,
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
@@ -156,7 +155,7 @@ class _ToursListScreenState extends State<ToursListScreen> {
                     color: AppTheme.textSecondary.withValues(alpha: 0.4),
                   ),
                   const SizedBox(height: 10),
-                  const Text(
+                  Text(
                     'No tours yet',
                     style: TextStyle(color: AppTheme.textSecondary),
                   ),
@@ -179,7 +178,9 @@ class _ToursListScreenState extends State<ToursListScreen> {
                       borderRadius: BorderRadius.circular(14),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.04),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.shadow.withValues(alpha: 0.12),
                           blurRadius: 8,
                           offset: const Offset(0, 2),
                         ),
@@ -219,7 +220,7 @@ class _ToursListScreenState extends State<ToursListScreen> {
                                 t.title,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w800,
                                   color: AppTheme.textPrimary,
@@ -228,7 +229,7 @@ class _ToursListScreenState extends State<ToursListScreen> {
                               const SizedBox(height: 2),
                               Text(
                                 '${t.duration} · ${t.places.length} stops',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 12,
                                   color: AppTheme.textSecondary,
                                 ),
