@@ -53,7 +53,7 @@ class _HiddenGemSuggestionsScreenState
         SnackBar(
           content: Text(
             action == 'approve'
-                ? 'Suggestion approved and added to Places.'
+                ? 'Suggestion approved and added to Places. The submitter was granted 30 days of Pro for free.'
                 : 'Suggestion rejected.',
           ),
         ),

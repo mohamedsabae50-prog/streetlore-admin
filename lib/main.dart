@@ -9,7 +9,6 @@ import 'theme.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  
   await Supabase.initialize(
     url: SupabaseConfig.url,
     publishableKey: SupabaseConfig.anonKey,
@@ -26,9 +25,6 @@ class StreetloreAdminApp extends StatelessWidget {
       title: 'Streetlore Admin',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
-      builder: (context, child) => SelectionArea(
-        child: child ?? const SizedBox.shrink(),
-      ),
       // Reverted to v1.0.45 form. Flutter 3.22 handled this gracefully;
       // Flutter 3.44's stricter Locale() validation can crash on
       // certain Chromium platform locales. The admin UI is hard-coded
@@ -40,12 +36,14 @@ class StreetloreAdminApp extends StatelessWidget {
         Locale('en', 'US'),
         Locale('ar', 'EG'),
       ],
-      home: AdminService.instance.isLoggedIn
-          ? const DashboardScreen()
-          : const LoginScreen(),
+      home: SelectionArea(
+        child: AdminService.instance.isLoggedIn
+            ? const DashboardScreen()
+            : const LoginScreen(),
+      ),
       routes: {
-        '/login': (_) => const LoginScreen(),
-        '/dashboard': (_) => const DashboardScreen(),
+        '/login': (_) => const SelectionArea(child: LoginScreen()),
+        '/dashboard': (_) => const SelectionArea(child: DashboardScreen()),
       },
     );
   }
