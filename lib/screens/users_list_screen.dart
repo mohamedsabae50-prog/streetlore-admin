@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import '../models/models.dart';
 import '../services/admin_service.dart';
 import '../theme.dart';
+import 'manage_user_visits_dialog.dart';
 
 class UsersListScreen extends StatefulWidget {
   const UsersListScreen({super.key});
@@ -223,6 +224,32 @@ class _UsersListScreenState extends State<UsersListScreen> {
     }
   }
 
+  Future<void> _manageVisits(AdminUser user) async {
+    final result = await showManageUserVisitsDialog(context, user);
+    if (!mounted || result == null) return;
+    final addedCount = (result['added_count'] as num?)?.toInt() ?? 0;
+    final badges = result['newly_unlocked'] is List
+        ? result['newly_unlocked'] as List
+        : const <dynamic>[];
+    final badgeNames = badges
+        .whereType<Map>()
+        .map((badge) => (badge['name'] ?? badge['id'] ?? 'Achievement').toString())
+        .map(
+          (name) => name
+              .replaceFirst('ach_', '')
+              .replaceAll('_name', '')
+              .replaceAll('_', ' '),
+        )
+        .toList(growable: false);
+    final message = addedCount == 0
+        ? 'No new visits were added for ${user.name}. Stats are synced.'
+        : 'Added $addedCount visit(s) for ${user.name}.'
+              '${badgeNames.isEmpty ? '' : ' New badges: ${badgeNames.join(', ')}'}';
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
   bool _containsArabic(String value) =>
       RegExp(r'[\u0600-\u06FF]').hasMatch(value);
 
@@ -429,6 +456,16 @@ class _UsersListScreenState extends State<UsersListScreen> {
                                       child: const Text('Manage plan'),
                                     ),
                                 ],
+                              ),
+                              IconButton(
+                                tooltip: 'Manage Visits / إضافة زيارات',
+                                onPressed: deleting || updatingPro
+                                    ? null
+                                    : () => _manageVisits(user),
+                                icon: const Icon(
+                                  Icons.add_location_alt_outlined,
+                                  color: AppTheme.primary,
+                                ),
                               ),
                               IconButton(
                                 tooltip: 'Delete user account',

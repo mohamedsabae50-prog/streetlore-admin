@@ -210,6 +210,71 @@ class AdminService {
     );
   }
 
+  Future<Map<String, dynamic>> fetchUserVisitState(String userId) async {
+    final response = await _client.functions.invoke(
+      'admin-user-management',
+      body: {'action': 'visits', 'user_id': userId},
+    );
+    final data = _functionResponseData(response, 'User visits request');
+    if (data['visited_place_ids'] is! List) {
+      throw const FormatException('Invalid user visits response.');
+    }
+    return data;
+  }
+
+  Future<Map<String, dynamic>> updateUserVisits({
+    required String userId,
+    required List<String> placeIds,
+    required bool add,
+  }) async {
+    final response = await _client.functions.invoke(
+      'admin-user-management',
+      body: {
+        'action': add ? 'add_visits' : 'remove_visits',
+        'user_id': userId,
+        'place_ids': placeIds,
+      },
+    );
+    final data = _functionResponseData(response, 'User visits update');
+    if (data['visited_place_ids'] is! List ||
+        data['badges'] is! List ||
+        data['newly_unlocked'] is! List) {
+      throw const FormatException('Invalid user visits update response.');
+    }
+    return data;
+  }
+
+  Map<String, dynamic> _functionResponseData(
+    FunctionResponse response,
+    String requestName,
+  ) {
+    if (response.status < 200 || response.status >= 300) {
+      final responseData = response.data;
+      final dynamic data = switch (responseData) {
+        String value => jsonDecode(value),
+        Uint8List value => jsonDecode(utf8.decode(value)),
+        _ => responseData,
+      };
+      final detail = data is Map<String, dynamic>
+          ? data['message'] ?? data['error']
+          : null;
+      throw StateError(
+        '$requestName failed (${response.status})'
+        '${detail == null ? '' : ': $detail'}',
+      );
+    }
+    final responseData = response.data;
+    final dynamic data = switch (responseData) {
+      String value => jsonDecode(value),
+      Uint8List value => jsonDecode(utf8.decode(value)),
+      _ => responseData,
+    };
+    if (data is! Map<String, dynamic>) {
+      throw FormatException('Invalid $requestName response.');
+    }
+    return data;
+  }
+
   Future<void> deleteUser(String userId) async {
     final response = await _client.functions.invoke(
       'admin-user-management',
