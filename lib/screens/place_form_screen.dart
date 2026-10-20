@@ -56,6 +56,12 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
   late TextEditingController _categoryAr;
   late TextEditingController _lat;
   late TextEditingController _lng;
+  final MapController _mapController = MapController();
+  final GlobalKey _mapKey = GlobalKey();
+  LatLng _selectedPoint = LatLng(31.2001, 29.9187);
+  bool _mapReady = false;
+  bool _isDraggingPin = false;
+  bool _updatingCoordinatesFromMap = false;
   late TextEditingController _address;
   late TextEditingController _addressAr;
   late TextEditingController _openHours;
@@ -100,8 +106,9 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
         .toList(growable: true);
     _category = TextEditingController(text: p?.category ?? 'Historical');
     _categoryAr = TextEditingController(text: p?.categoryAr ?? '');
-    _lat = TextEditingController(text: (p?.lat ?? 31.2).toString());
-    _lng = TextEditingController(text: (p?.lng ?? 29.9).toString());
+    _lat = TextEditingController(text: (p?.lat ?? 31.2001).toString());
+    _lng = TextEditingController(text: (p?.lng ?? 29.9187).toString());
+    _selectedPoint = _coordinatesFromFields() ?? _selectedPoint;
     _address = TextEditingController(text: p?.address ?? 'Alexandria, Egypt');
     _addressAr = TextEditingController(text: p?.addressAr ?? '');
     _openHours = TextEditingController(
@@ -131,7 +138,69 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
   }
 
   void _onCoordFieldChanged() {
+    if (!mounted || _updatingCoordinatesFromMap) return;
+    final point = _coordinatesFromFields();
+    if (point != null) {
+      _selectedPoint = point;
+      if (_mapReady && !_isDraggingPin) {
+        _mapController.move(point, _mapController.camera.zoom);
+      }
+    }
+    setState(() {});
+  }
+
+  LatLng? _coordinatesFromFields() {
+    final lat = double.tryParse(_lat.text.trim());
+    final lng = double.tryParse(_lng.text.trim());
+    if (lat == null ||
+        lng == null ||
+        !lat.isFinite ||
+        !lng.isFinite ||
+        lat < -90 ||
+        lat > 90 ||
+        lng < -180 ||
+        lng > 180) {
+      return null;
+    }
+    return LatLng(lat, lng);
+  }
+
+  void _setCoordinatesFromMap(LatLng point) {
+    if (!point.latitude.isFinite ||
+        !point.longitude.isFinite ||
+        point.latitude < -90 ||
+        point.latitude > 90 ||
+        point.longitude < -180 ||
+        point.longitude > 180) {
+      return;
+    }
+    _selectedPoint = point;
+    _updatingCoordinatesFromMap = true;
+    _lat.text = point.latitude.toStringAsFixed(6);
+    _lng.text = point.longitude.toStringAsFixed(6);
+    _updatingCoordinatesFromMap = false;
     if (mounted) setState(() {});
+  }
+
+  void _centerMapOnPin() {
+    if (_mapReady) {
+      _mapController.move(_selectedPoint, _mapController.camera.zoom);
+    }
+  }
+
+  void _updatePinFromDrag(DragUpdateDetails details) {
+    final renderObject = _mapKey.currentContext?.findRenderObject();
+    if (renderObject is! RenderBox) return;
+    final localPosition = renderObject.globalToLocal(details.globalPosition);
+    _setCoordinatesFromMap(
+      _mapController.camera.screenOffsetToLatLng(localPosition),
+    );
+  }
+
+  bool get _isOffshoreNorthwestOfAlexandria {
+    final lat = _selectedPoint.latitude;
+    final lng = _selectedPoint.longitude;
+    return lat > 31.23 && lat < 31.45 && lng > 29.70 && lng < 29.95;
   }
 
   String _suggestId() {
@@ -1544,9 +1613,9 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
   }
 
   Widget _mapPicker() {
-    final lat = double.tryParse(_lat.text.trim()) ?? 31.2001;
-    final lng = double.tryParse(_lng.text.trim()) ?? 29.9187;
-    final point = LatLng(lat, lng);
+    final point = _coordinatesFromFields() ?? _selectedPoint;
+    final lat = point.latitude;
+    final lng = point.longitude;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1568,29 +1637,64 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
             ),
             const SizedBox(width: 4),
             Text(
-              'tap to set coordinates',
+              'tap the map or drag the pin',
               style: TextStyle(fontSize: 11, color: AppTheme.textSecondary),
             ),
           ],
         ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                controller: _lat,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                  signed: true,
+                ),
+                decoration: const InputDecoration(
+                  labelText: 'Latitude (lat)',
+                  hintText: '31.200100',
+                  prefixIcon: Icon(Icons.north_rounded),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: TextFormField(
+                controller: _lng,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                  signed: true,
+                ),
+                decoration: const InputDecoration(
+                  labelText: 'Longitude (lng)',
+                  hintText: '29.918700',
+                  prefixIcon: Icon(Icons.east_rounded),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
         const SizedBox(height: 6),
         ClipRRect(
           borderRadius: BorderRadius.circular(12),
           child: Container(
+            key: _mapKey,
             height: 260,
             decoration: BoxDecoration(
               border: Border.all(color: AppTheme.border),
               borderRadius: BorderRadius.circular(12),
             ),
             child: FlutterMap(
+              mapController: _mapController,
               options: MapOptions(
                 initialCenter: point,
                 initialZoom: 13,
+                onMapReady: () => _mapReady = true,
                 onTap: (tapPosition, latLng) {
-                  setState(() {
-                    _lat.text = latLng.latitude.toStringAsFixed(6);
-                    _lng.text = latLng.longitude.toStringAsFixed(6);
-                  });
+                  _setCoordinatesFromMap(latLng);
                 },
               ),
               children: [
@@ -1604,25 +1708,87 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                       point: point,
                       width: 44,
                       height: 44,
-
-                      child: Icon(
-                        Icons.location_on_rounded,
-                        color: AppTheme.danger,
-                        size: 40,
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onPanStart: (_) => _isDraggingPin = true,
+                        onPanUpdate: _updatePinFromDrag,
+                        onPanEnd: (_) => _isDraggingPin = false,
+                        onPanCancel: () => _isDraggingPin = false,
+                        child: Icon(
+                          Icons.location_on_rounded,
+                          color: AppTheme.danger,
+                          size: 40,
+                        ),
                       ),
                     ),
+                  ],
+                ),
+                RichAttributionWidget(
+                  attributions: [
+                    TextSourceAttribution('OpenStreetMap contributors'),
                   ],
                 ),
               ],
             ),
           ),
         ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            OutlinedButton.icon(
+              onPressed: _centerMapOnPin,
+              icon: const Icon(Icons.my_location_rounded, size: 16),
+              label: const Text('Center on Pin'),
+            ),
+            if (_isOffshoreNorthwestOfAlexandria)
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 7,
+                ),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.errorContainer,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.error.withValues(alpha: 0.45),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.warning_amber_rounded,
+                      size: 16,
+                      color: Theme.of(context).colorScheme.onErrorContainer,
+                    ),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        'This pin may be offshore in the Mediterranean Sea. '
+                        'Check that it is on land.',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onErrorContainer,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
         const SizedBox(height: 8),
         Row(
           children: [
             Icon(
-              Icons.my_location_rounded,
-              size: 13,
+              Icons.location_on_outlined,
+              size: 14,
               color: AppTheme.textSecondary,
             ),
             const SizedBox(width: 6),
@@ -1673,6 +1839,11 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
 
   @override
   void dispose() {
+    _lat.removeListener(_onCoordFieldChanged);
+    _lng.removeListener(_onCoordFieldChanged);
+    _lat.dispose();
+    _lng.dispose();
+    _mapController.dispose();
     for (final c in _imageUrls) {
       c.dispose();
     }
