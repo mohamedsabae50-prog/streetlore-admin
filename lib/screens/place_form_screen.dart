@@ -6,6 +6,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
 import '../models/models.dart';
+import '../models/egypt_governorates.dart';
 import '../services/admin_service.dart';
 import '../theme.dart';
 
@@ -72,6 +73,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
   late TextEditingController _rating;
   late TextEditingController _displayOrder;
   PriceLevel _priceLevel = PriceLevel.free;
+  String _governorate = 'alexandria';
   bool _isHiddenGem = false;
   bool _isFeatured = false;
   bool _enableChat = true;
@@ -129,6 +131,9 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
       text: (p?.displayOrder ?? 999).toString(),
     );
     _priceLevel = p?.priceLevel ?? PriceLevel.free;
+    _governorate = AdminGovernorate.all.any((g) => g.id == p?.governorate)
+        ? p!.governorate
+        : 'alexandria';
     _isHiddenGem = p?.isHiddenGem ?? false;
     _isFeatured = p?.isFeatured ?? false;
     _enableChat = p?.enableChat ?? true;
@@ -414,6 +419,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
       lng: double.tryParse(_lng.text) ?? 0,
       address: _address.text.trim(),
       addressAr: _nullable(_addressAr),
+      governorate: _governorate,
       openHours: _openHours.text.trim(),
       reviewCount: int.tryParse(_reviewCount.text) ?? 0,
       priceLevel: _priceLevel,
@@ -904,6 +910,47 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
               ),
             ),
 
+            _section(
+              icon: Icons.location_city_rounded,
+              title: 'Governorate (المحافظة)',
+              child: DropdownButtonFormField<String>(
+                initialValue: _governorate,
+                decoration: const InputDecoration(
+                  prefixIcon: Icon(Icons.map_outlined),
+                ),
+                items: [
+                  for (final governorate in AdminGovernorate.all)
+                    DropdownMenuItem(
+                      value: governorate.id,
+                      child: Text(
+                        '${governorate.nameEn} — ${governorate.nameAr}',
+                      ),
+                    ),
+                ],
+                onChanged: (value) {
+                  if (value == null) return;
+                  setState(() => _governorate = value);
+                  if (!_isEditing) {
+                    final selected = AdminGovernorate.all.firstWhere(
+                      (item) => item.id == value,
+                    );
+                    final center = LatLng(
+                      selected.centerLat,
+                      selected.centerLng,
+                    );
+                    if (_mapReady) {
+                      _mapController.move(center, 11);
+                    } else {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (mounted && _mapReady) {
+                          _mapController.move(center, 11);
+                        }
+                      });
+                    }
+                  }
+                },
+              ),
+            ),
             _section(
               icon: Icons.map_rounded,
               title: 'Location (lat / lng)',

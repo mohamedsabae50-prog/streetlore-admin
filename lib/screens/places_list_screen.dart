@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/models.dart';
+import '../models/egypt_governorates.dart';
 import '../services/admin_service.dart';
 import '../theme.dart';
 import 'photos_list_screen.dart';
@@ -421,6 +422,30 @@ class _PlaceRow extends StatelessWidget {
                           fontSize: 15,
                           fontWeight: FontWeight.w800,
                           color: AppTheme.textPrimary,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0F9D8A).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        AdminGovernorate.all
+                            .firstWhere(
+                              (item) => item.id == place.governorate,
+                              orElse: () => AdminGovernorate.all.first,
+                            )
+                            .nameEn,
+                        style: const TextStyle(
+                          color: Color(0xFF087F6E),
+                          fontSize: 9,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
                     ),

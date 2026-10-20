@@ -289,6 +289,7 @@ class Place {
   final double lng;
   final String address;
   final String? addressAr;
+  final String governorate;
   final String openHours;
   final int reviewCount;
   final PriceLevel priceLevel;
@@ -316,6 +317,7 @@ class Place {
     required this.lng,
     this.address = 'Alexandria, Egypt',
     this.addressAr,
+    this.governorate = 'alexandria',
     this.openHours = '9:00 AM - 6:00 PM',
     this.reviewCount = 0,
     this.priceLevel = PriceLevel.free,
@@ -353,6 +355,9 @@ class Place {
       lng: (json['lng'] as num?)?.toDouble() ?? 0,
       address: (json['address'] as String?) ?? 'Alexandria, Egypt',
       addressAr: json['address_ar'] as String?,
+      governorate: (json['governorate'] as String?)?.trim().isNotEmpty == true
+          ? (json['governorate'] as String).trim().toLowerCase()
+          : 'alexandria',
       openHours: (json['open_hours'] as String?) ?? '9:00 AM - 6:00 PM',
       reviewCount: (json['review_count'] as int?) ?? 0,
       priceLevel: priceLevelFromString(json['price_level'] as String?),
@@ -385,6 +390,7 @@ class Place {
     'lng': lng,
     'address': address,
     'address_ar': addressAr,
+    'governorate': governorate,
     'open_hours': openHours,
     'review_count': reviewCount,
     'price_level': priceLevelToString(priceLevel),
@@ -412,6 +418,7 @@ class Place {
     'lng': lng,
     'address': address,
     'address_ar': addressAr,
+    'governorate': governorate,
     'open_hours': openHours,
     'review_count': reviewCount,
     'price_level': priceLevelToString(priceLevel),
@@ -440,6 +447,7 @@ class Place {
     double? lng,
     String? address,
     String? addressAr,
+    String? governorate,
     String? openHours,
     int? reviewCount,
     PriceLevel? priceLevel,
@@ -466,6 +474,7 @@ class Place {
     lng: lng ?? this.lng,
     address: address ?? this.address,
     addressAr: addressAr ?? this.addressAr,
+    governorate: governorate ?? this.governorate,
     openHours: openHours ?? this.openHours,
     reviewCount: reviewCount ?? this.reviewCount,
     priceLevel: priceLevel ?? this.priceLevel,
