@@ -48,6 +48,7 @@ class _UsersListScreenState extends State<UsersListScreen> {
   }
 
   void _onSearchChanged(String value) {
+    setState(() {});
     _searchDebounce?.cancel();
     _searchDebounce = Timer(const Duration(milliseconds: 300), () {
       final query = value.trim();
@@ -269,6 +270,10 @@ class _UsersListScreenState extends State<UsersListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final query = _searchController.text.trim();
+    final displayedUsers = _users
+        .where((user) => user.matchesSearch(query))
+        .toList(growable: false);
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -313,13 +318,28 @@ class _UsersListScreenState extends State<UsersListScreen> {
           Expanded(
             child: _loading
                 ? const Center(child: CircularProgressIndicator())
-                : _error != null && _users.isEmpty
+                : _error != null && displayedUsers.isEmpty && query.isEmpty
                 ? _errorState()
-                : _users.isEmpty
+                : displayedUsers.isEmpty
                 ? Center(
-                    child: Text(
-                      'No users found',
-                      style: TextStyle(color: AppTheme.textSecondary),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          query.isEmpty
+                              ? 'No users found'
+                              : 'No matching users found',
+                          style: TextStyle(color: AppTheme.textSecondary),
+                        ),
+                        if (_error != null) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            'Search request failed: $_error',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: AppTheme.textSecondary),
+                          ),
+                        ],
+                      ],
                     ),
                   )
                 : RefreshIndicator(
@@ -327,10 +347,10 @@ class _UsersListScreenState extends State<UsersListScreen> {
                     child: ListView.separated(
                       controller: _scrollController,
                       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                      itemCount: _users.length + (_loadingMore ? 1 : 0),
+                      itemCount: displayedUsers.length + (_loadingMore ? 1 : 0),
                       separatorBuilder: (_, _) => const SizedBox(height: 8),
                       itemBuilder: (context, index) {
-                        if (index == _users.length) {
+                        if (index == displayedUsers.length) {
                           return const Padding(
                             padding: EdgeInsets.all(16),
                             child: Center(
@@ -338,7 +358,7 @@ class _UsersListScreenState extends State<UsersListScreen> {
                             ),
                           );
                         }
-                        final user = _users[index];
+                        final user = displayedUsers[index];
                         final deleting = _deletingUserId == user.id;
                         final updatingPro = _updatingProUserId == user.id;
                         return Container(

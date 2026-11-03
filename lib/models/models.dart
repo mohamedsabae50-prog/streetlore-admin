@@ -1,9 +1,11 @@
-﻿enum PriceLevel { free, cheap, moderate, expensive }
+enum PriceLevel { free, cheap, moderate, expensive }
 
 class AdminUser {
   final String id;
   final String email;
   final String name;
+  final String? displayName;
+  final String? username;
   final DateTime? createdAt;
   final bool isPro;
   final String? subscriptionTier;
@@ -13,6 +15,8 @@ class AdminUser {
     required this.id,
     required this.email,
     required this.name,
+    this.displayName,
+    this.username,
     this.createdAt,
     this.isPro = false,
     this.subscriptionTier,
@@ -27,16 +31,31 @@ class AdminUser {
     id: id,
     email: email,
     name: name,
+    displayName: displayName,
+    username: username,
     createdAt: createdAt,
     isPro: isPro ?? this.isPro,
     subscriptionTier: subscriptionTier ?? this.subscriptionTier,
     subscriptionEndDate: subscriptionEndDate,
   );
 
+  bool matchesSearch(String query) {
+    final normalizedQuery = query.trim().toLowerCase();
+    if (normalizedQuery.isEmpty) return true;
+    return [
+      name,
+      displayName,
+      username,
+      email,
+    ].any((value) => value?.toLowerCase().contains(normalizedQuery) ?? false);
+  }
+
   factory AdminUser.fromJson(Map<String, dynamic> json) => AdminUser(
     id: json['id'] as String,
     email: (json['email'] as String?) ?? '',
     name: (json['name'] as String?) ?? 'Unnamed user',
+    displayName: json['display_name'] as String?,
+    username: json['username'] as String?,
     createdAt: DateTime.tryParse((json['created_at'] as String?) ?? ''),
     isPro: json['is_pro'] == true,
     subscriptionTier: json['subscription_tier'] as String?,

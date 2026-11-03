@@ -296,21 +296,67 @@ class AdminService {
     String userId,
     String plan,
   ) async {
-    final response = await _client.functions.invoke(
-      'admin-user-management',
-      body: {'action': 'set_plan', 'user_id': userId, 'plan': plan},
-    );
-    if (response.status < 200 || response.status >= 300) {
-      final data = response.data;
-      final detail = data is Map<String, dynamic>
-          ? data['message'] ?? data['error']
-          : null;
+    final normalizedPlan = switch (plan.toLowerCase().trim()) {
+      'yearly' => 'annual',
+      'pro' => 'lifetime',
+      final value => value,
+    };
+    final durationDays = switch (normalizedPlan) {
+      'weekly' => 7,
+      'monthly' => 30,
+      'annual' => 365,
+      _ => null,
+    };
+
+    Object? edgeError;
+    try {
+      final response = await _client.functions.invoke(
+        'admin-user-management',
+        body: {'action': 'set_plan', 'user_id': userId, 'plan': normalizedPlan},
+      );
+      if (response.status >= 200 && response.status < 300) {
+        return _subscriptionPlanResult(response.data);
+      }
+      edgeError = StateError(
+        'Edge Function returned HTTP ${response.status}: ${response.data}',
+      );
+    } catch (error) {
+      edgeError = error;
+    }
+
+    try {
+      final response = await _client.rpc(
+        'admin_update_user_plan',
+        params: {
+          'p_user_id': userId,
+          'p_tier': normalizedPlan,
+          'p_duration_days': durationDays,
+        },
+      );
+      return _subscriptionPlanResult(response);
+    } catch (rpcError) {
+      final email = _client.auth.currentUser?.email ?? 'Unknown account';
+      bool isAdmin = false;
+      try {
+        isAdmin = await _client.rpc('is_admin') == true;
+      } catch (_) {
+        isAdmin = false;
+      }
+      if (!isAdmin) {
+        throw StateError(
+          'The current session ($email) is not authorized to manage plans. '
+          'Sign out of the test account and sign in to StreetLore Admin as '
+          'mohamedsabae50@gmail.com.',
+        );
+      }
       throw StateError(
-        'Subscription plan update failed (${response.status})'
-        '${detail == null ? '' : ': $detail'}',
+        'Subscription plan update failed. Edge Function: $edgeError. '
+        'Database RPC: $rpcError',
       );
     }
-    final data = response.data;
+  }
+
+  ({String tier, DateTime? endDate}) _subscriptionPlanResult(dynamic data) {
     if (data is! Map || data['subscription_tier'] is! String) {
       throw const FormatException('Invalid subscription plan response.');
     }

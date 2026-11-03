@@ -13,6 +13,11 @@ Future<void> main() async {
   await Supabase.initialize(
     url: SupabaseConfig.url,
     publishableKey: SupabaseConfig.anonKey,
+    authOptions: FlutterAuthClientOptions(
+      localStorage: SharedPreferencesLocalStorage(
+        persistSessionKey: 'streetlore-admin-auth-token',
+      ),
+    ),
   );
 
   runApp(const StreetloreAdminApp());
