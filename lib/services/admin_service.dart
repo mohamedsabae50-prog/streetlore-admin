@@ -41,6 +41,11 @@ class AdminService {
     }
   }
 
+  static const _adminEmails = {
+    'mohamedsabae50@gmail.com',
+    'hackty65@gmail.com',
+  };
+
   String get currentUserEmail =>
       _client.auth.currentUser?.email ?? 'Unknown account';
 
@@ -181,8 +186,7 @@ class AdminService {
     int page = 1,
     int perPage = 50,
   }) async {
-    final response = await _client.functions.invoke(
-      'admin-user-management',
+    final response = await _invokeAdminFunction(
       body: {
         'action': 'list',
         'query': query,
@@ -191,7 +195,11 @@ class AdminService {
       },
     );
     if (response.status < 200 || response.status >= 300) {
-      throw StateError('User list request failed (${response.status}).');
+      throw await _adminFunctionError(
+        'User list request',
+        response.status,
+        response.data,
+      );
     }
     final responseData = response.data;
     final dynamic data = switch (responseData) {
@@ -211,11 +219,10 @@ class AdminService {
   }
 
   Future<Map<String, dynamic>> fetchUserVisitState(String userId) async {
-    final response = await _client.functions.invoke(
-      'admin-user-management',
+    final response = await _invokeAdminFunction(
       body: {'action': 'visits', 'user_id': userId},
     );
-    final data = _functionResponseData(response, 'User visits request');
+    final data = await _functionResponseData(response, 'User visits request');
     if (data['visited_place_ids'] is! List) {
       throw const FormatException('Invalid user visits response.');
     }
@@ -227,15 +234,14 @@ class AdminService {
     required List<String> placeIds,
     required bool add,
   }) async {
-    final response = await _client.functions.invoke(
-      'admin-user-management',
+    final response = await _invokeAdminFunction(
       body: {
         'action': add ? 'add_visits' : 'remove_visits',
         'user_id': userId,
         'place_ids': placeIds,
       },
     );
-    final data = _functionResponseData(response, 'User visits update');
+    final data = await _functionResponseData(response, 'User visits update');
     if (data['visited_place_ids'] is! List ||
         data['badges'] is! List ||
         data['newly_unlocked'] is! List) {
@@ -244,31 +250,77 @@ class AdminService {
     return data;
   }
 
-  Map<String, dynamic> _functionResponseData(
-    FunctionResponse response,
+  Future<FunctionResponse> _invokeAdminFunction({
+    required Map<String, dynamic> body,
+  }) async {
+    try {
+      return await _client.functions.invoke(
+        'admin-user-management',
+        body: body,
+      );
+    } on FunctionException catch (error) {
+      if (error.status == 403) {
+        throw await _adminFunctionError(
+          'Admin request',
+          error.status,
+          error.details,
+        );
+      }
+      rethrow;
+    }
+  }
+
+  dynamic _decodeFunctionData(dynamic responseData) => switch (responseData) {
+    String value => jsonDecode(value),
+    Uint8List value => jsonDecode(utf8.decode(value)),
+    _ => responseData,
+  };
+
+  Future<StateError> _adminFunctionError(
     String requestName,
-  ) {
-    if (response.status < 200 || response.status >= 300) {
-      final responseData = response.data;
-      final dynamic data = switch (responseData) {
-        String value => jsonDecode(value),
-        Uint8List value => jsonDecode(utf8.decode(value)),
-        _ => responseData,
-      };
-      final detail = data is Map<String, dynamic>
-          ? data['message'] ?? data['error']
-          : null;
-      throw StateError(
-        '$requestName failed (${response.status})'
-        '${detail == null ? '' : ': $detail'}',
+    int status,
+    dynamic responseData,
+  ) async {
+    final data = _decodeFunctionData(responseData);
+    final detail = data is Map ? data['message'] ?? data['error'] : null;
+    if (status == 403 || detail == 'forbidden') {
+      final email = _client.auth.currentUser?.email?.trim() ?? '';
+      var isAdmin = _adminEmails.contains(email.toLowerCase());
+      try {
+        isAdmin = isAdmin || await _client.rpc('is_admin') == true;
+      } catch (_) {
+        // The current email still identifies the two configured admin accounts.
+      }
+      if (!isAdmin) {
+        return StateError(
+          'The current session (${email.isEmpty ? 'Unknown account' : email}) '
+          'is not an admin. Sign out of the test account and sign in to '
+          'StreetLore Admin as mohamedsabae50@gmail.com.',
+        );
+      }
+      return StateError(
+        '$requestName was rejected for the admin session ($email). '
+        'Sign out and sign back in to refresh the admin session.',
       );
     }
-    final responseData = response.data;
-    final dynamic data = switch (responseData) {
-      String value => jsonDecode(value),
-      Uint8List value => jsonDecode(utf8.decode(value)),
-      _ => responseData,
-    };
+    return StateError(
+      '$requestName failed ($status)'
+      '${detail == null ? '' : ': $detail'}',
+    );
+  }
+
+  Future<Map<String, dynamic>> _functionResponseData(
+    FunctionResponse response,
+    String requestName,
+  ) async {
+    if (response.status < 200 || response.status >= 300) {
+      throw await _adminFunctionError(
+        requestName,
+        response.status,
+        response.data,
+      );
+    }
+    final data = _decodeFunctionData(response.data);
     if (data is! Map<String, dynamic>) {
       throw FormatException('Invalid $requestName response.');
     }
@@ -276,18 +328,14 @@ class AdminService {
   }
 
   Future<void> deleteUser(String userId) async {
-    final response = await _client.functions.invoke(
-      'admin-user-management',
+    final response = await _invokeAdminFunction(
       body: {'action': 'delete', 'user_id': userId},
     );
     if (response.status < 200 || response.status >= 300) {
-      final data = response.data;
-      final detail = data is Map<String, dynamic>
-          ? data['message'] ?? data['error']
-          : null;
-      throw StateError(
-        'User deletion failed (${response.status})'
-        '${detail == null ? '' : ': $detail'}',
+      throw await _adminFunctionError(
+        'User deletion',
+        response.status,
+        response.data,
       );
     }
   }
@@ -310,8 +358,7 @@ class AdminService {
 
     Object? edgeError;
     try {
-      final response = await _client.functions.invoke(
-        'admin-user-management',
+      final response = await _invokeAdminFunction(
         body: {'action': 'set_plan', 'user_id': userId, 'plan': normalizedPlan},
       );
       if (response.status >= 200 && response.status < 300) {
@@ -372,18 +419,14 @@ class AdminService {
     int page = 1,
     int perPage = 50,
   }) async {
-    final response = await _client.functions.invoke(
-      'admin-user-management',
+    final response = await _invokeAdminFunction(
       body: {'action': 'chat_logs', 'page': page, 'per_page': perPage},
     );
     if (response.status < 200 || response.status >= 300) {
-      final data = response.data;
-      final detail = data is Map<String, dynamic>
-          ? data['message'] ?? data['error']
-          : null;
-      throw StateError(
-        'AI chat logs request failed (${response.status})'
-        '${detail == null ? '' : ': $detail'}',
+      throw await _adminFunctionError(
+        'AI chat logs request',
+        response.status,
+        response.data,
       );
     }
     final responseData = response.data;
