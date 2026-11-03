@@ -3,7 +3,7 @@
 
 _flutter.buildConfig.builds.forEach((build) => {
   if (build.mainJsPath) {
-    build.mainJsPath += '?v=2.1.7-10-admin-session';
+    build.mainJsPath += '?v=2.1.7-10-admin-session-403fix';
   }
 });
 
