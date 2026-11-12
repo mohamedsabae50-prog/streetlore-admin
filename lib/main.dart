@@ -3,7 +3,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'config/supabase_config.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/login_screen.dart';
-import 'screens/local_preview_screen.dart';
 import 'services/admin_service.dart';
 import 'theme.dart';
 
@@ -54,8 +53,6 @@ class StreetloreAdminApp extends StatelessWidget {
         routes: {
           '/login': (_) => const SelectionArea(child: LoginScreen()),
           '/dashboard': (_) => const SelectionArea(child: DashboardScreen()),
-          '/local-preview': (_) =>
-              const SelectionArea(child: LocalPreviewScreen()),
         },
       ),
     );

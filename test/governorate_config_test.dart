@@ -16,8 +16,14 @@ void main() {
     expect(cairoGovernorate.centerLng, 31.2357);
     expect(cairoGovernorate.defaultZoom, 11);
     expect(alexandriaGovernorate.boundaryPolygon, hasLength(20));
-    expect(cairoGovernorate.boundaryPolygon, hasLength(12));
+    expect(cairoGovernorate.boundaryPolygon, hasLength(17));
     expect(AdminGovernorate.all, hasLength(2));
+    expect(
+      AdminGovernorate.all
+          .singleWhere((governorate) => governorate.id == 'cairo')
+          .boundaryPolygon,
+      cairoGovernorate.boundaryPolygon,
+    );
   });
 
   test('point validation rejects the Giza controls and wrong city', () {
@@ -37,7 +43,7 @@ void main() {
 
       expect(
         seed.places.where((place) => place.governorate == 'cairo'),
-        hasLength(34),
+        hasLength(120),
       );
       expect(
         seed.places.where((place) => place.governorate == 'alexandria'),
@@ -45,7 +51,7 @@ void main() {
       );
       expect(
         seed.tours.where((tour) => tour.governorate == 'cairo'),
-        hasLength(2),
+        hasLength(5),
       );
       expect(
         seed.tours.where((tour) => tour.governorate == 'alexandria'),
@@ -58,6 +64,21 @@ void main() {
               (place) =>
                   isPointInGovernorate(place.lat, place.lng, place.governorate),
             ),
+        isTrue,
+      );
+      final cairoPlaces = seed.places
+          .where((place) => place.governorate == 'cairo')
+          .toList(growable: false);
+      expect(
+        cairoPlaces.map((place) => place.imageUrl).toSet(),
+        hasLength(120),
+      );
+      expect(
+        cairoPlaces.every(
+          (place) =>
+              Uri.tryParse(place.imageUrl)?.scheme == 'https' &&
+              Uri.tryParse(place.imageUrl)?.host == 'upload.wikimedia.org',
+        ),
         isTrue,
       );
       for (final tour in seed.tours.where(

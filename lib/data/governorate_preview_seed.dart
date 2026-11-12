@@ -24,10 +24,31 @@ class GovernoratePreviewSeed {
         .map((row) => Tour.fromJson(Map<String, dynamic>.from(row as Map)))
         .toList(growable: false);
 
-    if (places.where((place) => place.governorate == 'cairo').length != 34 ||
-        tours.where((tour) => tour.governorate == 'cairo').length != 2) {
+    final cairoPlaces = places
+        .where((place) => place.governorate == 'cairo')
+        .toList(growable: false);
+    final cairoTours = tours
+        .where((tour) => tour.governorate == 'cairo')
+        .toList(growable: false);
+    final primaryImages = cairoPlaces.map((place) => place.imageUrl).toSet();
+    if (cairoPlaces.length != 120 ||
+        cairoTours.length != 5 ||
+        primaryImages.length != cairoPlaces.length ||
+        cairoPlaces.any((place) {
+          final uri = Uri.tryParse(place.imageUrl);
+          return uri == null ||
+              uri.scheme != 'https' ||
+              uri.host != 'upload.wikimedia.org' ||
+              place.imageUrls.any((image) {
+                final imageUri = Uri.tryParse(image);
+                return imageUri == null ||
+                    imageUri.scheme != 'https' ||
+                    imageUri.host != 'upload.wikimedia.org';
+              });
+        })) {
       throw StateError(
-        'The local Cairo preview must contain 34 places and 2 itineraries.',
+        'The Cairo seed must contain 120 places with unique HTTPS Wikimedia '
+        'images and 5 itineraries.',
       );
     }
     return (places: places, tours: tours);

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/models.dart';
 import '../services/admin_service.dart';
 import '../theme.dart';
@@ -11,7 +12,14 @@ import 'users_list_screen.dart';
 import 'ai_chat_logs_screen.dart';
 import 'reports_screen.dart';
 import 'hidden_gem_suggestions_screen.dart';
-import '../widgets/local_draft_mode_banner.dart';
+
+bool isAdminAnalyticsPermissionDenied(Object error) {
+  if (error is PostgrestException) {
+    return error.code == '42501' ||
+        error.message.toLowerCase().contains('admin access required');
+  }
+  return error.toString().toLowerCase().contains('admin access required');
+}
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -28,6 +36,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   AdminAnalytics? _analytics;
   bool _analyticsLoading = true;
   String? _analyticsError;
+  bool _analyticsPermissionDenied = false;
 
   @override
   void initState() {
@@ -40,6 +49,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _loading = true;
       _analyticsLoading = true;
       _analyticsError = null;
+      _analyticsPermissionDenied = false;
     });
     final photosFuture = AdminService.instance.fetchPhotoCount();
     final analyticsFuture = AdminService.instance.fetchAdminAnalytics();
@@ -76,12 +86,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _analytics = analytics;
         _analyticsLoading = false;
         _analyticsError = null;
+        _analyticsPermissionDenied = false;
       });
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _analyticsLoading = false;
         _analyticsError = '$e';
+        _analyticsPermissionDenied = isAdminAnalyticsPermissionDenied(e);
       });
     }
   }
@@ -114,7 +126,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         title: Row(
           children: [
             Text(
-              'Streetlore Admin',
+              'EgyptLore Admin',
               style: TextStyle(fontWeight: FontWeight.w800),
             ),
             SizedBox(width: 10),
@@ -143,10 +155,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
         backgroundColor: Theme.of(context).colorScheme.surface,
         actions: [
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 8),
-            child: LocalDraftModeBadge(),
-          ),
           IconButton(
             icon: Icon(
               AppTheme.themeMode.value == ThemeMode.dark
@@ -176,7 +184,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              LocalDraftModeBanner(onChanged: _refreshCounts),
               Text(
                 'Overview',
                 style: TextStyle(
@@ -256,6 +263,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 analytics: _analytics,
                 loading: _analyticsLoading,
                 error: _analyticsError,
+                permissionDenied: _analyticsPermissionDenied,
                 onRetry: _refreshCounts,
               ),
               const SizedBox(height: 28),
@@ -355,12 +363,14 @@ class _AnalyticsPanel extends StatelessWidget {
   final AdminAnalytics? analytics;
   final bool loading;
   final String? error;
+  final bool permissionDenied;
   final VoidCallback onRetry;
 
   const _AnalyticsPanel({
     required this.analytics,
     required this.loading,
     required this.error,
+    required this.permissionDenied,
     required this.onRetry,
   });
 
@@ -388,6 +398,30 @@ class _AnalyticsPanel extends StatelessWidget {
             child: Padding(
               padding: EdgeInsets.all(24),
               child: CircularProgressIndicator(),
+            ),
+          )
+        else if (permissionDenied)
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppTheme.surface,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppTheme.border),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.lock_outline_rounded, color: AppTheme.textSecondary),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Analytics are available to administrator accounts.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.textSecondary,
+                    ),
+                  ),
+                ),
+              ],
             ),
           )
         else if (error != null)

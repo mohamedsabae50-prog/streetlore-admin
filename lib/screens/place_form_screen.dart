@@ -9,7 +9,6 @@ import '../models/models.dart';
 import '../models/governorates_config.dart';
 import '../services/admin_service.dart';
 import '../theme.dart';
-import '../widgets/local_draft_mode_banner.dart';
 
 class PlaceFormScreen extends StatefulWidget {
   final Place? place;
@@ -535,7 +534,6 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
         ),
         backgroundColor: Theme.of(context).colorScheme.surface,
         actions: [
-          const LocalDraftModeBadge(),
           TextButton(
             onPressed: _saving ? null : _save,
             child: _saving

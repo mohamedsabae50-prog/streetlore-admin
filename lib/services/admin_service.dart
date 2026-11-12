@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart'
-    show ValueNotifier, compute, debugPrint, kDebugMode;
+    show ValueNotifier, compute, debugPrint;
 import 'package:image/image.dart' as img;
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -36,7 +36,7 @@ class AdminService {
   AdminService._();
 
   static const _draftModePreferenceKey = 'streetlore-admin-local-draft-mode';
-  static final ValueNotifier<bool> localDraftMode = ValueNotifier(true);
+  static final ValueNotifier<bool> localDraftMode = ValueNotifier(false);
   final LocalDraftStore _localDrafts = LocalDraftStore();
   Future<({List<Place> places, List<Tour> tours})>? _previewSeedFuture;
 
@@ -52,11 +52,9 @@ class AdminService {
     }
   }
 
-  Future<void> initializeLocalDraftMode() async {
-    final preferences = await SharedPreferences.getInstance();
-    localDraftMode.value = kDebugMode
-        ? true
-        : preferences.getBool(_draftModePreferenceKey) ?? false;
+  Future<void> initializeLocalDraftMode() {
+    localDraftMode.value = false;
+    return Future<void>.value();
   }
 
   Future<void> setLocalDraftMode(bool enabled) async {
@@ -135,17 +133,20 @@ class AdminService {
       final tours = await fetchTours();
       return (places: places.length, tours: tours.length);
     }
+    final seed = await _previewSeed();
     final results = await Future.wait([
-      _client.from('places').select('id').count(),
-      _client.from('tours').select('id').count(),
+      _client.from('places').select('id'),
+      _client.from('tours').select('id'),
     ]);
-
-    final places = (results[0] as dynamic).count;
-    final tours = (results[1] as dynamic).count;
-    if (places is! int || tours is! int) {
-      throw StateError('Supabase did not return exact dashboard counts.');
+    final placeIds = {for (final place in seed.places) place.id};
+    final tourIds = {for (final tour in seed.tours) tour.id};
+    for (final row in results[0] as List<dynamic>) {
+      placeIds.add((row as Map<String, dynamic>)['id'] as String);
     }
-    return (places: places, tours: tours);
+    for (final row in results[1] as List<dynamic>) {
+      tourIds.add((row as Map<String, dynamic>)['id'] as String);
+    }
+    return (places: placeIds.length, tours: tourIds.length);
   }
 
   Future<int> fetchPhotoCount() async {

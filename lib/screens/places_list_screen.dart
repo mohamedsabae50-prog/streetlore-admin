@@ -3,7 +3,6 @@ import '../models/models.dart';
 import '../models/governorates_config.dart';
 import '../services/admin_service.dart';
 import '../theme.dart';
-import '../widgets/local_draft_mode_banner.dart';
 import 'photos_list_screen.dart';
 import 'place_form_screen.dart';
 
@@ -209,10 +208,6 @@ class _PlacesListScreenState extends State<PlacesListScreen> {
         ),
         backgroundColor: Theme.of(context).colorScheme.surface,
         actions: [
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 8),
-            child: LocalDraftModeBadge(),
-          ),
           IconButton(
             icon: Icon(
               _editOrder
@@ -254,7 +249,6 @@ class _PlacesListScreenState extends State<PlacesListScreen> {
       ),
       body: Column(
         children: [
-          LocalDraftModeBanner(onChanged: _load),
           Padding(
             padding: const EdgeInsets.all(16),
             child: TextField(

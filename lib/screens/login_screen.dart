@@ -11,7 +11,7 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _emailCtrl = TextEditingController(text: 'mohamedsabae50@gmail.com');
+  final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   bool _loading = false;
   String? _error;
@@ -36,17 +36,6 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() => _error = 'Sign-in failed: $e');
     } finally {
       if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  Future<void> _openLocalPreview() async {
-    try {
-      await AdminService.instance.setLocalDraftMode(true);
-      if (!mounted) return;
-      Navigator.pushReplacementNamed(context, '/local-preview');
-    } catch (error) {
-      if (!mounted) return;
-      setState(() => _error = 'Could not open the local preview: $error');
     }
   }
 
@@ -109,6 +98,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   keyboardType: TextInputType.emailAddress,
                   decoration: const InputDecoration(
                     labelText: 'Email',
+                    hintText: 'name@example.com',
                     prefixIcon: Icon(Icons.alternate_email_rounded),
                   ),
                 ),
@@ -135,14 +125,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       style: const TextStyle(color: AppTheme.danger),
                     ),
                   ),
-                OutlinedButton.icon(
-                  key: const ValueKey('admin-google-sign-in-button'),
-                  onPressed: _loading ? null : _signInWithGoogle,
-                  icon: const Icon(Icons.g_mobiledata_rounded),
-                  label: const Text('Sign in with Google'),
-                ),
-                const SizedBox(height: 12),
                 ElevatedButton(
+                  key: const ValueKey('admin-sign-in-button'),
                   onPressed: _loading ? null : _submit,
                   child: _loading
                       ? const SizedBox(
@@ -157,19 +141,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 12),
                 OutlinedButton.icon(
-                  key: const ValueKey('admin-local-preview-button'),
-                  onPressed: _loading ? null : _openLocalPreview,
-                  icon: const Icon(Icons.shield_outlined),
-                  label: const Text(
-                    'Open Local Preview · معاينة محلية '
-                    '(الإسكندرية والقاهرة)',
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Local Draft Mode starts on; place and tour edits stay on this device.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                  key: const ValueKey('admin-google-sign-in-button'),
+                  onPressed: _loading ? null : _signInWithGoogle,
+                  icon: const Icon(Icons.g_mobiledata_rounded),
+                  label: const Text('Sign in with Google'),
                 ),
               ],
             ),

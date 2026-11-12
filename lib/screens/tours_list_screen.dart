@@ -5,7 +5,6 @@ import '../models/models.dart';
 import '../models/governorates_config.dart';
 import '../services/admin_service.dart';
 import '../theme.dart';
-import '../widgets/local_draft_mode_banner.dart';
 import 'tour_form_screen.dart';
 
 /// Resolves a stored tour image reference to a loadable URL.
@@ -137,12 +136,6 @@ class _ToursListScreenState extends State<ToursListScreen> {
           style: TextStyle(fontWeight: FontWeight.w800),
         ),
         backgroundColor: Theme.of(context).colorScheme.surface,
-        actions: const [
-          Padding(
-            padding: EdgeInsets.symmetric(vertical: 8),
-            child: LocalDraftModeBadge(),
-          ),
-        ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
@@ -158,7 +151,6 @@ class _ToursListScreenState extends State<ToursListScreen> {
       ),
       body: Column(
         children: [
-          LocalDraftModeBanner(onChanged: _load),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
             child: Column(

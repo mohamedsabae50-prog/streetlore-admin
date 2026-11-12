@@ -4,6 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:streetlore_admin/theme.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
     AppTheme.themeMode.value = ThemeMode.dark;
@@ -31,4 +33,12 @@ void main() {
       expect(AppTheme.textPrimary, AppTheme.lightTextPrimary);
     },
   );
+
+  test('applies the Cairo font to the global text theme', () {
+    final theme = AppTheme.light();
+
+    expect(theme.textTheme.bodyMedium?.fontFamily, contains('Cairo'));
+    expect(theme.textTheme.labelLarge?.fontFamily, contains('Cairo'));
+    expect(theme.chipTheme.labelStyle?.fontFamily, contains('Cairo'));
+  });
 }

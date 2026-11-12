@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AppTheme {
@@ -97,9 +99,37 @@ class AppTheme {
       borderRadius: BorderRadius.circular(10),
       side: BorderSide(color: outline),
     );
+    final cairoFontFamily = kIsWeb ? GoogleFonts.cairo().fontFamily : 'Cairo';
+    TextStyle cairoStyle({
+      double? fontSize,
+      FontWeight? fontWeight,
+      Color? color,
+      double? height,
+    }) {
+      final style = kIsWeb
+          ? GoogleFonts.cairo(
+              fontSize: fontSize,
+              fontWeight: fontWeight,
+              color: color,
+              height: height,
+            )
+          : const TextStyle(fontFamily: 'Cairo');
+      return style.copyWith(
+        fontSize: fontSize,
+        fontWeight: fontWeight,
+        color: color,
+        height: height,
+      );
+    }
+
+    final baseTextTheme = ThemeData(brightness: brightness).textTheme;
+    final cairoTextTheme = kIsWeb
+        ? GoogleFonts.cairoTextTheme(baseTextTheme)
+        : baseTextTheme.apply(fontFamily: cairoFontFamily);
     return ThemeData(
       useMaterial3: true,
       brightness: brightness,
+      fontFamily: cairoFontFamily,
       colorScheme: scheme.copyWith(
         surface: surface,
         outline: outline,
@@ -124,36 +154,36 @@ class AppTheme {
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         iconTheme: IconThemeData(color: foreground),
-        titleTextStyle: TextStyle(
+        titleTextStyle: cairoStyle(
           color: foreground,
           fontSize: 20,
           fontWeight: FontWeight.w800,
         ),
       ),
-      textTheme: TextTheme(
-        headlineSmall: TextStyle(
+      textTheme: cairoTextTheme.copyWith(
+        headlineSmall: cairoStyle(
           fontSize: 22,
           fontWeight: FontWeight.w800,
           color: foreground,
         ),
-        titleLarge: TextStyle(
+        titleLarge: cairoStyle(
           fontSize: 18,
           fontWeight: FontWeight.w800,
           color: foreground,
         ),
-        bodyLarge: TextStyle(fontSize: 14, color: foreground),
-        bodyMedium: TextStyle(
+        bodyLarge: cairoStyle(fontSize: 14, color: foreground),
+        bodyMedium: cairoStyle(
           fontSize: 13,
           color: secondaryForeground,
           height: 1.45,
         ),
-        labelLarge: TextStyle(color: foreground, fontWeight: FontWeight.w700),
+        labelLarge: cairoStyle(color: foreground, fontWeight: FontWeight.w700),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: surface,
-        hintStyle: TextStyle(color: secondaryForeground),
-        labelStyle: TextStyle(color: secondaryForeground),
+        hintStyle: cairoStyle(color: secondaryForeground),
+        labelStyle: cairoStyle(color: secondaryForeground),
         prefixIconColor: secondaryForeground,
         suffixIconColor: secondaryForeground,
         border: OutlineInputBorder(
@@ -184,16 +214,16 @@ class AppTheme {
         backgroundColor: surface,
         selectedColor: accent.withValues(alpha: 0.18),
         side: BorderSide(color: outline),
-        labelStyle: TextStyle(color: foreground),
-        secondaryLabelStyle: TextStyle(color: foreground),
+        labelStyle: cairoStyle(color: foreground),
+        secondaryLabelStyle: cairoStyle(color: foreground),
       ),
       popupMenuTheme: PopupMenuThemeData(
         color: surface,
-        textStyle: TextStyle(color: foreground),
+        textStyle: cairoStyle(color: foreground),
         surfaceTintColor: Colors.transparent,
       ),
       dropdownMenuTheme: DropdownMenuThemeData(
-        textStyle: TextStyle(color: foreground),
+        textStyle: cairoStyle(color: foreground),
         menuStyle: MenuStyle(
           backgroundColor: WidgetStatePropertyAll(surface),
           side: WidgetStatePropertyAll(BorderSide(color: outline)),
@@ -207,7 +237,7 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
           ),
-          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+          textStyle: cairoStyle(fontSize: 14, fontWeight: FontWeight.w700),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
@@ -220,7 +250,7 @@ class AppTheme {
       progressIndicatorTheme: ProgressIndicatorThemeData(color: accent),
       snackBarTheme: SnackBarThemeData(
         backgroundColor: surface,
-        contentTextStyle: TextStyle(color: foreground),
+        contentTextStyle: cairoStyle(color: foreground),
       ),
     );
   }

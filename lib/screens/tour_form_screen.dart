@@ -7,7 +7,6 @@ import '../models/models.dart';
 import '../models/governorates_config.dart';
 import '../services/admin_service.dart';
 import '../theme.dart';
-import '../widgets/local_draft_mode_banner.dart';
 
 class TourFormScreen extends StatefulWidget {
   final Tour? tour;
@@ -135,9 +134,7 @@ class _TourFormScreenState extends State<TourFormScreen> {
     if (_uploadingCover) return;
     if (AdminService.instance.isLocalDraftMode) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Image uploads are disabled in Local Draft Mode.'),
-        ),
+        const SnackBar(content: Text('Image uploads are unavailable.')),
       );
       return;
     }
@@ -294,7 +291,6 @@ class _TourFormScreenState extends State<TourFormScreen> {
         ),
         backgroundColor: Theme.of(context).colorScheme.surface,
         actions: [
-          const LocalDraftModeBadge(),
           TextButton(
             onPressed: _saving ? null : _save,
             child: _saving
@@ -556,7 +552,7 @@ class _TourFormScreenState extends State<TourFormScreen> {
                                               ),
                                         label: Text(
                                           AdminService.instance.isLocalDraftMode
-                                              ? 'Local Draft: URL only'
+                                              ? 'Image upload unavailable'
                                               : _uploadingCover
                                               ? 'Uploading…'
                                               : 'Upload to Supabase',
