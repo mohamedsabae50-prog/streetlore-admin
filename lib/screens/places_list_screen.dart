@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import '../models/models.dart';
-import '../models/egypt_governorates.dart';
+import '../models/governorates_config.dart';
 import '../services/admin_service.dart';
 import '../theme.dart';
+import '../widgets/local_draft_mode_banner.dart';
 import 'photos_list_screen.dart';
 import 'place_form_screen.dart';
 
@@ -18,6 +19,7 @@ class _PlacesListScreenState extends State<PlacesListScreen> {
   bool _loading = true;
   bool _savingOrder = false;
   String _filter = '';
+  String _governorateFilter = 'all';
   bool _editOrder = true;
 
   @override
@@ -44,6 +46,16 @@ class _PlacesListScreenState extends State<PlacesListScreen> {
     }
   }
 
+  int _countForGovernorate(String governorateId) =>
+      _places.where((place) => place.governorate == governorateId).length;
+
+  void _selectGovernorateFilter(String governorateId) {
+    setState(() {
+      _governorateFilter = governorateId;
+      if (governorateId != 'all') _editOrder = false;
+    });
+  }
+
   Future<void> _persistOrder(int oldIndex, int newIndex) async {
     final moved = _places.removeAt(oldIndex);
     _places.insert(newIndex, moved);
@@ -61,6 +73,7 @@ class _PlacesListScreenState extends State<PlacesListScreen> {
       placeIds.add(_places[i].id);
       newOrders.add((i + 1) * step);
     }
+
     final entries = List<({String id, int displayOrder})>.generate(
       _places.length,
       (i) => (id: placeIds[i], displayOrder: newOrders[i]),
@@ -175,15 +188,19 @@ class _PlacesListScreenState extends State<PlacesListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final filtered = _filter.isEmpty
-        ? _places
-        : _places
-              .where(
-                (p) =>
-                    p.name.toLowerCase().contains(_filter.toLowerCase()) ||
-                    p.category.toLowerCase().contains(_filter.toLowerCase()),
-              )
-              .toList();
+    final query = _filter.trim().toLowerCase();
+    final filtered = _places
+        .where((place) {
+          final matchesGovernorate =
+              _governorateFilter == 'all' ||
+              place.governorate == _governorateFilter;
+          final matchesQuery =
+              query.isEmpty ||
+              place.name.toLowerCase().contains(query) ||
+              place.category.toLowerCase().contains(query);
+          return matchesGovernorate && matchesQuery;
+        })
+        .toList(growable: false);
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -192,6 +209,10 @@ class _PlacesListScreenState extends State<PlacesListScreen> {
         ),
         backgroundColor: Theme.of(context).colorScheme.surface,
         actions: [
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: LocalDraftModeBadge(),
+          ),
           IconButton(
             icon: Icon(
               _editOrder
@@ -199,7 +220,20 @@ class _PlacesListScreenState extends State<PlacesListScreen> {
                   : Icons.list_alt_rounded,
               color: _editOrder ? AppTheme.primary : null,
             ),
-            onPressed: () => setState(() => _editOrder = !_editOrder),
+            onPressed: () {
+              if (!_editOrder &&
+                  (_governorateFilter != 'all' || query.isNotEmpty)) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'Clear governorate and search filters before reordering.',
+                    ),
+                  ),
+                );
+                return;
+              }
+              setState(() => _editOrder = !_editOrder);
+            },
             tooltip: _editOrder
                 ? 'Stop reordering (drag handles hidden)'
                 : 'Reorder places by drag-and-drop',
@@ -220,10 +254,14 @@ class _PlacesListScreenState extends State<PlacesListScreen> {
       ),
       body: Column(
         children: [
+          LocalDraftModeBanner(onChanged: _load),
           Padding(
             padding: const EdgeInsets.all(16),
             child: TextField(
-              onChanged: (v) => setState(() => _filter = v),
+              onChanged: (v) => setState(() {
+                _filter = v;
+                if (v.trim().isNotEmpty) _editOrder = false;
+              }),
               decoration: InputDecoration(
                 hintText: 'Search by name or category...',
                 prefixIcon: const Icon(Icons.search_rounded),
@@ -234,6 +272,40 @@ class _PlacesListScreenState extends State<PlacesListScreen> {
                         onPressed: () => setState(() => _filter = ''),
                       ),
               ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Governorate · المحافظة',
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: [
+                    ChoiceChip(
+                      label: Text('All · الكل (${_places.length})'),
+                      selected: _governorateFilter == 'all',
+                      onSelected: (_) => _selectGovernorateFilter('all'),
+                    ),
+                    for (final governorate in GovernorateConfig.all)
+                      ChoiceChip(
+                        label: Text(
+                          '${governorate.nameAr} · ${governorate.nameEn} '
+                          '(${_countForGovernorate(governorate.id)})',
+                        ),
+                        selected: _governorateFilter == governorate.id,
+                        onSelected: (_) =>
+                            _selectGovernorateFilter(governorate.id),
+                      ),
+                  ],
+                ),
+              ],
             ),
           ),
           if (_savingOrder) const LinearProgressIndicator(minHeight: 2),
@@ -436,12 +508,8 @@ class _PlaceRow extends StatelessWidget {
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        AdminGovernorate.all
-                            .firstWhere(
-                              (item) => item.id == place.governorate,
-                              orElse: () => AdminGovernorate.all.first,
-                            )
-                            .nameEn,
+                        governoratesConfig[place.governorate]?.nameAr ??
+                            place.governorate,
                         style: const TextStyle(
                           color: Color(0xFF087F6E),
                           fontSize: 9,
@@ -487,7 +555,7 @@ class _PlaceRow extends StatelessWidget {
               Icons.photo_library_outlined,
               color: AppTheme.success,
             ),
-            onPressed: onPhotos,
+            onPressed: AdminService.instance.isLocalDraftMode ? null : onPhotos,
             tooltip: 'Photos',
           ),
           IconButton(

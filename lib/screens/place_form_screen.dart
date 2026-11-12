@@ -6,9 +6,10 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
 import '../models/models.dart';
-import '../models/egypt_governorates.dart';
+import '../models/governorates_config.dart';
 import '../services/admin_service.dart';
 import '../theme.dart';
+import '../widgets/local_draft_mode_banner.dart';
 
 class PlaceFormScreen extends StatefulWidget {
   final Place? place;
@@ -73,7 +74,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
   late TextEditingController _rating;
   late TextEditingController _displayOrder;
   PriceLevel _priceLevel = PriceLevel.free;
-  String _governorate = 'alexandria';
+  String? _governorate;
   bool _isHiddenGem = false;
   bool _isFeatured = false;
   bool _enableChat = true;
@@ -131,8 +132,10 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
       text: (p?.displayOrder ?? 999).toString(),
     );
     _priceLevel = p?.priceLevel ?? PriceLevel.free;
-    _governorate = AdminGovernorate.all.any((g) => g.id == p?.governorate)
-        ? p!.governorate
+    _governorate = p == null
+        ? null
+        : governoratesConfig.containsKey(p.governorate)
+        ? p.governorate
         : 'alexandria';
     _isHiddenGem = p?.isHiddenGem ?? false;
     _isFeatured = p?.isFeatured ?? false;
@@ -152,6 +155,27 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
       }
     }
     setState(() {});
+  }
+
+  void _selectGovernorate(String id) {
+    final governorate = governoratesConfig[id]!;
+    final center = LatLng(governorate.centerLat, governorate.centerLng);
+    _updatingCoordinatesFromMap = true;
+    _lat.text = center.latitude.toStringAsFixed(6);
+    _lng.text = center.longitude.toStringAsFixed(6);
+    _address.text = '${governorate.nameEn}, Egypt';
+    _selectedPoint = center;
+    _updatingCoordinatesFromMap = false;
+    setState(() => _governorate = id);
+    if (_mapReady) {
+      _mapController.move(center, governorate.defaultZoom);
+    } else {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _mapReady && _governorate == id) {
+          _mapController.move(center, governorate.defaultZoom);
+        }
+      });
+    }
   }
 
   LatLng? _coordinatesFromFields() {
@@ -364,7 +388,26 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
   }
 
   Future<void> _save() async {
+    final governorateId = _governorate;
+    if (governorateId == null) {
+      _showValidationError(
+        'اختر المحافظة أولاً لتفعيل حقول الإضافة وتوجيه الخريطة تلقائياً',
+      );
+      return;
+    }
     if (!_formKey.currentState!.validate()) return;
+    final point = _coordinatesFromFields();
+    if (point == null) {
+      _showValidationError('أدخل إحداثيات صحيحة لخط العرض والطول.');
+      return;
+    }
+    if (!isPointInGovernorate(point.latitude, point.longitude, governorateId)) {
+      _showValidationError(
+        'الإحداثيات تقع خارج حدود المحافظة المحددة. '
+        'اختر موقعاً داخل ${governoratesConfig[governorateId]!.nameAr}.',
+      );
+      return;
+    }
     setState(() => _saving = true);
 
     final errors = <String>[];
@@ -380,6 +423,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
     final ts = DateTime.now().microsecondsSinceEpoch;
     var pIdx = 0;
     for (final draft in _primaryImageDrafts) {
+      if (AdminService.instance.isLocalDraftMode) break;
       if (draft.bytes == null) continue;
       try {
         final url = await AdminService.instance.uploadImageBytes(
@@ -419,7 +463,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
       lng: double.tryParse(_lng.text) ?? 0,
       address: _address.text.trim(),
       addressAr: _nullable(_addressAr),
-      governorate: _governorate,
+      governorate: governorateId,
       openHours: _openHours.text.trim(),
       reviewCount: int.tryParse(_reviewCount.text) ?? 0,
       priceLevel: _priceLevel,
@@ -475,6 +519,12 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
     Navigator.pop(context, place);
   }
 
+  void _showValidationError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: AppTheme.danger),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -485,6 +535,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
         ),
         backgroundColor: Theme.of(context).colorScheme.surface,
         actions: [
+          const LocalDraftModeBadge(),
           TextButton(
             onPressed: _saving ? null : _save,
             child: _saving
@@ -503,634 +554,738 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
           ),
         ],
       ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            _section(
-              icon: Icons.image_rounded,
-              title: 'Images',
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Add one or more images. The first one is the cover.',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: _addPrimaryImage,
-                          icon: const Icon(Icons.add_a_photo_rounded, size: 18),
-                          label: const Text('Add image'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primary,
-                            foregroundColor: Colors.white,
-                            elevation: 0,
-                            minimumSize: const Size.fromHeight(44),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: _addMultiplePrimaryImages,
-                          icon: const Icon(
-                            Icons.add_photo_alternate_rounded,
-                            size: 18,
-                          ),
-                          label: const Text('Upload multiple'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.success,
-                            foregroundColor: Colors.white,
-                            elevation: 0,
-                            minimumSize: const Size.fromHeight(44),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  _buildImageGrid(),
-                ],
+      body: Column(
+        children: [
+          _governorateSelector(),
+          if (_governorate == null)
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 0, 20, 12),
+              child: Text(
+                'اختر المحافظة أولاً لتفعيل حقول الإضافة وتوجيه الخريطة تلقائياً',
+                textDirection: TextDirection.rtl,
+                textAlign: TextAlign.right,
+                style: TextStyle(
+                  color: AppTheme.primary,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
-
-            _section(
-              icon: Icons.collections_rounded,
-              title: 'Official Image URLs',
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Add direct image URLs for the swipeable gallery shown in the app. These URLs are merged with the uploaded images below and saved to places.image_urls.',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  ..._imageUrls.asMap().entries.map(
-                    (entry) => _buildOfficialUrlRow(entry.key, entry.value),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
+          Expanded(
+            child: AbsorbPointer(
+              absorbing: _governorate == null,
+              child: Opacity(
+                opacity: _governorate == null ? 0.48 : 1,
+                child: Form(
+                  key: _formKey,
+                  child: ListView(
+                    padding: const EdgeInsets.all(16),
                     children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: _addOfficialUrlRow,
-                          icon: const Icon(Icons.add_link_rounded, size: 18),
-                          label: const Text('Add image URL'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppTheme.primary,
-                            side: BorderSide(
-                              color: AppTheme.primary.withValues(alpha: 0.5),
-                            ),
-                            minimumSize: const Size.fromHeight(40),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: _addOfficialUrlFromPicked,
-                          icon: const Icon(Icons.upload_file_rounded, size: 18),
-                          label: const Text('Upload as URL'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppTheme.success,
-                            side: BorderSide(
-                              color: AppTheme.success.withValues(alpha: 0.5),
-                            ),
-                            minimumSize: const Size.fromHeight(40),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            _section(
-              icon: Icons.fingerprint_rounded,
-              title: 'Identification',
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _labelBilingual('ID', isEn: true),
-                  TextFormField(
-                    controller: _id,
-                    enabled: !_isEditing,
-                    decoration: const InputDecoration(hintText: 'p_unique_id'),
-                    validator: (v) => (v == null || v.trim().isEmpty)
-                        ? 'ID is required'
-                        : null,
-                  ),
-                  const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      Expanded(
+                      _section(
+                        icon: Icons.image_rounded,
+                        title: 'Images',
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _labelBilingual('Rating (0-5)', isEn: true),
-                            TextFormField(
-                              controller: _rating,
-                              keyboardType:
-                                  const TextInputType.numberWithOptions(
-                                    decimal: true,
+                            Text(
+                              'Add one or more images. The first one is the cover.',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: ElevatedButton.icon(
+                                    onPressed:
+                                        AdminService.instance.isLocalDraftMode
+                                        ? null
+                                        : _addPrimaryImage,
+                                    icon: const Icon(
+                                      Icons.add_a_photo_rounded,
+                                      size: 18,
+                                    ),
+                                    label: const Text('Add image'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppTheme.primary,
+                                      foregroundColor: Colors.white,
+                                      elevation: 0,
+                                      minimumSize: const Size.fromHeight(44),
+                                    ),
                                   ),
-                              validator: _validateNumber,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: ElevatedButton.icon(
+                                    onPressed:
+                                        AdminService.instance.isLocalDraftMode
+                                        ? null
+                                        : _addMultiplePrimaryImages,
+                                    icon: const Icon(
+                                      Icons.add_photo_alternate_rounded,
+                                      size: 18,
+                                    ),
+                                    label: const Text('Upload multiple'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppTheme.success,
+                                      foregroundColor: Colors.white,
+                                      elevation: 0,
+                                      minimumSize: const Size.fromHeight(44),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            _buildImageGrid(),
+                          ],
+                        ),
+                      ),
+
+                      _section(
+                        icon: Icons.collections_rounded,
+                        title: 'Official Image URLs',
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Add direct image URLs for the swipeable gallery shown in the app. These URLs are merged with the uploaded images below and saved to places.image_urls.',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            ..._imageUrls.asMap().entries.map(
+                              (entry) =>
+                                  _buildOfficialUrlRow(entry.key, entry.value),
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    onPressed: _addOfficialUrlRow,
+                                    icon: const Icon(
+                                      Icons.add_link_rounded,
+                                      size: 18,
+                                    ),
+                                    label: const Text('Add image URL'),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: AppTheme.primary,
+                                      side: BorderSide(
+                                        color: AppTheme.primary.withValues(
+                                          alpha: 0.5,
+                                        ),
+                                      ),
+                                      minimumSize: const Size.fromHeight(40),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    onPressed:
+                                        AdminService.instance.isLocalDraftMode
+                                        ? null
+                                        : _addOfficialUrlFromPicked,
+                                    icon: const Icon(
+                                      Icons.upload_file_rounded,
+                                      size: 18,
+                                    ),
+                                    label: const Text('Upload as URL'),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: AppTheme.success,
+                                      side: BorderSide(
+                                        color: AppTheme.success.withValues(
+                                          alpha: 0.5,
+                                        ),
+                                      ),
+                                      minimumSize: const Size.fromHeight(40),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
+
+                      _section(
+                        icon: Icons.fingerprint_rounded,
+                        title: 'Identification',
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _labelBilingual('Display Order', isEn: true),
+                            _labelBilingual('ID', isEn: true),
                             TextFormField(
-                              controller: _displayOrder,
-                              keyboardType: TextInputType.number,
-                              validator: _validateNumber,
+                              controller: _id,
+                              enabled: !_isEditing,
                               decoration: const InputDecoration(
-                                hintText: '1, 2, 3… (lower = first)',
-                                helperText:
-                                    '1 appears first, 2 second, etc. Default 999.',
-                                prefixIcon: Icon(
-                                  Icons.format_list_numbered_rounded,
+                                hintText: 'p_unique_id',
+                              ),
+                              validator: (v) => (v == null || v.trim().isEmpty)
+                                  ? 'ID is required'
+                                  : null,
+                            ),
+                            const SizedBox(height: 14),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      _labelBilingual(
+                                        'Rating (0-5)',
+                                        isEn: true,
+                                      ),
+                                      TextFormField(
+                                        controller: _rating,
+                                        keyboardType:
+                                            const TextInputType.numberWithOptions(
+                                              decimal: true,
+                                            ),
+                                        validator: _validateNumber,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      _labelBilingual(
+                                        'Display Order',
+                                        isEn: true,
+                                      ),
+                                      TextFormField(
+                                        controller: _displayOrder,
+                                        keyboardType: TextInputType.number,
+                                        validator: _validateNumber,
+                                        decoration: const InputDecoration(
+                                          hintText: '1, 2, 3… (lower = first)',
+                                          helperText:
+                                              '1 appears first, 2 second, etc. Default 999.',
+                                          prefixIcon: Icon(
+                                            Icons.format_list_numbered_rounded,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 14),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      _labelBilingual(
+                                        'Review count',
+                                        isEn: true,
+                                      ),
+                                      TextFormField(
+                                        controller: _reviewCount,
+                                        keyboardType: TextInputType.number,
+                                        validator: _validateNumber,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      _labelBilingual('Featured', isEn: true),
+                                      SwitchListTile.adaptive(
+                                        value: _isFeatured,
+                                        onChanged: (v) =>
+                                            setState(() => _isFeatured = v),
+                                        contentPadding: EdgeInsets.zero,
+                                        dense: true,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 14),
+                            _labelBilingual('Category', isEn: true),
+                            DropdownButtonFormField<String>(
+                              initialValue: _category.text.isEmpty
+                                  ? null
+                                  : _category.text,
+                              items: const [
+                                DropdownMenuItem(
+                                  value: 'Historical',
+                                  child: Text('Historical'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'Culture',
+                                  child: Text('Culture'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'Nature',
+                                  child: Text('Nature'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'Food',
+                                  child: Text('Food'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'Shopping',
+                                  child: Text('Shopping'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'Mosques',
+                                  child: Text('Mosques'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'Churches',
+                                  child: Text('Churches'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'Streets',
+                                  child: Text('Streets'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'ATM',
+                                  child: Text('ATM'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'Hotel',
+                                  child: Text('Hotel'),
+                                ),
+                              ],
+                              onChanged: (v) {
+                                if (v != null) {
+                                  setState(() => _category.text = v);
+                                }
+                              },
+                              decoration: const InputDecoration(
+                                prefixIcon: Icon(Icons.category_rounded),
+                                hintText: 'Pick a category',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 18),
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.surface,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: const Color(
+                              0xFF3B82F6,
+                            ).withValues(alpha: 0.45),
+                            width: 2,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(
+                                0xFF3B82F6,
+                              ).withValues(alpha: 0.06),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    color: const Color(
+                                      0xFF3B82F6,
+                                    ).withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: const Text(
+                                    'EN',
+                                    style: TextStyle(
+                                      color: Color(0xFF3B82F6),
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    'English Content',
+                                    style: TextStyle(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w900,
+                                      color: AppTheme.textPrimary,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Required fields shown in blue. Both English fields are mandatory.',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: AppTheme.textSecondary,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            _labelBilingual('Name (English)', isEn: true),
+                            TextFormField(
+                              controller: _name,
+                              decoration: const InputDecoration(
+                                hintText: 'Qaitbay Citadel',
+                                prefixIcon: Icon(Icons.title_rounded),
+                              ),
+                              validator: (v) => (v == null || v.trim().isEmpty)
+                                  ? 'Name (English) is required'
+                                  : null,
+                            ),
+                            const SizedBox(height: 14),
+                            _labelBilingual(
+                              'Description (English)',
+                              isEn: true,
+                            ),
+                            TextFormField(
+                              controller: _description,
+                              maxLines: 5,
+                              decoration: const InputDecoration(
+                                hintText: 'Full description in English...',
+                              ),
+                              validator: (v) => (v == null || v.trim().isEmpty)
+                                  ? 'Description (English) is required'
+                                  : null,
+                            ),
+                            const SizedBox(height: 14),
+                            _labelBilingual('Address (English)', isEn: true),
+                            TextFormField(
+                              controller: _address,
+                              decoration: const InputDecoration(
+                                hintText: 'Corniche, Anfushi, Alexandria',
+                                prefixIcon: Icon(Icons.place_rounded),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      _section(
+                        icon: Icons.translate_rounded,
+                        title: 'Arabic Content',
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _labelBilingual('Name (AR)', isEn: false),
+                            TextFormField(
+                              controller: _nameAr,
+                              textDirection: TextDirection.rtl,
+                              textAlign: TextAlign.right,
+                              decoration: const InputDecoration(
+                                hintText: 'قلعة قايتباي',
+                                prefixIcon: Icon(Icons.translate_rounded),
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            _labelBilingual('Description (AR)', isEn: false),
+                            TextFormField(
+                              controller: _descriptionAr,
+                              maxLines: 5,
+                              textDirection: TextDirection.rtl,
+                              textAlign: TextAlign.right,
+                              decoration: const InputDecoration(
+                                hintText: 'الوصف بالعربي...',
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            _labelBilingual('Address (AR)', isEn: false),
+                            TextFormField(
+                              controller: _addressAr,
+                              textDirection: TextDirection.rtl,
+                              textAlign: TextAlign.right,
+                              decoration: const InputDecoration(
+                                hintText: 'الكورنيش، الأنفوشي، الإسكندرية',
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            _labelBilingual('Category (AR)', isEn: false),
+                            TextFormField(
+                              controller: _categoryAr,
+                              textDirection: TextDirection.rtl,
+                              textAlign: TextAlign.right,
+                              decoration: const InputDecoration(
+                                hintText: 'الفئة بالعربي...',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      _section(
+                        icon: Icons.map_rounded,
+                        title: 'Location (lat / lng)',
+                        child: _mapPicker(),
+                      ),
+
+                      _section(
+                        icon: Icons.access_time_rounded,
+                        title: 'Operating Hours',
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _labelBilingual('Open Hours', isEn: false),
+                            TextFormField(
+                              controller: _openHours,
+                              decoration: const InputDecoration(
+                                hintText:
+                                    '9:00 AM - 5:00 PM / 9 صباحاً - 5 مساءً',
+                                prefixIcon: Icon(Icons.schedule_rounded),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Padding(
+                              padding: const EdgeInsets.only(left: 4),
+                              child: Text(
+                                'Or "Open 24 hours" / "مفتوح 24 ساعة"',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: AppTheme.textSecondary,
                                 ),
                               ),
                             ),
                           ],
                         ),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      Expanded(
+
+                      _section(
+                        icon: Icons.confirmation_number_rounded,
+                        title: 'Tickets (EGP)',
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _labelBilingual('Review count', isEn: true),
-                            TextFormField(
-                              controller: _reviewCount,
-                              keyboardType: TextInputType.number,
-                              validator: _validateNumber,
+                            _priceLevelDropdown(),
+                            const SizedBox(height: 14),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      _labelBilingual(
+                                        'Egyptian (Local)',
+                                        isEn: true,
+                                        hint: '🇪🇬',
+                                      ),
+                                      TextFormField(
+                                        controller: _priceLocal,
+                                        keyboardType: TextInputType.number,
+                                        decoration: const InputDecoration(
+                                          hintText: 'e.g. 10',
+                                          prefixIcon: Icon(
+                                            Icons.local_offer_rounded,
+                                          ),
+                                        ),
+                                        validator: _validateNumber,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      _labelBilingual(
+                                        'Tourist (Foreigner)',
+                                        isEn: true,
+                                        hint: '🌍',
+                                      ),
+                                      TextFormField(
+                                        controller: _priceForeigner,
+                                        keyboardType: TextInputType.number,
+                                        decoration: const InputDecoration(
+                                          hintText: 'e.g. 60',
+                                          prefixIcon: Icon(
+                                            Icons.local_offer_rounded,
+                                          ),
+                                        ),
+                                        validator: _validateNumber,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
+                            const SizedBox(height: 4),
+                            Padding(
+                              padding: const EdgeInsets.only(left: 4),
+                              child: Text(
+                                'Leave empty for free entry. Local price applies to Egyptian/resident ID holders.',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: AppTheme.textSecondary,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            _labelBilingual('Price note', isEn: true),
+                            TextFormField(
+                              controller: _priceNote,
+                              decoration: const InputDecoration(
+                                hintText: 'EGP 100 adults, EGP 50 students',
+                                prefixIcon: Icon(Icons.notes_rounded),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
                           ],
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
+
+                      _section(
+                        icon: Icons.local_offer_rounded,
+                        title: 'Tags',
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _labelBilingual('Featured', isEn: true),
                             SwitchListTile.adaptive(
-                              value: _isFeatured,
-                              onChanged: (v) => setState(() => _isFeatured = v),
+                              value: _isHiddenGem,
+                              onChanged: (v) =>
+                                  setState(() => _isHiddenGem = v),
+                              title: const Text('Hidden gem'),
+                              subtitle: const Text(
+                                'Show only when filtering "Hidden Gems"',
+                              ),
                               contentPadding: EdgeInsets.zero,
-                              dense: true,
                             ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  _labelBilingual('Category', isEn: true),
-                  DropdownButtonFormField<String>(
-                    initialValue: _category.text.isEmpty
-                        ? null
-                        : _category.text,
-                    items: const [
-                      DropdownMenuItem(
-                        value: 'Historical',
-                        child: Text('Historical'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'Culture',
-                        child: Text('Culture'),
-                      ),
-                      DropdownMenuItem(value: 'Nature', child: Text('Nature')),
-                      DropdownMenuItem(value: 'Food', child: Text('Food')),
-                      DropdownMenuItem(
-                        value: 'Shopping',
-                        child: Text('Shopping'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'Mosques',
-                        child: Text('Mosques'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'Churches',
-                        child: Text('Churches'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'Streets',
-                        child: Text('Streets'),
-                      ),
-                      DropdownMenuItem(value: 'ATM', child: Text('ATM')),
-                      DropdownMenuItem(value: 'Hotel', child: Text('Hotel')),
-                    ],
-                    onChanged: (v) {
-                      if (v != null) {
-                        setState(() => _category.text = v);
-                      }
-                    },
-                    decoration: const InputDecoration(
-                      prefixIcon: Icon(Icons.category_rounded),
-                      hintText: 'Pick a category',
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            Container(
-              margin: const EdgeInsets.only(bottom: 18),
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: const Color(0xFF3B82F6).withValues(alpha: 0.45),
-                  width: 2,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF3B82F6).withValues(alpha: 0.06),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: const Color(
-                            0xFF3B82F6,
-                          ).withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        alignment: Alignment.center,
-                        child: const Text(
-                          'EN',
-                          style: TextStyle(
-                            color: Color(0xFF3B82F6),
-                            fontSize: 13,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'English Content',
-                          style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w900,
-                            color: AppTheme.textPrimary,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Required fields shown in blue. Both English fields are mandatory.',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: AppTheme.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  _labelBilingual('Name (English)', isEn: true),
-                  TextFormField(
-                    controller: _name,
-                    decoration: const InputDecoration(
-                      hintText: 'Qaitbay Citadel',
-                      prefixIcon: Icon(Icons.title_rounded),
-                    ),
-                    validator: (v) => (v == null || v.trim().isEmpty)
-                        ? 'Name (English) is required'
-                        : null,
-                  ),
-                  const SizedBox(height: 14),
-                  _labelBilingual('Description (English)', isEn: true),
-                  TextFormField(
-                    controller: _description,
-                    maxLines: 5,
-                    decoration: const InputDecoration(
-                      hintText: 'Full description in English...',
-                    ),
-                    validator: (v) => (v == null || v.trim().isEmpty)
-                        ? 'Description (English) is required'
-                        : null,
-                  ),
-                  const SizedBox(height: 14),
-                  _labelBilingual('Address (English)', isEn: true),
-                  TextFormField(
-                    controller: _address,
-                    decoration: const InputDecoration(
-                      hintText: 'Corniche, Anfushi, Alexandria',
-                      prefixIcon: Icon(Icons.place_rounded),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            _section(
-              icon: Icons.translate_rounded,
-              title: 'Arabic Content',
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _labelBilingual('Name (AR)', isEn: false),
-                  TextFormField(
-                    controller: _nameAr,
-                    textDirection: TextDirection.rtl,
-                    textAlign: TextAlign.right,
-                    decoration: const InputDecoration(
-                      hintText: 'قلعة قايتباي',
-                      prefixIcon: Icon(Icons.translate_rounded),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  _labelBilingual('Description (AR)', isEn: false),
-                  TextFormField(
-                    controller: _descriptionAr,
-                    maxLines: 5,
-                    textDirection: TextDirection.rtl,
-                    textAlign: TextAlign.right,
-                    decoration: const InputDecoration(
-                      hintText: 'الوصف بالعربي...',
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  _labelBilingual('Address (AR)', isEn: false),
-                  TextFormField(
-                    controller: _addressAr,
-                    textDirection: TextDirection.rtl,
-                    textAlign: TextAlign.right,
-                    decoration: const InputDecoration(
-                      hintText: 'الكورنيش، الأنفوشي، الإسكندرية',
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  _labelBilingual('Category (AR)', isEn: false),
-                  TextFormField(
-                    controller: _categoryAr,
-                    textDirection: TextDirection.rtl,
-                    textAlign: TextAlign.right,
-                    decoration: const InputDecoration(
-                      hintText: 'الفئة بالعربي...',
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            _section(
-              icon: Icons.location_city_rounded,
-              title: 'Governorate (المحافظة)',
-              child: DropdownButtonFormField<String>(
-                initialValue: _governorate,
-                decoration: const InputDecoration(
-                  prefixIcon: Icon(Icons.map_outlined),
-                ),
-                items: [
-                  for (final governorate in AdminGovernorate.all)
-                    DropdownMenuItem(
-                      value: governorate.id,
-                      child: Text(
-                        '${governorate.nameEn} — ${governorate.nameAr}',
-                      ),
-                    ),
-                ],
-                onChanged: (value) {
-                  if (value == null) return;
-                  setState(() => _governorate = value);
-                  if (!_isEditing) {
-                    final selected = AdminGovernorate.all.firstWhere(
-                      (item) => item.id == value,
-                    );
-                    final center = LatLng(
-                      selected.centerLat,
-                      selected.centerLng,
-                    );
-                    if (_mapReady) {
-                      _mapController.move(center, 11);
-                    } else {
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        if (mounted && _mapReady) {
-                          _mapController.move(center, 11);
-                        }
-                      });
-                    }
-                  }
-                },
-              ),
-            ),
-            _section(
-              icon: Icons.map_rounded,
-              title: 'Location (lat / lng)',
-              child: _mapPicker(),
-            ),
-
-            _section(
-              icon: Icons.access_time_rounded,
-              title: 'Operating Hours',
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _labelBilingual('Open Hours', isEn: false),
-                  TextFormField(
-                    controller: _openHours,
-                    decoration: const InputDecoration(
-                      hintText: '9:00 AM - 5:00 PM / 9 صباحاً - 5 مساءً',
-                      prefixIcon: Icon(Icons.schedule_rounded),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Padding(
-                    padding: const EdgeInsets.only(left: 4),
-                    child: Text(
-                      'Or "Open 24 hours" / "مفتوح 24 ساعة"',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: AppTheme.textSecondary,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            _section(
-              icon: Icons.confirmation_number_rounded,
-              title: 'Tickets (EGP)',
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _priceLevelDropdown(),
-                  const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _labelBilingual(
-                              'Egyptian (Local)',
-                              isEn: true,
-                              hint: '🇪🇬',
-                            ),
-                            TextFormField(
-                              controller: _priceLocal,
-                              keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(
-                                hintText: 'e.g. 10',
-                                prefixIcon: Icon(Icons.local_offer_rounded),
+                            SwitchListTile.adaptive(
+                              value: _enableChat,
+                              onChanged: (v) => setState(() => _enableChat = v),
+                              title: const Text('Enable Community Chat'),
+                              subtitle: const Text(
+                                'Show the chat section on this place details page',
                               ),
-                              validator: _validateNumber,
+                              contentPadding: EdgeInsets.zero,
                             ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _labelBilingual(
-                              'Tourist (Foreigner)',
-                              isEn: true,
-                              hint: '🌍',
-                            ),
-                            TextFormField(
-                              controller: _priceForeigner,
-                              keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(
-                                hintText: 'e.g. 60',
-                                prefixIcon: Icon(Icons.local_offer_rounded),
+                            SwitchListTile.adaptive(
+                              value: _enableGallery,
+                              onChanged: (v) =>
+                                  setState(() => _enableGallery = v),
+                              title: const Text('Enable Photo Gallery'),
+                              subtitle: const Text(
+                                'Show the visitor photo gallery on this place details page',
                               ),
-                              validator: _validateNumber,
+                              contentPadding: EdgeInsets.zero,
                             ),
                           ],
                         ),
                       ),
+
+                      const SizedBox(height: 22),
+                      if (_isEditing &&
+                          !AdminService.instance.isLocalDraftMode &&
+                          (widget.place?.id ?? _id.text).isNotEmpty)
+                        _ModerationSection(
+                          placeId: widget.place?.id ?? _id.text,
+                        ),
+                      const SizedBox(height: 22),
+                      ElevatedButton(
+                        onPressed: _saving ? null : _save,
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          backgroundColor: AppTheme.primary,
+                          foregroundColor: Colors.white,
+                        ),
+                        child: _saving
+                            ? SizedBox(
+                                height: 18,
+                                width: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Theme.of(context).colorScheme.surface,
+                                ),
+                              )
+                            : Text(
+                                _isEditing ? 'Update Place' : 'Create Place',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 15,
+                                ),
+                              ),
+                      ),
+                      const SizedBox(height: 32),
                     ],
                   ),
-                  const SizedBox(height: 4),
-                  Padding(
-                    padding: const EdgeInsets.only(left: 4),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _governorateSelector() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppTheme.primary.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppTheme.primary.withValues(alpha: 0.32)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Step 1 · Governorate (المحافظة) · Required',
+              style: TextStyle(fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<String>(
+              initialValue: _governorate,
+              decoration: const InputDecoration(
+                prefixIcon: Icon(Icons.map_outlined),
+                hintText: 'Select Alexandria or Cairo',
+              ),
+              items: [
+                for (final governorate in GovernorateConfig.all)
+                  DropdownMenuItem(
+                    value: governorate.id,
                     child: Text(
-                      'Leave empty for free entry. Local price applies to Egyptian/resident ID holders.',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: AppTheme.textSecondary,
-                      ),
+                      '${governorate.nameAr} — ${governorate.nameEn}',
                     ),
                   ),
-                  const SizedBox(height: 14),
-                  _labelBilingual('Price note', isEn: true),
-                  TextFormField(
-                    controller: _priceNote,
-                    decoration: const InputDecoration(
-                      hintText: 'EGP 100 adults, EGP 50 students',
-                      prefixIcon: Icon(Icons.notes_rounded),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                ],
-              ),
+              ],
+              onChanged: (value) {
+                if (value != null) _selectGovernorate(value);
+              },
             ),
-
-            _section(
-              icon: Icons.local_offer_rounded,
-              title: 'Tags',
-              child: Column(
-                children: [
-                  SwitchListTile.adaptive(
-                    value: _isHiddenGem,
-                    onChanged: (v) => setState(() => _isHiddenGem = v),
-                    title: const Text('Hidden gem'),
-                    subtitle: const Text(
-                      'Show only when filtering "Hidden Gems"',
-                    ),
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                  SwitchListTile.adaptive(
-                    value: _enableChat,
-                    onChanged: (v) => setState(() => _enableChat = v),
-                    title: const Text('Enable Community Chat'),
-                    subtitle: const Text(
-                      'Show the chat section on this place details page',
-                    ),
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                  SwitchListTile.adaptive(
-                    value: _enableGallery,
-                    onChanged: (v) => setState(() => _enableGallery = v),
-                    title: const Text('Enable Photo Gallery'),
-                    subtitle: const Text(
-                      'Show the visitor photo gallery on this place details page',
-                    ),
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 22),
-            if (_isEditing && (widget.place?.id ?? _id.text).isNotEmpty)
-              _ModerationSection(placeId: widget.place?.id ?? _id.text),
-            const SizedBox(height: 22),
-            ElevatedButton(
-              onPressed: _saving ? null : _save,
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                backgroundColor: AppTheme.primary,
-                foregroundColor: Colors.white,
-              ),
-              child: _saving
-                  ? SizedBox(
-                      height: 18,
-                      width: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Theme.of(context).colorScheme.surface,
-                      ),
-                    )
-                  : Text(
-                      _isEditing ? 'Update Place' : 'Create Place',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 15,
-                      ),
-                    ),
-            ),
-            const SizedBox(height: 32),
           ],
         ),
       ),
@@ -1704,6 +1859,9 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                   hintText: '31.200100',
                   prefixIcon: Icon(Icons.north_rounded),
                 ),
+                validator: (_) => _coordinatesFromFields() == null
+                    ? 'Enter a valid latitude and longitude'
+                    : null,
               ),
             ),
             const SizedBox(width: 12),
@@ -1719,6 +1877,9 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                   hintText: '29.918700',
                   prefixIcon: Icon(Icons.east_rounded),
                 ),
+                validator: (_) => _coordinatesFromFields() == null
+                    ? 'Enter a valid latitude and longitude'
+                    : null,
               ),
             ),
           ],
@@ -1738,8 +1899,15 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
               mapController: _mapController,
               options: MapOptions(
                 initialCenter: point,
-                initialZoom: 13,
-                onMapReady: () => _mapReady = true,
+                initialZoom:
+                    governoratesConfig[_governorate]?.defaultZoom ?? 11,
+                onMapReady: () {
+                  _mapReady = true;
+                  _mapController.move(
+                    _selectedPoint,
+                    governoratesConfig[_governorate]?.defaultZoom ?? 11,
+                  );
+                },
                 onTap: (tapPosition, latLng) {
                   _setCoordinatesFromMap(latLng);
                 },

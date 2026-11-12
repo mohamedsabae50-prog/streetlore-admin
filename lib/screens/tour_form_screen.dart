@@ -4,8 +4,10 @@ import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../models/models.dart';
+import '../models/governorates_config.dart';
 import '../services/admin_service.dart';
 import '../theme.dart';
+import '../widgets/local_draft_mode_banner.dart';
 
 class TourFormScreen extends StatefulWidget {
   final Tour? tour;
@@ -37,6 +39,7 @@ class _TourFormScreenState extends State<TourFormScreen> {
   String _status = 'published';
   bool _isPremium = false;
   bool _isHiddenGem = false;
+  String? _governorate;
   final _cover = _CoverDraft();
 
   List<Place> _allPlaces = [];
@@ -46,6 +49,17 @@ class _TourFormScreenState extends State<TourFormScreen> {
   bool _uploadingCover = false;
 
   bool get _isEditing => widget.tour != null;
+  List<Place> get _placesForGovernorate => _allPlaces
+      .where((place) => place.governorate == _governorate)
+      .toList(growable: false);
+
+  void _selectGovernorate(String id) {
+    setState(() {
+      _governorate = id;
+      _selectedPlaces.removeWhere((place) => place.governorate != id);
+      _search.clear();
+    });
+  }
 
   @override
   void initState() {
@@ -66,8 +80,16 @@ class _TourFormScreenState extends State<TourFormScreen> {
     _status = t?.status ?? 'published';
     _isPremium = t?.isPremium ?? false;
     _isHiddenGem = t?.isHiddenGem ?? false;
+    _governorate = t == null
+        ? null
+        : governoratesConfig.containsKey(t.governorate)
+        ? t.governorate
+        : 'alexandria';
     _search = TextEditingController();
-    _selectedPlaces = List<Place>.from(t?.places ?? const []);
+    _selectedPlaces = List<Place>.from(
+      t?.places.where((place) => place.governorate == _governorate) ??
+          const <Place>[],
+    );
     _load();
   }
 
@@ -111,6 +133,14 @@ class _TourFormScreenState extends State<TourFormScreen> {
 
   Future<void> _pickAndUploadCover() async {
     if (_uploadingCover) return;
+    if (AdminService.instance.isLocalDraftMode) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Image uploads are disabled in Local Draft Mode.'),
+        ),
+      );
+      return;
+    }
     final picker = ImagePicker();
     XFile? picked;
     try {
@@ -162,8 +192,10 @@ class _TourFormScreenState extends State<TourFormScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => _PlacePickerSheet(
-        all: _allPlaces,
-        initiallySelected: _selectedPlaces,
+        all: _placesForGovernorate,
+        initiallySelected: _selectedPlaces
+            .where((place) => place.governorate == _governorate)
+            .toList(growable: false),
         searchCtrl: _search,
       ),
     );
@@ -184,7 +216,23 @@ class _TourFormScreenState extends State<TourFormScreen> {
   }
 
   Future<void> _save() async {
+    final governorateId = _governorate;
+    if (governorateId == null) {
+      _showGovernorateError();
+      return;
+    }
     if (!_formKey.currentState!.validate()) return;
+    if (_selectedPlaces.any((place) => place.governorate != governorateId)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'All tour stops must belong to the selected governorate.',
+          ),
+          backgroundColor: AppTheme.danger,
+        ),
+      );
+      return;
+    }
     setState(() => _saving = true);
     try {
       final tour = Tour(
@@ -201,6 +249,7 @@ class _TourFormScreenState extends State<TourFormScreen> {
         categoryAr: _nullable(_categoryAr),
         imageUrl: _imageUrl.text.trim(),
         status: _status,
+        governorate: governorateId,
         isPremium: _isPremium,
         isHiddenGem: _isHiddenGem,
         places: _selectedPlaces,
@@ -223,6 +272,17 @@ class _TourFormScreenState extends State<TourFormScreen> {
     }
   }
 
+  void _showGovernorateError() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'اختر المحافظة أولاً لتفعيل حقول الإضافة وتوجيه الخريطة تلقائياً',
+        ),
+        backgroundColor: AppTheme.danger,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final coverPreview = _cover.uploadedUrl ?? _imageUrl.text.trim();
@@ -234,6 +294,7 @@ class _TourFormScreenState extends State<TourFormScreen> {
         ),
         backgroundColor: Theme.of(context).colorScheme.surface,
         actions: [
+          const LocalDraftModeBadge(),
           TextButton(
             onPressed: _saving ? null : _save,
             child: _saving
@@ -254,401 +315,507 @@ class _TourFormScreenState extends State<TourFormScreen> {
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : Form(
-              key: _formKey,
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  _label('ID'),
-                  TextFormField(
-                    controller: _id,
-                    enabled: !_isEditing,
-                    validator: (v) => (v == null || v.trim().isEmpty)
-                        ? 'ID is required'
-                        : null,
-                  ),
-                  const SizedBox(height: 18),
-
-                  _label('Title (English)'),
-                  TextFormField(
-                    controller: _titleEn,
-                    validator: (v) => (v == null || v.trim().isEmpty)
-                        ? 'Title is required'
-                        : null,
-                  ),
-                  const SizedBox(height: 10),
-                  _label('Title (Arabic)'),
-                  TextFormField(
-                    controller: _titleAr,
-                    textDirection: TextDirection.rtl,
-                    textAlign: TextAlign.right,
-                    decoration: const InputDecoration(
-                      hintText: 'عنوان الجولة بالعربي',
+          : Column(
+              children: [
+                _governorateSelector(),
+                if (_governorate == null)
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(20, 0, 20, 12),
+                    child: Text(
+                      'اختر المحافظة أولاً لتفعيل حقول الإضافة وتوجيه الخريطة تلقائياً',
+                      textDirection: TextDirection.rtl,
+                      textAlign: TextAlign.right,
+                      style: TextStyle(
+                        color: AppTheme.primary,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 18),
-
-                  _label('Description (English)'),
-                  TextFormField(
-                    controller: _descriptionEn,
-                    maxLines: 3,
-                    validator: (v) => (v == null || v.trim().isEmpty)
-                        ? 'Description is required'
-                        : null,
-                  ),
-                  const SizedBox(height: 10),
-                  _label('Description (Arabic)'),
-                  TextFormField(
-                    controller: _descriptionAr,
-                    maxLines: 3,
-                    textDirection: TextDirection.rtl,
-                    textAlign: TextAlign.right,
-                    decoration: const InputDecoration(
-                      hintText: 'وصف الجولة بالعربي',
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                Expanded(
+                  child: AbsorbPointer(
+                    absorbing: _governorate == null,
+                    child: Opacity(
+                      opacity: _governorate == null ? 0.48 : 1,
+                      child: Form(
+                        key: _formKey,
+                        child: ListView(
+                          padding: const EdgeInsets.all(16),
                           children: [
-                            _label('Duration (English)'),
+                            _label('ID'),
                             TextFormField(
-                              controller: _durationEn,
-                              decoration: const InputDecoration(
-                                hintText: '4 Hours',
-                              ),
+                              controller: _id,
+                              enabled: !_isEditing,
                               validator: (v) => (v == null || v.trim().isEmpty)
-                                  ? 'Required'
+                                  ? 'ID is required'
                                   : null,
                             ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _label('Duration (Arabic)'),
+                            const SizedBox(height: 18),
+
+                            _label('Title (English)'),
                             TextFormField(
-                              controller: _durationAr,
+                              controller: _titleEn,
+                              validator: (v) => (v == null || v.trim().isEmpty)
+                                  ? 'Title is required'
+                                  : null,
+                            ),
+                            const SizedBox(height: 10),
+                            _label('Title (Arabic)'),
+                            TextFormField(
+                              controller: _titleAr,
                               textDirection: TextDirection.rtl,
                               textAlign: TextAlign.right,
                               decoration: const InputDecoration(
-                                hintText: '٤ ساعات',
+                                hintText: 'عنوان الجولة بالعربي',
                               ),
                             ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 18),
+                            const SizedBox(height: 18),
 
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _label('Category / Theme'),
+                            _label('Description (English)'),
                             TextFormField(
-                              controller: _category,
-                              decoration: const InputDecoration(
-                                hintText: 'Historical, Coastal, Spiritual…',
-                              ),
+                              controller: _descriptionEn,
+                              maxLines: 3,
+                              validator: (v) => (v == null || v.trim().isEmpty)
+                                  ? 'Description is required'
+                                  : null,
                             ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _label('Category (Arabic)'),
+                            const SizedBox(height: 10),
+                            _label('Description (Arabic)'),
                             TextFormField(
-                              controller: _categoryAr,
+                              controller: _descriptionAr,
+                              maxLines: 3,
                               textDirection: TextDirection.rtl,
                               textAlign: TextAlign.right,
                               decoration: const InputDecoration(
-                                hintText: 'تاريخي / ساحلي / روحاني',
+                                hintText: 'وصف الجولة بالعربي',
                               ),
                             ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 18),
+                            const SizedBox(height: 18),
 
-                  _label('Cover image'),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: SizedBox(
-                          width: 80,
-                          height: 80,
-                          child: coverPreview.isEmpty
-                              ? Container(
-                                  color: AppTheme.bg,
-                                  child: Icon(
-                                    Icons.image_outlined,
-                                    color: AppTheme.textSecondary,
-                                    size: 28,
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      _label('Duration (English)'),
+                                      TextFormField(
+                                        controller: _durationEn,
+                                        decoration: const InputDecoration(
+                                          hintText: '4 Hours',
+                                        ),
+                                        validator: (v) =>
+                                            (v == null || v.trim().isEmpty)
+                                            ? 'Required'
+                                            : null,
+                                      ),
+                                    ],
                                   ),
-                                )
-                              : (kIsWeb
-                                    ? Image.network(
-                                        coverPreview,
-                                        width: 80,
-                                        height: 80,
-                                        cacheWidth: 180,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (_, _, _) => Container(
-                                          color: AppTheme.bg,
-                                          child: const Icon(
-                                            Icons.broken_image_outlined,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      _label('Duration (Arabic)'),
+                                      TextFormField(
+                                        controller: _durationAr,
+                                        textDirection: TextDirection.rtl,
+                                        textAlign: TextAlign.right,
+                                        decoration: const InputDecoration(
+                                          hintText: '٤ ساعات',
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 18),
+
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      _label('Category / Theme'),
+                                      TextFormField(
+                                        controller: _category,
+                                        decoration: const InputDecoration(
+                                          hintText:
+                                              'Historical, Coastal, Spiritual…',
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      _label('Category (Arabic)'),
+                                      TextFormField(
+                                        controller: _categoryAr,
+                                        textDirection: TextDirection.rtl,
+                                        textAlign: TextAlign.right,
+                                        decoration: const InputDecoration(
+                                          hintText: 'تاريخي / ساحلي / روحاني',
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 18),
+
+                            _label('Cover image'),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: SizedBox(
+                                    width: 80,
+                                    height: 80,
+                                    child: coverPreview.isEmpty
+                                        ? Container(
+                                            color: AppTheme.bg,
+                                            child: Icon(
+                                              Icons.image_outlined,
+                                              color: AppTheme.textSecondary,
+                                              size: 28,
+                                            ),
+                                          )
+                                        : (kIsWeb
+                                              ? Image.network(
+                                                  coverPreview,
+                                                  width: 80,
+                                                  height: 80,
+                                                  cacheWidth: 180,
+                                                  fit: BoxFit.cover,
+                                                  errorBuilder: (_, _, _) =>
+                                                      Container(
+                                                        color: AppTheme.bg,
+                                                        child: const Icon(
+                                                          Icons
+                                                              .broken_image_outlined,
+                                                        ),
+                                                      ),
+                                                )
+                                              : Image.network(
+                                                  coverPreview,
+                                                  width: 80,
+                                                  height: 80,
+                                                  cacheWidth: 180,
+                                                  fit: BoxFit.cover,
+                                                  errorBuilder: (_, _, _) =>
+                                                      Container(
+                                                        color: AppTheme.bg,
+                                                        child: const Icon(
+                                                          Icons
+                                                              .broken_image_outlined,
+                                                        ),
+                                                      ),
+                                                )),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      OutlinedButton.icon(
+                                        onPressed:
+                                            _uploadingCover ||
+                                                AdminService
+                                                    .instance
+                                                    .isLocalDraftMode
+                                            ? null
+                                            : _pickAndUploadCover,
+                                        icon: _uploadingCover
+                                            ? const SizedBox(
+                                                width: 16,
+                                                height: 16,
+                                                child:
+                                                    CircularProgressIndicator(
+                                                      strokeWidth: 2,
+                                                    ),
+                                              )
+                                            : const Icon(
+                                                Icons.upload_rounded,
+                                                size: 18,
+                                              ),
+                                        label: Text(
+                                          AdminService.instance.isLocalDraftMode
+                                              ? 'Local Draft: URL only'
+                                              : _uploadingCover
+                                              ? 'Uploading…'
+                                              : 'Upload to Supabase',
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        'or paste a URL below',
+                                        style: TextStyle(
+                                          color: AppTheme.textSecondary,
+                                          fontSize: 11,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            TextFormField(
+                              controller: _imageUrl,
+                              decoration: const InputDecoration(
+                                hintText: 'https://upload.wikimedia.org/...',
+                              ),
+                              validator: (v) => (v == null || v.trim().isEmpty)
+                                  ? 'Cover image is required'
+                                  : null,
+                              onChanged: (_) => setState(() {}),
+                            ),
+                            const SizedBox(height: 24),
+
+                            _label('Status'),
+                            DropdownButtonFormField<String>(
+                              initialValue: _status,
+                              decoration: const InputDecoration(
+                                border: OutlineInputBorder(),
+                              ),
+                              items: const [
+                                DropdownMenuItem(
+                                  value: 'draft',
+                                  child: Text('Draft'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'published',
+                                  child: Text('Published'),
+                                ),
+                              ],
+                              onChanged: (value) {
+                                if (value != null) {
+                                  setState(() => _status = value);
+                                }
+                              },
+                            ),
+                            const SizedBox(height: 24),
+
+                            SwitchListTile.adaptive(
+                              contentPadding: EdgeInsets.zero,
+                              value: _isPremium,
+                              onChanged: (value) =>
+                                  setState(() => _isPremium = value),
+                              title: const Text(
+                                'Premium Tour (Pro Users Only)',
+                                style: TextStyle(fontWeight: FontWeight.w700),
+                              ),
+                              subtitle: const Text(
+                                'Only Streetlore Pro users can start this tour.',
+                              ),
+                              activeThumbColor: AppTheme.primary,
+                            ),
+                            SwitchListTile.adaptive(
+                              contentPadding: EdgeInsets.zero,
+                              value: _isHiddenGem,
+                              onChanged: (value) =>
+                                  setState(() => _isHiddenGem = value),
+                              title: const Text(
+                                'Hidden Gem Tour',
+                                style: TextStyle(fontWeight: FontWeight.w700),
+                              ),
+                              subtitle: const Text(
+                                'Hidden gem tours are also restricted to Pro users.',
+                              ),
+                              activeThumbColor: AppTheme.primary,
+                            ),
+                            const SizedBox(height: 12),
+
+                            Row(
+                              children: [
+                                _label('Stops (${_selectedPlaces.length})'),
+                                const Spacer(),
+                                TextButton.icon(
+                                  onPressed: _pickPlaces,
+                                  icon: const Icon(
+                                    Icons.add_location_alt_outlined,
+                                    size: 18,
+                                  ),
+                                  label: const Text('Add stops'),
+                                ),
+                              ],
+                            ),
+                            if (_selectedPlaces.isEmpty)
+                              Container(
+                                padding: const EdgeInsets.all(20),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.bg,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: AppTheme.border,
+                                    style: BorderStyle.solid,
+                                  ),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    'No stops yet — tap "Add stops"',
+                                    style: TextStyle(
+                                      color: AppTheme.textSecondary,
+                                    ),
+                                  ),
+                                ),
+                              )
+                            else
+                              ReorderableListView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                buildDefaultDragHandles: false,
+                                itemCount: _selectedPlaces.length,
+                                onReorderItem: _movePlace,
+                                itemBuilder: (context, i) {
+                                  final p = _selectedPlaces[i];
+                                  return Container(
+                                    key: ValueKey(p.id),
+                                    margin: const EdgeInsets.only(bottom: 6),
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.surface,
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
+                                        color: AppTheme.border,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        ReorderableDragStartListener(
+                                          index: i,
+                                          child: Padding(
+                                            padding: EdgeInsets.only(right: 8),
+                                            child: Icon(
+                                              Icons.drag_indicator_rounded,
+                                              color: AppTheme.textSecondary,
+                                            ),
                                           ),
                                         ),
-                                      )
-                                    : Image.network(
-                                        coverPreview,
-                                        width: 80,
-                                        height: 80,
-                                        cacheWidth: 180,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (_, _, _) => Container(
-                                          color: AppTheme.bg,
-                                          child: const Icon(
-                                            Icons.broken_image_outlined,
+                                        CircleAvatar(
+                                          radius: 14,
+                                          backgroundColor: AppTheme.primary,
+                                          child: Text(
+                                            '${i + 1}',
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w800,
+                                            ),
                                           ),
                                         ),
-                                      )),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            OutlinedButton.icon(
-                              onPressed: _uploadingCover
-                                  ? null
-                                  : _pickAndUploadCover,
-                              icon: _uploadingCover
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                          child: Text(
+                                            p.name,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w700,
+                                              color: AppTheme.textPrimary,
+                                            ),
+                                          ),
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(
+                                            Icons.close_rounded,
+                                            color: AppTheme.danger,
+                                          ),
+                                          onPressed: () => _removePlace(p),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
+                            const SizedBox(height: 24),
+                            ElevatedButton(
+                              onPressed: _saving ? null : _save,
+                              child: _saving
                                   ? const SizedBox(
-                                      width: 16,
-                                      height: 16,
+                                      height: 18,
+                                      width: 18,
                                       child: CircularProgressIndicator(
                                         strokeWidth: 2,
+                                        color: Colors.white,
                                       ),
                                     )
-                                  : const Icon(Icons.upload_rounded, size: 18),
-                              label: Text(
-                                _uploadingCover
-                                    ? 'Uploading…'
-                                    : 'Upload to Supabase',
-                              ),
+                                  : Text(
+                                      _isEditing
+                                          ? 'Update Tour'
+                                          : 'Create Tour',
+                                    ),
                             ),
-                            const SizedBox(height: 6),
-                            Text(
-                              'or paste a URL below',
-                              style: TextStyle(
-                                color: AppTheme.textSecondary,
-                                fontSize: 11,
-                              ),
-                            ),
+                            const SizedBox(height: 32),
                           ],
                         ),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  TextFormField(
-                    controller: _imageUrl,
-                    decoration: const InputDecoration(
-                      hintText: 'https://upload.wikimedia.org/...',
                     ),
-                    validator: (v) => (v == null || v.trim().isEmpty)
-                        ? 'Cover image is required'
-                        : null,
-                    onChanged: (_) => setState(() {}),
                   ),
-                  const SizedBox(height: 24),
-
-                  _label('Status'),
-                  DropdownButtonFormField<String>(
-                    initialValue: _status,
-                    decoration: const InputDecoration(
-                      border: OutlineInputBorder(),
-                    ),
-                    items: const [
-                      DropdownMenuItem(value: 'draft', child: Text('Draft')),
-                      DropdownMenuItem(
-                        value: 'published',
-                        child: Text('Published'),
-                      ),
-                    ],
-                    onChanged: (value) {
-                      if (value != null) setState(() => _status = value);
-                    },
-                  ),
-                  const SizedBox(height: 24),
-
-                  SwitchListTile.adaptive(
-                    contentPadding: EdgeInsets.zero,
-                    value: _isPremium,
-                    onChanged: (value) => setState(() => _isPremium = value),
-                    title: const Text(
-                      'Premium Tour (Pro Users Only)',
-                      style: TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                    subtitle: const Text(
-                      'Only Streetlore Pro users can start this tour.',
-                    ),
-                    activeThumbColor: AppTheme.primary,
-                  ),
-                  SwitchListTile.adaptive(
-                    contentPadding: EdgeInsets.zero,
-                    value: _isHiddenGem,
-                    onChanged: (value) => setState(() => _isHiddenGem = value),
-                    title: const Text(
-                      'Hidden Gem Tour',
-                      style: TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                    subtitle: const Text(
-                      'Hidden gem tours are also restricted to Pro users.',
-                    ),
-                    activeThumbColor: AppTheme.primary,
-                  ),
-                  const SizedBox(height: 12),
-
-                  Row(
-                    children: [
-                      _label('Stops (${_selectedPlaces.length})'),
-                      const Spacer(),
-                      TextButton.icon(
-                        onPressed: _pickPlaces,
-                        icon: const Icon(
-                          Icons.add_location_alt_outlined,
-                          size: 18,
-                        ),
-                        label: const Text('Add stops'),
-                      ),
-                    ],
-                  ),
-                  if (_selectedPlaces.isEmpty)
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: AppTheme.bg,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: AppTheme.border,
-                          style: BorderStyle.solid,
-                        ),
-                      ),
-                      child: Center(
-                        child: Text(
-                          'No stops yet — tap "Add stops"',
-                          style: TextStyle(color: AppTheme.textSecondary),
-                        ),
-                      ),
-                    )
-                  else
-                    ReorderableListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      buildDefaultDragHandles: false,
-                      itemCount: _selectedPlaces.length,
-                      onReorderItem: _movePlace,
-                      itemBuilder: (context, i) {
-                        final p = _selectedPlaces[i];
-                        return Container(
-                          key: ValueKey(p.id),
-                          margin: const EdgeInsets.only(bottom: 6),
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: AppTheme.surface,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: AppTheme.border),
-                          ),
-                          child: Row(
-                            children: [
-                              ReorderableDragStartListener(
-                                index: i,
-                                child: Padding(
-                                  padding: EdgeInsets.only(right: 8),
-                                  child: Icon(
-                                    Icons.drag_indicator_rounded,
-                                    color: AppTheme.textSecondary,
-                                  ),
-                                ),
-                              ),
-                              CircleAvatar(
-                                radius: 14,
-                                backgroundColor: AppTheme.primary,
-                                child: Text(
-                                  '${i + 1}',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  p.name,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppTheme.textPrimary,
-                                  ),
-                                ),
-                              ),
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.close_rounded,
-                                  color: AppTheme.danger,
-                                ),
-                                onPressed: () => _removePlace(p),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                  const SizedBox(height: 24),
-                  ElevatedButton(
-                    onPressed: _saving ? null : _save,
-                    child: _saving
-                        ? const SizedBox(
-                            height: 18,
-                            width: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : Text(_isEditing ? 'Update Tour' : 'Create Tour'),
-                  ),
-                  const SizedBox(height: 32),
-                ],
-              ),
+                ),
+              ],
             ),
+    );
+  }
+
+  Widget _governorateSelector() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppTheme.primary.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppTheme.primary.withValues(alpha: 0.32)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Step 1 · Governorate (المحافظة) · Required',
+              style: TextStyle(fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<String>(
+              initialValue: _governorate,
+              decoration: const InputDecoration(
+                prefixIcon: Icon(Icons.map_outlined),
+                hintText: 'Select Alexandria or Cairo',
+              ),
+              items: [
+                for (final governorate in GovernorateConfig.all)
+                  DropdownMenuItem(
+                    value: governorate.id,
+                    child: Text(
+                      '${governorate.nameAr} — ${governorate.nameEn}',
+                    ),
+                  ),
+              ],
+              onChanged: (value) {
+                if (value != null) _selectGovernorate(value);
+              },
+            ),
+          ],
+        ),
+      ),
     );
   }
 

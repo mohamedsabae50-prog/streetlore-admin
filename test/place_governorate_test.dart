@@ -14,9 +14,12 @@ void main() {
     expect(place.toSupabaseUpdate()['governorate'], 'alexandria');
   });
 
-  test('admin governorate choices include all 27 governorates', () {
-    expect(AdminGovernorate.all, hasLength(27));
-    expect(AdminGovernorate.all.map((item) => item.id).toSet(), hasLength(27));
+  test('admin governorate choices match configured coverage', () {
+    expect(AdminGovernorate.all, hasLength(2));
+    expect(AdminGovernorate.all.map((item) => item.id).toSet(), {
+      'alexandria',
+      'cairo',
+    });
     expect(AdminGovernorate.all.first.nameEn, 'Alexandria');
     expect(AdminGovernorate.all.first.nameAr, 'الإسكندرية');
   });

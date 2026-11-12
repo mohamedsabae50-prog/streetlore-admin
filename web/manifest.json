@@ -1,11 +1,11 @@
 {
-    "name": "streetlore_admin",
-    "short_name": "streetlore_admin",
+    "name": "EgyptLore Admin",
+    "short_name": "EgyptLore",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "EgyptLore administration dashboard.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

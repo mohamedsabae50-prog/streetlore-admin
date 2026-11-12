@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'config/supabase_config.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/login_screen.dart';
+import 'screens/local_preview_screen.dart';
 import 'services/admin_service.dart';
 import 'theme.dart';
 
@@ -10,6 +11,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await AppTheme.loadSavedMode();
+  await AdminService.instance.initializeLocalDraftMode();
   await Supabase.initialize(
     url: SupabaseConfig.url,
     publishableKey: SupabaseConfig.anonKey,
@@ -30,7 +32,7 @@ class StreetloreAdminApp extends StatelessWidget {
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: AppTheme.themeMode,
       builder: (context, mode, _) => MaterialApp(
-        title: 'Streetlore Admin',
+        title: 'EgyptLore Admin',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.light(),
         darkTheme: AppTheme.dark(),
@@ -52,6 +54,8 @@ class StreetloreAdminApp extends StatelessWidget {
         routes: {
           '/login': (_) => const SelectionArea(child: LoginScreen()),
           '/dashboard': (_) => const SelectionArea(child: DashboardScreen()),
+          '/local-preview': (_) =>
+              const SelectionArea(child: LocalPreviewScreen()),
         },
       ),
     );

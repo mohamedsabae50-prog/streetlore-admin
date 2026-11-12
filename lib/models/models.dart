@@ -520,6 +520,7 @@ class Tour {
   final String? categoryAr;
   final String imageUrl;
   final String status;
+  final String governorate;
   final int viewCount;
   final bool isPremium;
   final bool isHiddenGem;
@@ -537,6 +538,7 @@ class Tour {
     this.categoryAr,
     required this.imageUrl,
     this.status = 'published',
+    this.governorate = 'alexandria',
     this.viewCount = 0,
     this.isPremium = false,
     this.isHiddenGem = false,
@@ -576,6 +578,9 @@ class Tour {
     categoryAr: json['category_ar'] as String?,
     imageUrl: (json['image_url'] as String?) ?? '',
     status: (json['status'] as String?) ?? 'published',
+    governorate: (json['governorate'] as String?)?.trim().isNotEmpty == true
+        ? (json['governorate'] as String).trim().toLowerCase()
+        : 'alexandria',
     viewCount: (json['view_count'] as num?)?.toInt() ?? 0,
     isPremium: (json['is_premium'] as bool?) ?? false,
     isHiddenGem: (json['is_hidden_gem'] as bool?) ?? false,
@@ -596,6 +601,7 @@ class Tour {
     'category_ar': categoryAr,
     'image_url': imageUrl,
     'status': status,
+    'governorate': governorate,
     'view_count': viewCount,
     'is_premium': isPremium,
     'is_hidden_gem': isHiddenGem,
@@ -613,6 +619,7 @@ class Tour {
     'category_ar': categoryAr ?? '',
     'image_url': imageUrl,
     'status': status,
+    'governorate': governorate,
     'is_premium': isPremium,
     'is_hidden_gem': isHiddenGem,
   };
@@ -629,6 +636,7 @@ class Tour {
     String? categoryAr,
     String? imageUrl,
     String? status,
+    String? governorate,
     int? viewCount,
     bool? isPremium,
     bool? isHiddenGem,
@@ -645,6 +653,7 @@ class Tour {
     categoryAr: categoryAr ?? this.categoryAr,
     imageUrl: imageUrl ?? this.imageUrl,
     status: status ?? this.status,
+    governorate: governorate ?? this.governorate,
     viewCount: viewCount ?? this.viewCount,
     isPremium: isPremium ?? this.isPremium,
     isHiddenGem: isHiddenGem ?? this.isHiddenGem,

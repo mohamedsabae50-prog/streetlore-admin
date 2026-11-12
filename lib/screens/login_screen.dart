@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/admin_service.dart';
 import '../theme.dart';
 
@@ -9,7 +11,7 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _emailCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController(text: 'mohamedsabae50@gmail.com');
   final _passCtrl = TextEditingController();
   bool _loading = false;
   String? _error;
@@ -37,16 +39,47 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<void> _openLocalPreview() async {
+    try {
+      await AdminService.instance.setLocalDraftMode(true);
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(context, '/local-preview');
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _error = 'Could not open the local preview: $error');
+    }
+  }
+
+  Future<void> _signInWithGoogle() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final launched = await Supabase.instance.client.auth.signInWithOAuth(
+        OAuthProvider.google,
+        redirectTo: kIsWeb ? Uri.base.origin + Uri.base.path : null,
+      );
+      if (!launched) {
+        throw StateError('Google sign-in did not open the OAuth page.');
+      }
+    } catch (error) {
+      if (mounted) setState(() => _error = 'Google sign-in failed: $error');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 420),
-          child: Padding(
+          child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const Icon(
@@ -56,7 +89,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Streetlore Admin',
+                  'EgyptLore Admin',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 26,
@@ -102,6 +135,13 @@ class _LoginScreenState extends State<LoginScreen> {
                       style: const TextStyle(color: AppTheme.danger),
                     ),
                   ),
+                OutlinedButton.icon(
+                  key: const ValueKey('admin-google-sign-in-button'),
+                  onPressed: _loading ? null : _signInWithGoogle,
+                  icon: const Icon(Icons.g_mobiledata_rounded),
+                  label: const Text('Sign in with Google'),
+                ),
+                const SizedBox(height: 12),
                 ElevatedButton(
                   onPressed: _loading ? null : _submit,
                   child: _loading
@@ -114,6 +154,22 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         )
                       : const Text('Sign In'),
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  key: const ValueKey('admin-local-preview-button'),
+                  onPressed: _loading ? null : _openLocalPreview,
+                  icon: const Icon(Icons.shield_outlined),
+                  label: const Text(
+                    'Open Local Preview · معاينة محلية '
+                    '(الإسكندرية والقاهرة)',
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Local Draft Mode starts on; place and tour edits stay on this device.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
                 ),
               ],
             ),

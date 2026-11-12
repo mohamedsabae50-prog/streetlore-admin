@@ -11,6 +11,7 @@ import 'users_list_screen.dart';
 import 'ai_chat_logs_screen.dart';
 import 'reports_screen.dart';
 import 'hidden_gem_suggestions_screen.dart';
+import '../widgets/local_draft_mode_banner.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -142,6 +143,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
         backgroundColor: Theme.of(context).colorScheme.surface,
         actions: [
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: LocalDraftModeBadge(),
+          ),
           IconButton(
             icon: Icon(
               AppTheme.themeMode.value == ThemeMode.dark
@@ -171,6 +176,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              LocalDraftModeBanner(onChanged: _refreshCounts),
               Text(
                 'Overview',
                 style: TextStyle(

@@ -1,12 +1,16 @@
 import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:typed_data';
-import 'package:flutter/foundation.dart' show compute, debugPrint;
+import 'package:flutter/foundation.dart'
+    show ValueNotifier, compute, debugPrint, kDebugMode;
 import 'package:image/image.dart' as img;
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/supabase_config.dart';
+import '../data/governorate_preview_seed.dart';
 import '../models/models.dart';
+import 'local_draft_store.dart';
 
 Uint8List _compressImageToJpeg(Uint8List bytes) {
   final decoded = img.decodeImage(bytes);
@@ -31,7 +35,64 @@ class AdminService {
   static AdminService get instance => _instance ??= AdminService._();
   AdminService._();
 
+  static const _draftModePreferenceKey = 'streetlore-admin-local-draft-mode';
+  static final ValueNotifier<bool> localDraftMode = ValueNotifier(true);
+  final LocalDraftStore _localDrafts = LocalDraftStore();
+  Future<({List<Place> places, List<Tour> tours})>? _previewSeedFuture;
+
   SupabaseClient get _client => Supabase.instance.client;
+
+  bool get isLocalDraftMode => localDraftMode.value;
+
+  void _requireLiveWrites(String operation) {
+    if (isLocalDraftMode) {
+      throw StateError(
+        '$operation is disabled while Local Draft Mode is active.',
+      );
+    }
+  }
+
+  Future<void> initializeLocalDraftMode() async {
+    final preferences = await SharedPreferences.getInstance();
+    localDraftMode.value = kDebugMode
+        ? true
+        : preferences.getBool(_draftModePreferenceKey) ?? false;
+  }
+
+  Future<void> setLocalDraftMode(bool enabled) async {
+    if (!enabled && !isLoggedIn) {
+      throw StateError('Sign in before enabling live database writes.');
+    }
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.setBool(_draftModePreferenceKey, enabled);
+    localDraftMode.value = enabled;
+  }
+
+  Future<({List<Place> places, List<Tour> tours})> _previewSeed() =>
+      _previewSeedFuture ??= GovernoratePreviewSeed.load();
+
+  List<T> _mergeById<T>(
+    Iterable<T> seeds,
+    Iterable<T> remote, {
+    required String Function(T) idOf,
+    Iterable<T> drafts = const [],
+    Set<String> deletedIds = const {},
+  }) {
+    final merged = <String, T>{};
+    for (final record in seeds) {
+      merged[idOf(record)] = record;
+    }
+    for (final record in remote) {
+      merged[idOf(record)] = record;
+    }
+    for (final record in drafts) {
+      merged[idOf(record)] = record;
+    }
+    for (final id in deletedIds) {
+      merged.remove(id);
+    }
+    return merged.values.toList(growable: true);
+  }
 
   bool get isLoggedIn {
     try {
@@ -69,6 +130,11 @@ class AdminService {
   }
 
   Future<({int places, int tours})> fetchDashboardCounts() async {
+    if (isLocalDraftMode) {
+      final places = await fetchPlaces();
+      final tours = await fetchTours();
+      return (places: places.length, tours: tours.length);
+    }
     final results = await Future.wait([
       _client.from('places').select('id').count(),
       _client.from('tours').select('id').count(),
@@ -83,6 +149,7 @@ class AdminService {
   }
 
   Future<int> fetchPhotoCount() async {
+    if (isLocalDraftMode) return 0;
     final adminId = adminUserId;
     if (adminId.isEmpty) {
       throw StateError(
@@ -129,6 +196,7 @@ class AdminService {
   }
 
   Future<void> moderateHiddenGem(String suggestionId, String action) async {
+    _requireLiveWrites('Hidden-gem moderation');
     if (action != 'approve' && action != 'reject') {
       throw ArgumentError.value(action, 'action');
     }
@@ -139,6 +207,7 @@ class AdminService {
   }
 
   Future<void> dismissReport(String reportId) async {
+    _requireLiveWrites('Report moderation');
     await _client
         .from('reports')
         .update({'status': 'dismissed'})
@@ -151,6 +220,7 @@ class AdminService {
     String targetType,
     String targetId,
   ) async {
+    _requireLiveWrites('Reported-content deletion');
     switch (targetType) {
       case 'place':
         await _client.from('places').delete().eq('id', targetId);
@@ -234,6 +304,7 @@ class AdminService {
     required List<String> placeIds,
     required bool add,
   }) async {
+    _requireLiveWrites('Visit editing');
     final response = await _invokeAdminFunction(
       body: {
         'action': add ? 'add_visits' : 'remove_visits',
@@ -328,6 +399,7 @@ class AdminService {
   }
 
   Future<void> deleteUser(String userId) async {
+    _requireLiveWrites('User deletion');
     final response = await _invokeAdminFunction(
       body: {'action': 'delete', 'user_id': userId},
     );
@@ -344,6 +416,7 @@ class AdminService {
     String userId,
     String plan,
   ) async {
+    _requireLiveWrites('Subscription changes');
     final normalizedPlan = switch (plan.toLowerCase().trim()) {
       'yearly' => 'annual',
       'pro' => 'lifetime',
@@ -498,6 +571,18 @@ class AdminService {
   }
 
   Future<List<Place>> fetchPlaces() async {
+    final seed = await _previewSeed();
+    if (isLocalDraftMode) {
+      return _sortPlaces(
+        _mergeById(
+          seed.places,
+          const <Place>[],
+          idOf: (place) => place.id,
+          drafts: await _localDrafts.places(),
+          deletedIds: await _localDrafts.deletedPlaceIds(),
+        ),
+      );
+    }
     // v1.0.69 fix: sort by display_order first, then by id. Previously
     // this only ordered by id, which made the admin page always show
     // places in DB insertion order — so drag-and-drop reorders looked
@@ -510,12 +595,27 @@ class AdminService {
         .select()
         .order('display_order', ascending: true)
         .order('id', ascending: true);
-    return (res as List<dynamic>)
+    final remote = (res as List<dynamic>)
         .map((e) => Place.fromJson(e as Map<String, dynamic>))
         .toList();
+    return _sortPlaces(
+      _mergeById(seed.places, remote, idOf: (place) => place.id),
+    );
+  }
+
+  List<Place> _sortPlaces(List<Place> places) {
+    places.sort((a, b) {
+      final order = a.displayOrder.compareTo(b.displayOrder);
+      return order != 0 ? order : a.id.compareTo(b.id);
+    });
+    return places;
   }
 
   Future<Place> createPlace(Place place) async {
+    if (isLocalDraftMode) {
+      await _localDrafts.savePlace(place);
+      return place;
+    }
     final row = await _client
         .from('places')
         .insert(place.toJson())
@@ -526,6 +626,10 @@ class AdminService {
   }
 
   Future<Place> updatePlace(Place place) async {
+    if (isLocalDraftMode) {
+      await _localDrafts.savePlace(place);
+      return place;
+    }
     final row = await _client
         .from('places')
         .update(place.toSupabaseUpdate())
@@ -556,6 +660,17 @@ class AdminService {
       add(url);
     }
     final cover = merged.isEmpty ? '' : merged.first;
+    if (isLocalDraftMode) {
+      final places = await fetchPlaces();
+      final index = places.indexWhere((place) => place.id == placeId);
+      if (index < 0) {
+        throw StateError('Cannot find local place $placeId to update images.');
+      }
+      await _localDrafts.savePlace(
+        places[index].copyWith(imageUrl: cover, imageUrls: merged),
+      );
+      return merged;
+    }
     final updated = await _client
         .from('places')
         .update({'image_url': cover, 'image_urls': merged})
@@ -610,6 +725,20 @@ class AdminService {
       }
       placeIds.add(id);
       newOrders.add(e.displayOrder);
+    }
+
+    if (isLocalDraftMode) {
+      final currentPlaces = await fetchPlaces();
+      final placesById = {for (final place in currentPlaces) place.id: place};
+      final updated = <Place>[];
+      for (var i = 0; i < placeIds.length; i++) {
+        final place = placesById[placeIds[i]];
+        if (place != null) {
+          updated.add(place.copyWith(displayOrder: newOrders[i]));
+        }
+      }
+      await _localDrafts.savePlaces(updated);
+      return;
     }
 
     try {
@@ -672,20 +801,39 @@ class AdminService {
   }
 
   Future<void> deletePlace(String id) async {
+    if (isLocalDraftMode) {
+      await _localDrafts.deletePlace(id);
+      return;
+    }
     await _client.from('places').delete().eq('id', id);
   }
 
   Future<List<Tour>> fetchTours() async {
+    final seed = await _previewSeed();
+    if (isLocalDraftMode) {
+      return _mergeById(
+        seed.tours,
+        const <Tour>[],
+        idOf: (tour) => tour.id,
+        drafts: await _localDrafts.tours(),
+        deletedIds: await _localDrafts.deletedTourIds(),
+      );
+    }
     final res = await _client
         .from('tours_with_places')
         .select()
         .order('id', ascending: true);
-    return (res as List<dynamic>)
+    final remote = (res as List<dynamic>)
         .map((e) => Tour.fromJson(e as Map<String, dynamic>))
         .toList();
+    return _mergeById(seed.tours, remote, idOf: (tour) => tour.id);
   }
 
   Future<Tour> createTour(Tour tour) async {
+    if (isLocalDraftMode) {
+      await _localDrafts.saveTour(tour);
+      return tour;
+    }
     await _client.from('tours').insert({
       'id': tour.id,
       'title': tour.title,
@@ -698,6 +846,7 @@ class AdminService {
       'category_ar': tour.categoryAr ?? '',
       'image_url': tour.imageUrl,
       'status': tour.status,
+      'governorate': tour.governorate,
       'is_premium': tour.isPremium,
       'is_hidden_gem': tour.isHiddenGem,
     });
@@ -711,6 +860,10 @@ class AdminService {
   }
 
   Future<Tour> updateTour(Tour tour) async {
+    if (isLocalDraftMode) {
+      await _localDrafts.saveTour(tour);
+      return tour;
+    }
     await _client
         .from('tours')
         .update(tour.toSupabaseUpdate())
@@ -720,6 +873,10 @@ class AdminService {
   }
 
   Future<void> deleteTour(String id) async {
+    if (isLocalDraftMode) {
+      await _localDrafts.deleteTour(id);
+      return;
+    }
     // The tour_places rows are removed by the `on delete cascade` FK on
     // tour_places.tour_id. (Migration 004 leaves that FK in place.)
     await _client.from('tours').delete().eq('id', id);
@@ -752,6 +909,7 @@ class AdminService {
     String folder,
     String fileName,
   ) async {
+    _requireLiveWrites('Image uploads');
     final compressedBytes = await _compressImage(bytes);
     final jpegName = fileName.replaceFirst(RegExp(r'\.[^.]+$'), '.jpg');
     final path = '$folder/$jpegName';
@@ -828,11 +986,13 @@ class AdminService {
   }
 
   Future<PlacePhoto> createPhoto(PlacePhoto photo) async {
+    _requireLiveWrites('Photo creation');
     await _client.from('place_photos').insert(photo.toJson());
     return photo;
   }
 
   Future<PlacePhoto> updatePhoto(PlacePhoto photo) async {
+    _requireLiveWrites('Photo updates');
     await _client
         .from('place_photos')
         .update(photo.toSupabaseUpdate())
@@ -841,6 +1001,7 @@ class AdminService {
   }
 
   Future<void> deletePhoto(String id) async {
+    _requireLiveWrites('Photo deletion');
     final photo = await _client
         .from('place_photos')
         .select('image_url')
@@ -898,6 +1059,7 @@ class AdminService {
   /// RLS policy `admin can delete place_chat` (see migration
   /// `2026_10_03_admin_moderation.sql`) authorizes the admin user.
   Future<void> deleteChatMessage(String id) async {
+    _requireLiveWrites('Chat-message deletion');
     await _client.from('place_chat').delete().eq('id', id);
   }
 }
