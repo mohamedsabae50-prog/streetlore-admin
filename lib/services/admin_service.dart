@@ -11,6 +11,7 @@ import '../config/supabase_config.dart';
 import '../data/governorate_preview_seed.dart';
 import '../models/models.dart';
 import 'local_draft_store.dart';
+import 'visit_progress.dart';
 
 Uint8List _compressImageToJpeg(Uint8List bytes) {
   final decoded = img.decodeImage(bytes);
@@ -28,6 +29,13 @@ Uint8List _compressImageToJpeg(Uint8List bytes) {
         )
       : normalized;
   return img.encodeJpg(resized, quality: 80, chroma: img.JpegChroma.yuv420);
+}
+
+class PlaceSaveResult {
+  const PlaceSaveResult({required this.remoteSynced, this.remoteError});
+
+  final bool remoteSynced;
+  final Object? remoteError;
 }
 
 class AdminService {
@@ -315,15 +323,14 @@ class AdminService {
     if (unknownIds.isNotEmpty) {
       throw ArgumentError('Unknown place id(s): ${unknownIds.join(', ')}');
     }
-    final eligibleIds = requestedIds
-        .where((id) => !placesById[id]!.isAtm)
-        .toList(growable: false);
+    final eligibleIds = visitEligiblePlaces(
+      requestedIds.map((id) => placesById[id]!),
+    ).map((place) => place.id).toList(growable: false);
     if (eligibleIds.isEmpty) return fetchUserVisitState(userId);
-    if (add) {
-      await _ensureRemotePlaces(eligibleIds, placesById);
-    }
-
     try {
+      if (add) {
+        await _ensureRemotePlaces(eligibleIds, placesById);
+      }
       final response = await _invokeAdminFunction(
         body: {
           'action': add ? 'add_visits' : 'remove_visits',
@@ -372,6 +379,12 @@ class AdminService {
         final currentIds = (currentRows as List<dynamic>)
             .map((row) => (row as Map<String, dynamic>)['place_id'] as String)
             .toSet();
+        final eligibleIds = visitEligiblePlaces(
+          places,
+        ).map((place) => place.id).toSet();
+        final previousPlaceCount = currentIds.intersection(eligibleIds).length;
+        var addedCount = 0;
+        var removedCount = 0;
         if (add) {
           final missingIds = placeIds
               .where((id) => !currentIds.contains(id))
@@ -381,7 +394,9 @@ class AdminService {
               for (final id in missingIds) {'user_id': userId, 'place_id': id},
             ]);
           }
+          addedCount = missingIds.length;
         } else {
+          removedCount = currentIds.intersection(placeIds.toSet()).length;
           await _client
               .from(table)
               .delete()
@@ -393,10 +408,6 @@ class AdminService {
             .from(table)
             .select('place_id')
             .eq('user_id', userId);
-        final eligibleIds = places
-            .where((place) => !place.isAtm)
-            .map((place) => place.id)
-            .toSet();
         final visitedIds = (updatedRows as List<dynamic>)
             .map((row) => (row as Map<String, dynamic>)['place_id'] as String)
             .where(eligibleIds.contains)
@@ -404,15 +415,20 @@ class AdminService {
         final leaderboard = await _syncDirectVisitCount(
           userId: userId,
           placeCount: visitedIds.length,
+          previousPlaceCount: previousPlaceCount,
         );
         return {
           'visited_place_ids': visitedIds.toList(growable: false),
           'places_visited': visitedIds.length,
+          'added_count': addedCount,
+          'removed_count': removedCount,
           'total_points': leaderboard['total_points'] ?? 0,
           'badges': leaderboard['badges'] is List
               ? leaderboard['badges']
               : const <dynamic>[],
-          'newly_unlocked': const <dynamic>[],
+          'newly_unlocked': leaderboard['newly_unlocked'] is List
+              ? leaderboard['newly_unlocked']
+              : const <dynamic>[],
           'fallback_used': true,
         };
       } on PostgrestException catch (error) {
@@ -442,28 +458,51 @@ class AdminService {
   Future<Map<String, dynamic>> _syncDirectVisitCount({
     required String userId,
     required int placeCount,
+    required int previousPlaceCount,
   }) async {
     final current = await _client
         .from('leaderboard')
-        .select('total_points,badges')
+        .select('total_points,places_visited,badges')
         .eq('user_id', userId)
         .maybeSingle();
+    final progress = calculateVisitProgress(
+      currentPoints: (current?['total_points'] as num?)?.toInt() ?? 0,
+      previousPlaceCount: current == null
+          ? 0
+          : (current['places_visited'] as num?)?.toInt() ?? previousPlaceCount,
+      placeCount: placeCount,
+      currentBadges: current?['badges'] is List
+          ? current!['badges'] as List<dynamic>
+          : const <dynamic>[],
+    );
     if (current == null) {
       await _client.from('leaderboard').insert({
         'user_id': userId,
         'user_name': '',
-        'total_points': 0,
+        'total_points': progress.totalPoints,
         'places_visited': placeCount,
-        'badges': const <dynamic>[],
+        'badges': progress.badges,
         'level': 'Explorer',
       });
-      return const {'total_points': 0, 'badges': <dynamic>[]};
+      return {
+        'total_points': progress.totalPoints,
+        'badges': progress.badges,
+        'newly_unlocked': progress.newlyUnlocked,
+      };
     }
     await _client
         .from('leaderboard')
-        .update({'places_visited': placeCount})
+        .update({
+          'places_visited': placeCount,
+          'total_points': progress.totalPoints,
+          'badges': progress.badges,
+        })
         .eq('user_id', userId);
-    return Map<String, dynamic>.from(current);
+    return {
+      'total_points': progress.totalPoints,
+      'badges': progress.badges,
+      'newly_unlocked': progress.newlyUnlocked,
+    };
   }
 
   Future<void> _ensureRemotePlaces(
@@ -492,10 +531,9 @@ class AdminService {
     Map<String, dynamic> state,
     List<Place> places,
   ) {
-    final eligibleIds = places
-        .where((place) => !place.isAtm)
-        .map((place) => place.id)
-        .toSet();
+    final eligibleIds = visitEligiblePlaces(
+      places,
+    ).map((place) => place.id).toSet();
     final visitedIds = (state['visited_place_ids'] as List)
         .map((id) => id.toString())
         .where(eligibleIds.contains)
@@ -803,24 +841,27 @@ class AdminService {
     return places;
   }
 
-  Future<Place> createPlace(Place place) async {
-    if (isLocalDraftMode) {
-      await _localDrafts.savePlace(place);
-      return place;
-    }
-    await _upsertPlace(place);
-    await _localDrafts.savePlace(place);
-    return place;
-  }
+  Future<PlaceSaveResult> createPlace(Place place) => _savePlace(place);
 
-  Future<Place> updatePlace(Place place) async {
+  Future<PlaceSaveResult> updatePlace(Place place) => _savePlace(place);
+
+  Future<PlaceSaveResult> _savePlace(Place place) async {
     if (isLocalDraftMode) {
       await _localDrafts.savePlace(place);
-      return place;
+      return const PlaceSaveResult(remoteSynced: false);
     }
-    await _upsertPlace(place);
+    try {
+      await _upsertPlace(place);
+    } on Exception catch (error) {
+      await _localDrafts.savePlace(place);
+      debugPrint(
+        'Place ${place.id} was saved to the local overlay because the '
+        'Supabase write failed: $error',
+      );
+      return PlaceSaveResult(remoteSynced: false, remoteError: error);
+    }
     await _localDrafts.savePlace(place);
-    return place;
+    return const PlaceSaveResult(remoteSynced: true);
   }
 
   Future<void> _upsertPlace(Place place) async {

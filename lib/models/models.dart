@@ -512,6 +512,9 @@ class Place {
   );
 }
 
+List<Place> visitEligiblePlaces(Iterable<Place> places) =>
+    places.where((place) => !place.isAtm).toList(growable: false);
+
 class Tour {
   final String id;
   final String title;

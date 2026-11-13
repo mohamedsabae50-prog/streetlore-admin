@@ -481,11 +481,12 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
     );
 
     // 4) Persist the place in ONE call (with the new cover, if any).
+    late final PlaceSaveResult saveResult;
     try {
       if (_isEditing) {
-        await AdminService.instance.updatePlace(place);
+        saveResult = await AdminService.instance.updatePlace(place);
       } else {
-        await AdminService.instance.createPlace(place);
+        saveResult = await AdminService.instance.createPlace(place);
       }
     } catch (e) {
       errors.insert(0, 'Save place: $e');
@@ -503,12 +504,19 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
 
     if (mounted) setState(() => _saving = false);
 
-    if (errors.isNotEmpty && mounted) {
+    final saveWarnings = <String>[];
+    if (!saveResult.remoteSynced) {
+      saveWarnings.add(
+        saveResult.remoteError == null
+            ? 'Place saved to Local Draft Mode.'
+            : 'Supabase sync is pending: ${saveResult.remoteError}',
+      );
+    }
+    saveWarnings.addAll(errors);
+    if (saveWarnings.isNotEmpty && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'Saved with ${errors.length} error(s): ${errors.first}',
-          ),
+          content: Text('Place saved with notice(s): ${saveWarnings.join(' | ')}'),
           duration: const Duration(seconds: 8),
         ),
       );

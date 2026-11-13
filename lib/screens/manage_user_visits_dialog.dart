@@ -51,9 +51,7 @@ class _ManageUserVisitsDialogState extends State<_ManageUserVisitsDialog> {
         AdminService.instance.fetchUserVisitState(widget.user.id),
       ]);
       if (!mounted) return;
-      final places = (results[0] as List<Place>)
-          .where((place) => !place.isAtm)
-          .toList(growable: false);
+      final places = visitEligiblePlaces(results[0] as List<Place>);
       final loadedState = results[1] as Map<String, dynamic>;
       final eligibleIds = places.map((place) => place.id).toSet();
       final visitedIds = (loadedState['visited_place_ids'] as List)
@@ -123,7 +121,7 @@ class _ManageUserVisitsDialogState extends State<_ManageUserVisitsDialog> {
         SnackBar(
           content: Text(
             result['fallback_used'] == true
-                ? 'Removed visit to ${place.name}; stored XP and badges were not recalculated.'
+                ? 'Removed visit to ${place.name}; XP and visit milestones were reconciled.'
                 : 'Removed visit to ${place.name}. Stats synced.',
           ),
         ),
@@ -160,7 +158,7 @@ class _ManageUserVisitsDialogState extends State<_ManageUserVisitsDialog> {
         SnackBar(
           content: Text(
             result['fallback_used'] == true
-                ? 'Visit records saved; XP and badges were not recalculated.'
+                ? 'Visit records saved; XP and visit milestones were reconciled.'
                 : 'Visits, XP, and badges synced.',
           ),
         ),

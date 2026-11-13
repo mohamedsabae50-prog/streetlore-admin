@@ -34,8 +34,13 @@ void main() {
         lng: 31.2357,
         governorate: 'cairo',
       );
-      await service.createPlace(place);
-      await service.updatePlace(place.copyWith(name: 'Edited Cairo Draft'));
+      expect((await service.createPlace(place)).remoteSynced, isFalse);
+      expect(
+        (await service.updatePlace(
+          place.copyWith(name: 'Edited Cairo Draft'),
+        )).remoteSynced,
+        isFalse,
+      );
       expect(
         (await service.fetchPlaces())
             .singleWhere((candidate) => candidate.id == place.id)

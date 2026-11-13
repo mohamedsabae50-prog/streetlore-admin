@@ -49,6 +49,11 @@ void main() {
     ];
 
     expect(places.map((place) => place.isAtm), [true, true, false]);
+    expect(visitEligiblePlaces(places).map((place) => place.id), [
+      'place_historical',
+    ]);
+    expect(places[0].toJson()['category'], 'Historical');
+    expect(places[1].toJson()['category'], 'aTmS');
   });
 
   test('admin governorate choices match configured coverage', () {

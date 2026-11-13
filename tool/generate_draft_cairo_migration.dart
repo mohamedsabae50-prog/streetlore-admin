@@ -102,8 +102,8 @@ Future<void> main() async {
       .where((row) => row['governorate'] == 'cairo')
       .toList();
 
-  if (places.length != 34 || tours.length != 2) {
-    throw StateError('Expected exactly 34 Cairo places and 2 Cairo tours.');
+  if (places.length < 120 || tours.length < 5) {
+    throw StateError('Expected at least 120 Cairo places and 5 Cairo tours.');
   }
   final ids = places.map((place) => place['id'] as String).toSet();
   if (ids.length != places.length ||
