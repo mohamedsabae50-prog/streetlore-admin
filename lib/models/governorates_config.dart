@@ -60,12 +60,13 @@ const alexandriaGovernorate = GovernorateConfig(
 
 const cairoGovernorate = GovernorateConfig(
   id: 'cairo',
-  nameEn: 'Cairo',
-  nameAr: 'القاهرة',
+  nameEn: 'Cairo & Giza',
+  nameAr: 'القاهرة والجيزة',
   centerLat: 30.0444,
   centerLng: 31.2357,
   defaultZoom: 11,
   boundaryPolygon: [
+    LatLng(30.1450, 31.1850),
     LatLng(30.1300, 31.2380),
     LatLng(30.1580, 31.3350),
     LatLng(30.1650, 31.4600),
@@ -75,16 +76,19 @@ const cairoGovernorate = GovernorateConfig(
     LatLng(29.9300, 31.8000),
     LatLng(29.8800, 31.6200),
     LatLng(29.7800, 31.4200),
-    LatLng(29.7850, 31.3100),
-    LatLng(29.8800, 31.2850),
-    LatLng(29.9550, 31.2450),
-    LatLng(30.0050, 31.2220),
-    LatLng(30.0430, 31.2160),
-    LatLng(30.0680, 31.2155),
-    LatLng(30.0950, 31.2300),
-    LatLng(30.1140, 31.2400),
+    LatLng(29.7500, 31.2600),
+    LatLng(29.7500, 31.1200),
+    LatLng(29.8800, 30.8800),
+    LatLng(30.0200, 30.8500),
+    LatLng(30.1300, 30.9200),
+    LatLng(30.1550, 31.0800),
   ],
 );
+
+String normalizeGovernorateId(String governorateId) {
+  final normalized = governorateId.trim().toLowerCase();
+  return normalized == 'giza' ? 'cairo' : normalized;
+}
 
 const Map<String, GovernorateConfig> governoratesConfig = {
   'alexandria': alexandriaGovernorate,
@@ -100,7 +104,8 @@ bool isPointInGovernorate(double lat, double lng, String governorateId) {
       lng > 180) {
     return false;
   }
-  final polygon = governoratesConfig[governorateId]?.boundaryPolygon;
+  final polygon = governoratesConfig[normalizeGovernorateId(governorateId)]
+      ?.boundaryPolygon;
   if (polygon == null || polygon.length < 3) return false;
 
   var inside = false;
@@ -144,7 +149,8 @@ bool isPointInGovernorateOrExpandedBounds(
       !expansionKm.isFinite) {
     return false;
   }
-  final polygon = governoratesConfig[governorateId]?.boundaryPolygon;
+  final polygon = governoratesConfig[normalizeGovernorateId(governorateId)]
+      ?.boundaryPolygon;
   if (polygon == null || polygon.length < 3) return false;
 
   const kilometersPerDegree = 111.32;

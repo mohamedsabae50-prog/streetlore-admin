@@ -133,8 +133,8 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
     _priceLevel = p?.priceLevel ?? PriceLevel.free;
     _governorate = p == null
         ? 'alexandria'
-        : governoratesConfig.containsKey(p.governorate)
-        ? p.governorate
+        : governoratesConfig.containsKey(normalizeGovernorateId(p.governorate))
+        ? normalizeGovernorateId(p.governorate)
         : 'alexandria';
     _isHiddenGem = p?.isHiddenGem ?? false;
     _isFeatured = p?.isFeatured ?? false;
@@ -516,7 +516,9 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
     if (saveWarnings.isNotEmpty && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Place saved with notice(s): ${saveWarnings.join(' | ')}'),
+          content: Text(
+            'Place saved with notice(s): ${saveWarnings.join(' | ')}',
+          ),
           duration: const Duration(seconds: 8),
         ),
       );
@@ -1285,14 +1287,14 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
               initialValue: _governorate,
               decoration: const InputDecoration(
                 prefixIcon: Icon(Icons.map_outlined),
-                hintText: 'Select Alexandria or Cairo',
+                hintText: 'Select Alexandria or Cairo & Giza',
               ),
               items: [
                 for (final governorate in GovernorateConfig.all)
                   DropdownMenuItem(
                     value: governorate.id,
                     child: Text(
-                      '${governorate.nameAr} — ${governorate.nameEn}',
+                      '${governorate.nameEn} (${governorate.nameAr})',
                     ),
                   ),
               ],

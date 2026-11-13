@@ -174,8 +174,8 @@ class _ToursListScreenState extends State<ToursListScreen> {
                     for (final governorate in GovernorateConfig.all)
                       ChoiceChip(
                         label: Text(
-                          '${governorate.nameAr} · ${governorate.nameEn} '
-                          '(${_tours.where((tour) => tour.governorate == governorate.id).length})',
+                          '${governorate.nameEn} (${governorate.nameAr}) '
+                          '(${_tours.where((tour) => normalizeGovernorateId(tour.governorate) == governorate.id).length})',
                         ),
                         selected: _governorateFilter == governorate.id,
                         onSelected: (_) =>
@@ -294,7 +294,7 @@ class _ToursListScreenState extends State<ToursListScreen> {
                                       ),
                                       child: Text(
                                         '${governoratesConfig[t.governorate]?.nameAr ?? t.governorate} · '
-                                        '${governoratesConfig[t.governorate]?.nameEn ?? t.governorate}',
+                                        '${governoratesConfig[normalizeGovernorateId(t.governorate)]?.nameEn ?? t.governorate}',
                                         style: const TextStyle(
                                           fontSize: 10,
                                           fontWeight: FontWeight.w800,

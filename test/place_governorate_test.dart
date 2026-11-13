@@ -14,6 +14,27 @@ void main() {
     expect(place.toSupabaseUpdate()['governorate'], 'alexandria');
   });
 
+  test('legacy Giza governorate values normalize to Cairo', () {
+    final place = Place.fromJson(const {
+      'id': 'giza-place',
+      'name': 'Giza place',
+      'governorate': ' GIZA ',
+    });
+    final tour = Tour.fromJson(const {
+      'id': 'giza-tour',
+      'title': 'Giza tour',
+      'description': '',
+      'duration': '',
+      'image_url': '',
+      'governorate': 'giza',
+    });
+
+    expect(place.governorate, 'cairo');
+    expect(place.toJson()['governorate'], 'cairo');
+    expect(tour.governorate, 'cairo');
+    expect(tour.toSupabaseUpdate()['governorate'], 'cairo');
+  });
+
   test('ATM places remain places but are not visit-eligible', () {
     final places = [
       Place(

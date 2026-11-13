@@ -45,8 +45,11 @@ class _PlacesListScreenState extends State<PlacesListScreen> {
     }
   }
 
-  int _countForGovernorate(String governorateId) =>
-      _places.where((place) => place.governorate == governorateId).length;
+  int _countForGovernorate(String governorateId) => _places
+      .where(
+        (place) => normalizeGovernorateId(place.governorate) == governorateId,
+      )
+      .length;
 
   void _selectGovernorateFilter(String governorateId) {
     setState(() {
@@ -192,7 +195,7 @@ class _PlacesListScreenState extends State<PlacesListScreen> {
         .where((place) {
           final matchesGovernorate =
               _governorateFilter == 'all' ||
-              place.governorate == _governorateFilter;
+              normalizeGovernorateId(place.governorate) == _governorateFilter;
           final matchesQuery =
               query.isEmpty ||
               place.name.toLowerCase().contains(query) ||
@@ -290,7 +293,7 @@ class _PlacesListScreenState extends State<PlacesListScreen> {
                     for (final governorate in GovernorateConfig.all)
                       ChoiceChip(
                         label: Text(
-                          '${governorate.nameAr} · ${governorate.nameEn} '
+                          '${governorate.nameEn} (${governorate.nameAr}) '
                           '(${_countForGovernorate(governorate.id)})',
                         ),
                         selected: _governorateFilter == governorate.id,
@@ -502,7 +505,10 @@ class _PlaceRow extends StatelessWidget {
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        governoratesConfig[place.governorate]?.nameAr ??
+                        governoratesConfig[normalizeGovernorateId(
+                                  place.governorate,
+                                )]
+                                ?.nameAr ??
                             place.governorate,
                         style: const TextStyle(
                           color: Color(0xFF087F6E),

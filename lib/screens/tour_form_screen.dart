@@ -49,13 +49,17 @@ class _TourFormScreenState extends State<TourFormScreen> {
 
   bool get _isEditing => widget.tour != null;
   List<Place> get _placesForGovernorate => _allPlaces
-      .where((place) => place.governorate == _governorate)
+      .where(
+        (place) => normalizeGovernorateId(place.governorate) == _governorate,
+      )
       .toList(growable: false);
 
   void _selectGovernorate(String id) {
     setState(() {
       _governorate = id;
-      _selectedPlaces.removeWhere((place) => place.governorate != id);
+      _selectedPlaces.removeWhere(
+        (place) => normalizeGovernorateId(place.governorate) != id,
+      );
       _search.clear();
     });
   }
@@ -81,12 +85,15 @@ class _TourFormScreenState extends State<TourFormScreen> {
     _isHiddenGem = t?.isHiddenGem ?? false;
     _governorate = t == null
         ? null
-        : governoratesConfig.containsKey(t.governorate)
-        ? t.governorate
+        : governoratesConfig.containsKey(normalizeGovernorateId(t.governorate))
+        ? normalizeGovernorateId(t.governorate)
         : 'alexandria';
     _search = TextEditingController();
     _selectedPlaces = List<Place>.from(
-      t?.places.where((place) => place.governorate == _governorate) ??
+      t?.places.where(
+            (place) =>
+                normalizeGovernorateId(place.governorate) == _governorate,
+          ) ??
           const <Place>[],
     );
     _load();
@@ -191,7 +198,10 @@ class _TourFormScreenState extends State<TourFormScreen> {
       builder: (ctx) => _PlacePickerSheet(
         all: _placesForGovernorate,
         initiallySelected: _selectedPlaces
-            .where((place) => place.governorate == _governorate)
+            .where(
+              (place) =>
+                  normalizeGovernorateId(place.governorate) == _governorate,
+            )
             .toList(growable: false),
         searchCtrl: _search,
       ),
@@ -219,7 +229,9 @@ class _TourFormScreenState extends State<TourFormScreen> {
       return;
     }
     if (!_formKey.currentState!.validate()) return;
-    if (_selectedPlaces.any((place) => place.governorate != governorateId)) {
+    if (_selectedPlaces.any(
+      (place) => normalizeGovernorateId(place.governorate) != governorateId,
+    )) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
@@ -794,14 +806,14 @@ class _TourFormScreenState extends State<TourFormScreen> {
               initialValue: _governorate,
               decoration: const InputDecoration(
                 prefixIcon: Icon(Icons.map_outlined),
-                hintText: 'Select Alexandria or Cairo',
+                hintText: 'Select Alexandria or Cairo & Giza',
               ),
               items: [
                 for (final governorate in GovernorateConfig.all)
                   DropdownMenuItem(
                     value: governorate.id,
                     child: Text(
-                      '${governorate.nameAr} — ${governorate.nameEn}',
+                      '${governorate.nameEn} (${governorate.nameAr})',
                     ),
                   ),
               ],

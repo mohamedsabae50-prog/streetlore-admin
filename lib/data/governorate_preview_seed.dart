@@ -2,7 +2,15 @@ import 'dart:convert';
 
 import 'package:flutter/services.dart';
 
+import '../models/governorates_config.dart';
 import '../models/models.dart';
+
+bool _isCommonsImageUrl(String value) {
+  final uri = Uri.tryParse(value);
+  return uri != null &&
+      uri.scheme == 'https' &&
+      const {'upload.wikimedia.org', 'thumb.wikimedia.org'}.contains(uri.host);
+}
 
 class GovernoratePreviewSeed {
   const GovernoratePreviewSeed._();
@@ -30,25 +38,37 @@ class GovernoratePreviewSeed {
     final cairoTours = tours
         .where((tour) => tour.governorate == 'cairo')
         .toList(growable: false);
+    final alexandriaPlaces = places
+        .where((place) => place.governorate == 'alexandria')
+        .toList(growable: false);
+    final newAlexandriaPlaces = alexandriaPlaces
+        .where((place) => place.id.startsWith('alexandria_'))
+        .toList(growable: false);
     final primaryImages = cairoPlaces.map((place) => place.imageUrl).toSet();
     if (cairoPlaces.length < 120 ||
         cairoTours.length < 5 ||
         primaryImages.length != cairoPlaces.length ||
+        cairoPlaces.any(
+          (place) =>
+              !isPointInGovernorate(place.lat, place.lng, place.governorate),
+        ) ||
+        alexandriaPlaces.any(
+          (place) =>
+              !isPointInGovernorate(place.lat, place.lng, place.governorate),
+        ) ||
+        newAlexandriaPlaces.length != 10 ||
+        newAlexandriaPlaces.map((place) => place.imageUrl).toSet().length !=
+            10 ||
         cairoPlaces.any((place) {
-          final uri = Uri.tryParse(place.imageUrl);
-          return uri == null ||
-              uri.scheme != 'https' ||
-              uri.host != 'upload.wikimedia.org' ||
-              place.imageUrls.any((image) {
-                final imageUri = Uri.tryParse(image);
-                return imageUri == null ||
-                    imageUri.scheme != 'https' ||
-                    imageUri.host != 'upload.wikimedia.org';
-              });
+          return !_isCommonsImageUrl(place.imageUrl) ||
+              place.imageUrls.any((image) => !_isCommonsImageUrl(image));
+        }) ||
+        newAlexandriaPlaces.any((place) {
+          return !_isCommonsImageUrl(place.imageUrl);
         })) {
       throw StateError(
-        'The Cairo seed must contain at least 120 places and 5 itineraries, '
-        'with unique HTTPS Wikimedia images.',
+        'The unified Cairo seed must contain at least 120 places and 5 tours, '
+        'with in-boundary coordinates and unique HTTPS Wikimedia images.',
       );
     }
     return (places: places, tours: tours);

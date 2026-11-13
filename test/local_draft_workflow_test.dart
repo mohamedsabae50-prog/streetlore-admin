@@ -19,8 +19,16 @@ void main() {
       final service = AdminService.instance;
       final initialPlaces = await service.fetchPlaces();
       final initialTours = await service.fetchTours();
-      expect(initialPlaces, hasLength(169));
-      expect(initialTours, hasLength(15));
+      expect(initialPlaces, hasLength(229));
+      expect(initialTours, hasLength(20));
+      expect(
+        initialPlaces.map((place) => place.id),
+        containsAll({
+          'giza_great_pyramid',
+          'giza_grand_egyptian_museum',
+          'alexandria_cavafy_museum',
+        }),
+      );
 
       final place = Place(
         id: 'draft_cairo_test_place',

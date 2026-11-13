@@ -302,8 +302,8 @@ FROM public.tours t;
 COMMIT;
 ''';
 
-  final output = File(
-    r'D:\codes\streetlore\supabase\migrations\draft_cairo_multi_governorate.sql',
+  final output = File.fromUri(
+    Platform.script.resolve('draft_cairo_multi_governorate.sql'),
   );
   await output.writeAsString(sql);
   stdout.writeln(

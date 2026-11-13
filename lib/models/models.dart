@@ -1,3 +1,5 @@
+import 'governorates_config.dart';
+
 enum PriceLevel { free, cheap, moderate, expensive }
 
 class AdminUser {
@@ -379,7 +381,7 @@ class Place {
       address: (json['address'] as String?) ?? 'Alexandria, Egypt',
       addressAr: json['address_ar'] as String?,
       governorate: (json['governorate'] as String?)?.trim().isNotEmpty == true
-          ? (json['governorate'] as String).trim().toLowerCase()
+          ? normalizeGovernorateId(json['governorate'] as String)
           : 'alexandria',
       openHours: (json['open_hours'] as String?) ?? '9:00 AM - 6:00 PM',
       reviewCount: (json['review_count'] as int?) ?? 0,
@@ -413,7 +415,7 @@ class Place {
     'lng': lng,
     'address': address,
     'address_ar': addressAr,
-    'governorate': governorate,
+    'governorate': normalizeGovernorateId(governorate),
     'open_hours': openHours,
     'review_count': reviewCount,
     'price_level': priceLevelToString(priceLevel),
@@ -441,7 +443,7 @@ class Place {
     'lng': lng,
     'address': address,
     'address_ar': addressAr,
-    'governorate': governorate,
+    'governorate': normalizeGovernorateId(governorate),
     'open_hours': openHours,
     'review_count': reviewCount,
     'price_level': priceLevelToString(priceLevel),
@@ -586,7 +588,7 @@ class Tour {
     imageUrl: (json['image_url'] as String?) ?? '',
     status: (json['status'] as String?) ?? 'published',
     governorate: (json['governorate'] as String?)?.trim().isNotEmpty == true
-        ? (json['governorate'] as String).trim().toLowerCase()
+        ? normalizeGovernorateId(json['governorate'] as String)
         : 'alexandria',
     viewCount: (json['view_count'] as num?)?.toInt() ?? 0,
     isPremium: (json['is_premium'] as bool?) ?? false,
@@ -608,7 +610,7 @@ class Tour {
     'category_ar': categoryAr,
     'image_url': imageUrl,
     'status': status,
-    'governorate': governorate,
+    'governorate': normalizeGovernorateId(governorate),
     'view_count': viewCount,
     'is_premium': isPremium,
     'is_hidden_gem': isHiddenGem,
@@ -626,7 +628,7 @@ class Tour {
     'category_ar': categoryAr ?? '',
     'image_url': imageUrl,
     'status': status,
-    'governorate': governorate,
+    'governorate': normalizeGovernorateId(governorate),
     'is_premium': isPremium,
     'is_hidden_gem': isHiddenGem,
   };

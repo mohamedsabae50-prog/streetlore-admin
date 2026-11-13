@@ -51,4 +51,22 @@ void main() {
     expect(progress.totalPoints, 0);
     expect(progress.badges, isEmpty);
   });
+
+  test('fallback sync awards XP and the 50-visit badge for new places', () {
+    final progress = calculateVisitProgress(
+      currentPoints: 0,
+      previousPlaceCount: 0,
+      placeCount: 50,
+      currentBadges: const [],
+    );
+
+    expect(progress.totalPoints, 50 * adminVisitXpPerPlace);
+    expect(progress.newlyUnlocked.map((badge) => badge['id']), [
+      'visit_milestone_1',
+      'visit_milestone_5',
+      'visit_milestone_10',
+      'visit_milestone_25',
+      'visit_milestone_50',
+    ]);
+  });
 }
