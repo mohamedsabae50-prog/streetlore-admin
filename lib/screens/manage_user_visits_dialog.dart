@@ -51,14 +51,25 @@ class _ManageUserVisitsDialogState extends State<_ManageUserVisitsDialog> {
         AdminService.instance.fetchUserVisitState(widget.user.id),
       ]);
       if (!mounted) return;
-      final places = results[0] as List<Place>;
-      final state = results[1] as Map<String, dynamic>;
+      final places = (results[0] as List<Place>)
+          .where((place) => !place.isAtm)
+          .toList(growable: false);
+      final loadedState = results[1] as Map<String, dynamic>;
+      final eligibleIds = places.map((place) => place.id).toSet();
+      final visitedIds = (loadedState['visited_place_ids'] as List)
+          .map((id) => id.toString())
+          .where(eligibleIds.contains)
+          .toSet();
+      final state = {
+        ...loadedState,
+        'visited_place_ids': visitedIds.toList(growable: false),
+        'places_visited': visitedIds.length,
+      };
       setState(() {
         _places = places;
         _visitState = state;
-        _visitedPlaceIds = (state['visited_place_ids'] as List)
-            .map((id) => id.toString())
-            .toSet();
+        _visitedPlaceIds = visitedIds;
+        _selectedPlaceIds.removeWhere((id) => !eligibleIds.contains(id));
         _loading = false;
       });
     } catch (error) {
@@ -110,7 +121,11 @@ class _ManageUserVisitsDialogState extends State<_ManageUserVisitsDialog> {
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Removed visit to ${place.name}. Stats synced.'),
+          content: Text(
+            result['fallback_used'] == true
+                ? 'Removed visit to ${place.name}; stored XP and badges were not recalculated.'
+                : 'Removed visit to ${place.name}. Stats synced.',
+          ),
         ),
       );
     } catch (error) {
@@ -142,7 +157,13 @@ class _ManageUserVisitsDialogState extends State<_ManageUserVisitsDialog> {
         _saving = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Visits, XP, and badges synced.')),
+        SnackBar(
+          content: Text(
+            result['fallback_used'] == true
+                ? 'Visit records saved; XP and badges were not recalculated.'
+                : 'Visits, XP, and badges synced.',
+          ),
+        ),
       );
     } catch (error) {
       if (!mounted) return;

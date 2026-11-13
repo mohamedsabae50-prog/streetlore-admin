@@ -297,7 +297,7 @@ class AdminService {
     if (data['visited_place_ids'] is! List) {
       throw const FormatException('Invalid user visits response.');
     }
-    return data;
+    return _filterAtmVisits(data, await fetchPlaces());
   }
 
   Future<Map<String, dynamic>> updateUserVisits({
@@ -306,20 +306,205 @@ class AdminService {
     required bool add,
   }) async {
     _requireLiveWrites('Visit editing');
-    final response = await _invokeAdminFunction(
-      body: {
-        'action': add ? 'add_visits' : 'remove_visits',
-        'user_id': userId,
-        'place_ids': placeIds,
-      },
-    );
-    final data = await _functionResponseData(response, 'User visits update');
-    if (data['visited_place_ids'] is! List ||
-        data['badges'] is! List ||
-        data['newly_unlocked'] is! List) {
-      throw const FormatException('Invalid user visits update response.');
+    final places = await fetchPlaces();
+    final placesById = {for (final place in places) place.id: place};
+    final requestedIds = placeIds.toSet();
+    final unknownIds = requestedIds
+        .where((id) => !placesById.containsKey(id))
+        .toList(growable: false);
+    if (unknownIds.isNotEmpty) {
+      throw ArgumentError('Unknown place id(s): ${unknownIds.join(', ')}');
     }
-    return data;
+    final eligibleIds = requestedIds
+        .where((id) => !placesById[id]!.isAtm)
+        .toList(growable: false);
+    if (eligibleIds.isEmpty) return fetchUserVisitState(userId);
+    if (add) {
+      await _ensureRemotePlaces(eligibleIds, placesById);
+    }
+
+    try {
+      final response = await _invokeAdminFunction(
+        body: {
+          'action': add ? 'add_visits' : 'remove_visits',
+          'user_id': userId,
+          'place_ids': eligibleIds,
+        },
+      );
+      final data = await _functionResponseData(response, 'User visits update');
+      if (data['visited_place_ids'] is! List ||
+          data['badges'] is! List ||
+          data['newly_unlocked'] is! List) {
+        throw const FormatException('Invalid user visits update response.');
+      }
+      return _filterAtmVisits(data, places);
+    } catch (edgeError) {
+      try {
+        return await _updateUserVisitsDirectly(
+          userId: userId,
+          placeIds: eligibleIds,
+          add: add,
+          places: places,
+        );
+      } catch (fallbackError) {
+        throw StateError(
+          'User visits update failed in the Edge Function ($edgeError) and '
+          'the direct database fallback ($fallbackError).',
+        );
+      }
+    }
+  }
+
+  Future<Map<String, dynamic>> _updateUserVisitsDirectly({
+    required String userId,
+    required List<String> placeIds,
+    required bool add,
+    required List<Place> places,
+  }) async {
+    await _requireAdminForDirectVisitWrites();
+    Object? lastMissingTableError;
+    for (final table in const ['user_visits', 'visits']) {
+      try {
+        final currentRows = await _client
+            .from(table)
+            .select('place_id')
+            .eq('user_id', userId);
+        final currentIds = (currentRows as List<dynamic>)
+            .map((row) => (row as Map<String, dynamic>)['place_id'] as String)
+            .toSet();
+        if (add) {
+          final missingIds = placeIds
+              .where((id) => !currentIds.contains(id))
+              .toList(growable: false);
+          if (missingIds.isNotEmpty) {
+            await _client.from(table).insert([
+              for (final id in missingIds) {'user_id': userId, 'place_id': id},
+            ]);
+          }
+        } else {
+          await _client
+              .from(table)
+              .delete()
+              .eq('user_id', userId)
+              .inFilter('place_id', placeIds);
+        }
+
+        final updatedRows = await _client
+            .from(table)
+            .select('place_id')
+            .eq('user_id', userId);
+        final eligibleIds = places
+            .where((place) => !place.isAtm)
+            .map((place) => place.id)
+            .toSet();
+        final visitedIds = (updatedRows as List<dynamic>)
+            .map((row) => (row as Map<String, dynamic>)['place_id'] as String)
+            .where(eligibleIds.contains)
+            .toSet();
+        final leaderboard = await _syncDirectVisitCount(
+          userId: userId,
+          placeCount: visitedIds.length,
+        );
+        return {
+          'visited_place_ids': visitedIds.toList(growable: false),
+          'places_visited': visitedIds.length,
+          'total_points': leaderboard['total_points'] ?? 0,
+          'badges': leaderboard['badges'] is List
+              ? leaderboard['badges']
+              : const <dynamic>[],
+          'newly_unlocked': const <dynamic>[],
+          'fallback_used': true,
+        };
+      } on PostgrestException catch (error) {
+        if (!_isMissingVisitTable(error) || table == 'visits') rethrow;
+        lastMissingTableError = error;
+      }
+    }
+    throw StateError(
+      'No supported visit table was found: $lastMissingTableError',
+    );
+  }
+
+  Future<void> _requireAdminForDirectVisitWrites() async {
+    final email = _client.auth.currentUser?.email?.trim().toLowerCase() ?? '';
+    if (_adminEmails.contains(email)) return;
+    final isAdmin = await _client.rpc('is_admin') == true;
+    if (!isAdmin) {
+      throw StateError(
+        'Direct visit writes require an authenticated admin session.',
+      );
+    }
+  }
+
+  bool _isMissingVisitTable(PostgrestException error) =>
+      error.code == '42P01' || error.code == 'PGRST205';
+
+  Future<Map<String, dynamic>> _syncDirectVisitCount({
+    required String userId,
+    required int placeCount,
+  }) async {
+    final current = await _client
+        .from('leaderboard')
+        .select('total_points,badges')
+        .eq('user_id', userId)
+        .maybeSingle();
+    if (current == null) {
+      await _client.from('leaderboard').insert({
+        'user_id': userId,
+        'user_name': '',
+        'total_points': 0,
+        'places_visited': placeCount,
+        'badges': const <dynamic>[],
+        'level': 'Explorer',
+      });
+      return const {'total_points': 0, 'badges': <dynamic>[]};
+    }
+    await _client
+        .from('leaderboard')
+        .update({'places_visited': placeCount})
+        .eq('user_id', userId);
+    return Map<String, dynamic>.from(current);
+  }
+
+  Future<void> _ensureRemotePlaces(
+    List<String> placeIds,
+    Map<String, Place> placesById,
+  ) async {
+    final rows = await _client
+        .from('places')
+        .select('id')
+        .inFilter('id', placeIds);
+    final remoteIds = (rows as List<dynamic>)
+        .map((row) => (row as Map<String, dynamic>)['id'] as String)
+        .toSet();
+    for (final id in placeIds) {
+      if (remoteIds.contains(id)) continue;
+      final place = placesById[id];
+      if (place == null) {
+        throw StateError('Cannot find place $id to prepare its visit.');
+      }
+      await _upsertPlace(place);
+      await _localDrafts.savePlace(place);
+    }
+  }
+
+  Map<String, dynamic> _filterAtmVisits(
+    Map<String, dynamic> state,
+    List<Place> places,
+  ) {
+    final eligibleIds = places
+        .where((place) => !place.isAtm)
+        .map((place) => place.id)
+        .toSet();
+    final visitedIds = (state['visited_place_ids'] as List)
+        .map((id) => id.toString())
+        .where(eligibleIds.contains)
+        .toSet();
+    return {
+      ...state,
+      'visited_place_ids': visitedIds.toList(growable: false),
+      'places_visited': visitedIds.length,
+    };
   }
 
   Future<FunctionResponse> _invokeAdminFunction({
@@ -600,7 +785,13 @@ class AdminService {
         .map((e) => Place.fromJson(e as Map<String, dynamic>))
         .toList();
     return _sortPlaces(
-      _mergeById(seed.places, remote, idOf: (place) => place.id),
+      _mergeById(
+        seed.places,
+        remote,
+        idOf: (place) => place.id,
+        drafts: await _localDrafts.places(),
+        deletedIds: await _localDrafts.deletedPlaceIds(),
+      ),
     );
   }
 
@@ -617,12 +808,8 @@ class AdminService {
       await _localDrafts.savePlace(place);
       return place;
     }
-    final row = await _client
-        .from('places')
-        .insert(place.toJson())
-        .select('id, enable_chat, enable_gallery')
-        .single();
-    _verifyFeatureFlags(row, place);
+    await _upsertPlace(place);
+    await _localDrafts.savePlace(place);
     return place;
   }
 
@@ -631,17 +818,53 @@ class AdminService {
       await _localDrafts.savePlace(place);
       return place;
     }
-    final row = await _client
-        .from('places')
-        .update(place.toSupabaseUpdate())
-        .eq('id', place.id)
-        .select('id, enable_chat, enable_gallery')
-        .maybeSingle();
-    if (row == null) {
-      throw StateError('Supabase did not update place ${place.id}.');
-    }
-    _verifyFeatureFlags(row, place);
+    await _upsertPlace(place);
+    await _localDrafts.savePlace(place);
     return place;
+  }
+
+  Future<void> _upsertPlace(Place place) async {
+    final row = place.toJson();
+    while (true) {
+      try {
+        final selectedColumns = [
+          'id',
+          if (row.containsKey('enable_chat')) 'enable_chat',
+          if (row.containsKey('enable_gallery')) 'enable_gallery',
+        ].join(',');
+        final saved = await _client
+            .from('places')
+            .upsert(row, onConflict: 'id')
+            .select(selectedColumns)
+            .single();
+        _verifyFeatureFlags(saved, place);
+        return;
+      } on PostgrestException catch (error) {
+        final unsupportedColumn = _unsupportedPlaceColumn(error);
+        if (unsupportedColumn == null ||
+            unsupportedColumn == 'id' ||
+            !row.containsKey(unsupportedColumn)) {
+          rethrow;
+        }
+        row.remove(unsupportedColumn);
+      }
+    }
+  }
+
+  String? _unsupportedPlaceColumn(PostgrestException error) {
+    final message = '${error.message} ${error.details ?? ''}';
+    final schemaCacheMatch = RegExp(
+      "Could not find the ['\"]([a-z_][a-z0-9_]*)['\"] column",
+      caseSensitive: false,
+    ).firstMatch(message);
+    if (schemaCacheMatch != null) {
+      return schemaCacheMatch.group(1)?.toLowerCase();
+    }
+    final missingColumnMatch = RegExp(
+      r'column\s+(?:[a-z_][a-z0-9_]*\.)?([a-z_][a-z0-9_]*)\s+does not exist',
+      caseSensitive: false,
+    ).firstMatch(message);
+    return missingColumnMatch?.group(1)?.toLowerCase();
   }
 
   Future<List<String>> syncPlaceImageUrls(
@@ -685,8 +908,10 @@ class AdminService {
   }
 
   void _verifyFeatureFlags(Map<String, dynamic> row, Place place) {
-    if (row['enable_chat'] != place.enableChat ||
-        row['enable_gallery'] != place.enableGallery) {
+    if ((row.containsKey('enable_chat') &&
+            row['enable_chat'] != place.enableChat) ||
+        (row.containsKey('enable_gallery') &&
+            row['enable_gallery'] != place.enableGallery)) {
       throw StateError(
         'Supabase saved different feature flags for place ${place.id}.',
       );
@@ -807,6 +1032,7 @@ class AdminService {
       return;
     }
     await _client.from('places').delete().eq('id', id);
+    await _localDrafts.deletePlace(id);
   }
 
   Future<List<Tour>> fetchTours() async {

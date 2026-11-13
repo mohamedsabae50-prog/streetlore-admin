@@ -31,8 +31,8 @@ class GovernoratePreviewSeed {
         .where((tour) => tour.governorate == 'cairo')
         .toList(growable: false);
     final primaryImages = cairoPlaces.map((place) => place.imageUrl).toSet();
-    if (cairoPlaces.length != 120 ||
-        cairoTours.length != 5 ||
+    if (cairoPlaces.length < 120 ||
+        cairoTours.length < 5 ||
         primaryImages.length != cairoPlaces.length ||
         cairoPlaces.any((place) {
           final uri = Uri.tryParse(place.imageUrl);
@@ -47,8 +47,8 @@ class GovernoratePreviewSeed {
               });
         })) {
       throw StateError(
-        'The Cairo seed must contain 120 places with unique HTTPS Wikimedia '
-        'images and 5 itineraries.',
+        'The Cairo seed must contain at least 120 places and 5 itineraries, '
+        'with unique HTTPS Wikimedia images.',
       );
     }
     return (places: places, tours: tours);

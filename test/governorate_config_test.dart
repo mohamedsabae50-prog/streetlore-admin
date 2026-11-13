@@ -37,13 +37,28 @@ void main() {
   });
 
   test(
+    'expanded validation includes nearby edges but excludes distant areas',
+    () {
+      expect(
+        isPointInGovernorateOrExpandedBounds(30.17, 31.4, 'cairo'),
+        isTrue,
+      );
+      expect(
+        isPointInGovernorateOrExpandedBounds(29.9792, 31.1342, 'cairo'),
+        isFalse,
+      );
+      expect(isPointInGovernorateOrExpandedBounds(0, 0, 'unknown'), isFalse);
+    },
+  );
+
+  test(
     'preview asset includes all Cairo and Alexandria places and tours',
     () async {
       final seed = await GovernoratePreviewSeed.load();
 
       expect(
         seed.places.where((place) => place.governorate == 'cairo'),
-        hasLength(120),
+        hasLength(greaterThanOrEqualTo(120)),
       );
       expect(
         seed.places.where((place) => place.governorate == 'alexandria'),
@@ -51,7 +66,7 @@ void main() {
       );
       expect(
         seed.tours.where((tour) => tour.governorate == 'cairo'),
-        hasLength(5),
+        hasLength(greaterThanOrEqualTo(10)),
       );
       expect(
         seed.tours.where((tour) => tour.governorate == 'alexandria'),
@@ -70,8 +85,20 @@ void main() {
           .where((place) => place.governorate == 'cairo')
           .toList(growable: false);
       expect(
+        cairoPlaces.map((place) => place.id),
+        containsAll({
+          'mosque_muhammad_ali',
+          'qasr_el_nil_bridge',
+          'ben_ezra_synagogue',
+          'babylon_fortress',
+          'mahmoud_mukhtar_museum',
+          'al_gawhara_palace',
+          'sultan_al_ghuri_complex',
+        }),
+      );
+      expect(
         cairoPlaces.map((place) => place.imageUrl).toSet(),
-        hasLength(120),
+        hasLength(cairoPlaces.length),
       );
       expect(
         cairoPlaces.every(
@@ -80,6 +107,16 @@ void main() {
               Uri.tryParse(place.imageUrl)?.host == 'upload.wikimedia.org',
         ),
         isTrue,
+      );
+      expect(
+        seed.tours.map((tour) => tour.id),
+        containsAll({
+          'cairo_citadel_mosque_palace',
+          'cairo_coptic_cairo_heritage',
+          'cairo_nile_bridge_and_art',
+          'cairo_mamluk_al_muizz_route',
+          'cairo_old_cairo_and_citadel',
+        }),
       );
       for (final tour in seed.tours.where(
         (tour) => tour.governorate == 'cairo',

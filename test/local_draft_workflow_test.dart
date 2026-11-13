@@ -19,8 +19,8 @@ void main() {
       final service = AdminService.instance;
       final initialPlaces = await service.fetchPlaces();
       final initialTours = await service.fetchTours();
-      expect(initialPlaces, hasLength(162));
-      expect(initialTours, hasLength(10));
+      expect(initialPlaces, hasLength(169));
+      expect(initialTours, hasLength(15));
 
       final place = Place(
         id: 'draft_cairo_test_place',

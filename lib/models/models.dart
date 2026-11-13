@@ -350,6 +350,10 @@ class Place {
     this.enableGallery = true,
   });
 
+  bool get isAtm =>
+      id.toLowerCase().startsWith('atm_') ||
+      const {'atm', 'atms'}.contains(category.trim().toLowerCase());
+
   factory Place.fromJson(Map<String, dynamic> json) {
     final urlsRaw = json['image_urls'] ?? json['imageUrls'];
     List<String> urls = const <String>[];

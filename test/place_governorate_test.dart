@@ -14,6 +14,43 @@ void main() {
     expect(place.toSupabaseUpdate()['governorate'], 'alexandria');
   });
 
+  test('ATM places remain places but are not visit-eligible', () {
+    final places = [
+      Place(
+        id: 'atm_bank_branch',
+        name: 'ATM',
+        description: '',
+        imageUrl: '',
+        rating: 0,
+        category: 'Historical',
+        lat: 0,
+        lng: 0,
+      ),
+      Place(
+        id: 'place_atm_category',
+        name: 'Cash machine',
+        description: '',
+        imageUrl: '',
+        rating: 0,
+        category: 'aTmS',
+        lat: 0,
+        lng: 0,
+      ),
+      Place(
+        id: 'place_historical',
+        name: 'Museum',
+        description: '',
+        imageUrl: '',
+        rating: 0,
+        category: 'Historical',
+        lat: 0,
+        lng: 0,
+      ),
+    ];
+
+    expect(places.map((place) => place.isAtm), [true, true, false]);
+  });
+
   test('admin governorate choices match configured coverage', () {
     expect(AdminGovernorate.all, hasLength(2));
     expect(AdminGovernorate.all.map((item) => item.id).toSet(), {

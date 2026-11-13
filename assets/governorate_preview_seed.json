@@ -5025,6 +5025,188 @@
       "display_order": 999,
       "enable_chat": true,
       "enable_gallery": true
+    },
+    {
+      "id": "mosque_muhammad_ali",
+      "name": "Mosque of Muhammad Ali",
+      "name_en": "Mosque of Muhammad Ali",
+      "description": "An Ottoman-era mosque inside Cairo Citadel, famed for its alabaster-clad courtyard and landmark domes.",
+      "description_en": "An Ottoman-era mosque inside Cairo Citadel, famed for its alabaster-clad courtyard and landmark domes.",
+      "image_url": "https://upload.wikimedia.org/wikipedia/commons/5/50/Mosque_of_Muhammad_Ali%2C_Cairo2026_4.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+      "image_urls": [
+        "https://upload.wikimedia.org/wikipedia/commons/5/50/Mosque_of_Muhammad_Ali%2C_Cairo2026_4.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original"
+      ],
+      "rating": 4.8,
+      "category": "Mosques",
+      "lat": 30.0287,
+      "lng": 31.2611,
+      "address": "Cairo Citadel, Al-Abageyah, Cairo",
+      "governorate": "cairo",
+      "open_hours": "Check current opening hours",
+      "review_count": 0,
+      "price_level": "cheap",
+      "price_note": "Included with the Cairo Citadel ticket; confirm current prices",
+      "is_hidden_gem": false,
+      "is_featured": true,
+      "display_order": 999,
+      "enable_chat": true,
+      "enable_gallery": true
+    },
+    {
+      "id": "qasr_el_nil_bridge",
+      "name": "Qasr El Nil Bridge",
+      "name_en": "Qasr El Nil Bridge",
+      "description": "A celebrated Nile crossing linking downtown Cairo with Gezira Island, recognized by its bronze lion statues.",
+      "description_en": "A celebrated Nile crossing linking downtown Cairo with Gezira Island, recognized by its bronze lion statues.",
+      "image_url": "https://upload.wikimedia.org/wikipedia/commons/d/de/Qasr_El_Nil_Bridge.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+      "image_urls": [
+        "https://upload.wikimedia.org/wikipedia/commons/d/de/Qasr_El_Nil_Bridge.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original"
+      ],
+      "rating": 4.6,
+      "category": "Historical",
+      "lat": 30.0432,
+      "lng": 31.2316,
+      "address": "Qasr El Nil Street, Downtown Cairo",
+      "governorate": "cairo",
+      "open_hours": "Open access",
+      "review_count": 0,
+      "price_level": "free",
+      "price_note": "",
+      "is_hidden_gem": false,
+      "is_featured": true,
+      "display_order": 999,
+      "enable_chat": true,
+      "enable_gallery": true
+    },
+    {
+      "id": "ben_ezra_synagogue",
+      "name": "Ben Ezra Synagogue",
+      "name_en": "Ben Ezra Synagogue",
+      "description": "A historic synagogue in Coptic Cairo, associated with the discovery of the celebrated Cairo Geniza manuscripts.",
+      "description_en": "A historic synagogue in Coptic Cairo, associated with the discovery of the celebrated Cairo Geniza manuscripts.",
+      "image_url": "https://upload.wikimedia.org/wikipedia/commons/a/a4/Ben_Ezra_Synagogue-1.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+      "image_urls": [
+        "https://upload.wikimedia.org/wikipedia/commons/a/a4/Ben_Ezra_Synagogue-1.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original"
+      ],
+      "rating": 4.5,
+      "category": "Historical",
+      "lat": 30.0061,
+      "lng": 31.2306,
+      "address": "Coptic Cairo, Old Cairo",
+      "governorate": "cairo",
+      "open_hours": "Check current visitor arrangements",
+      "review_count": 0,
+      "price_level": "free",
+      "price_note": "Check current visitor arrangements",
+      "is_hidden_gem": false,
+      "is_featured": true,
+      "display_order": 999,
+      "enable_chat": true,
+      "enable_gallery": true
+    },
+    {
+      "id": "babylon_fortress",
+      "name": "Babylon Fortress",
+      "name_en": "Babylon Fortress",
+      "description": "Roman-era fortification remains at the heart of Old Cairo, forming the historic setting for the Coptic Cairo district.",
+      "description_en": "Roman-era fortification remains at the heart of Old Cairo, forming the historic setting for the Coptic Cairo district.",
+      "image_url": "https://upload.wikimedia.org/wikipedia/commons/3/35/Babylon_Fortress_%28Roman_Tower%29%2C_Old_Cairo%2C_Egypt1.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+      "image_urls": [
+        "https://upload.wikimedia.org/wikipedia/commons/3/35/Babylon_Fortress_%28Roman_Tower%29%2C_Old_Cairo%2C_Egypt1.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original"
+      ],
+      "rating": 4.5,
+      "category": "Historical",
+      "lat": 30.0063,
+      "lng": 31.2316,
+      "address": "Coptic Cairo, Old Cairo",
+      "governorate": "cairo",
+      "open_hours": "Open access around the district",
+      "review_count": 0,
+      "price_level": "free",
+      "price_note": "",
+      "is_hidden_gem": false,
+      "is_featured": true,
+      "display_order": 999,
+      "enable_chat": true,
+      "enable_gallery": true
+    },
+    {
+      "id": "mahmoud_mukhtar_museum",
+      "name": "Mahmoud Mukhtar Museum",
+      "name_en": "Mahmoud Mukhtar Museum",
+      "description": "A museum dedicated to Egyptian sculptor Mahmoud Mokhtar, home to works including the monumental Nahdat Misr.",
+      "description_en": "A museum dedicated to Egyptian sculptor Mahmoud Mokhtar, home to works including the monumental Nahdat Misr.",
+      "image_url": "https://upload.wikimedia.org/wikipedia/commons/3/33/Mahmoud_Mukhtar_Museum_001.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+      "image_urls": [
+        "https://upload.wikimedia.org/wikipedia/commons/3/33/Mahmoud_Mukhtar_Museum_001.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original"
+      ],
+      "rating": 4.5,
+      "category": "Culture",
+      "lat": 30.0415,
+      "lng": 31.2226,
+      "address": "Gezira Island, Zamalek, Cairo",
+      "governorate": "cairo",
+      "open_hours": "Check current museum hours",
+      "review_count": 0,
+      "price_level": "cheap",
+      "price_note": "Check current ticket prices",
+      "is_hidden_gem": false,
+      "is_featured": true,
+      "display_order": 999,
+      "enable_chat": true,
+      "enable_gallery": true
+    },
+    {
+      "id": "al_gawhara_palace",
+      "name": "Al-Gawhara Palace",
+      "name_en": "Al-Gawhara Palace",
+      "description": "An early 19th-century palace within Cairo Citadel, built for Muhammad Ali Pasha and now presented as a museum.",
+      "description_en": "An early 19th-century palace within Cairo Citadel, built for Muhammad Ali Pasha and now presented as a museum.",
+      "image_url": "https://upload.wikimedia.org/wikipedia/commons/8/88/Kairo_Zitadelle_Al-Gawhara_02.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+      "image_urls": [
+        "https://upload.wikimedia.org/wikipedia/commons/8/88/Kairo_Zitadelle_Al-Gawhara_02.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original"
+      ],
+      "rating": 4.5,
+      "category": "Historical",
+      "lat": 30.0291,
+      "lng": 31.2585,
+      "address": "Cairo Citadel, Al-Abageyah, Cairo",
+      "governorate": "cairo",
+      "open_hours": "Check current visitor arrangements",
+      "review_count": 0,
+      "price_level": "cheap",
+      "price_note": "Included with the Cairo Citadel ticket; confirm current prices",
+      "is_hidden_gem": false,
+      "is_featured": false,
+      "display_order": 999,
+      "enable_chat": true,
+      "enable_gallery": true
+    },
+    {
+      "id": "sultan_al_ghuri_complex",
+      "name": "Sultan Al-Ghuri Complex",
+      "name_en": "Sultan Al-Ghuri Complex",
+      "description": "A late Mamluk complex on Al-Muizz Street that combines a mosque, madrasa, mausoleum, and historic market frontage.",
+      "description_en": "A late Mamluk complex on Al-Muizz Street that combines a mosque, madrasa, mausoleum, and historic market frontage.",
+      "image_url": "https://upload.wikimedia.org/wikipedia/commons/5/58/Al-Ghuri_2019-11-02b.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+      "image_urls": [
+        "https://upload.wikimedia.org/wikipedia/commons/5/58/Al-Ghuri_2019-11-02b.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original"
+      ],
+      "rating": 4.6,
+      "category": "Historical",
+      "lat": 30.0478,
+      "lng": 31.2628,
+      "address": "Al-Muizz Street, Al-Gamaliya, Cairo",
+      "governorate": "cairo",
+      "open_hours": "Check current visitor arrangements",
+      "review_count": 0,
+      "price_level": "cheap",
+      "price_note": "Check current admission and performance schedules",
+      "is_hidden_gem": false,
+      "is_featured": true,
+      "display_order": 999,
+      "enable_chat": true,
+      "enable_gallery": true
     }
   ],
   "tours": [
@@ -6307,6 +6489,186 @@
           "display_order": 999,
           "enable_chat": true,
           "enable_gallery": true
+        }
+      ]
+    },
+    {
+      "id": "cairo_citadel_mosque_palace",
+      "title": "Citadel Mosque & Palace",
+      "description": "Explore Muhammad Ali Mosque and Al-Gawhara Palace within the historic Cairo Citadel.",
+      "duration": "Half day",
+      "category": "Heritage",
+      "image_url": "https://upload.wikimedia.org/wikipedia/commons/5/50/Mosque_of_Muhammad_Ali%2C_Cairo2026_4.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+      "status": "published",
+      "governorate": "cairo",
+      "is_premium": false,
+      "is_hidden_gem": false,
+      "places": [
+        {
+          "id": "mosque_muhammad_ali",
+          "name": "Mosque of Muhammad Ali",
+          "description": "An Ottoman-era mosque inside Cairo Citadel.",
+          "image_url": "https://upload.wikimedia.org/wikipedia/commons/5/50/Mosque_of_Muhammad_Ali%2C_Cairo2026_4.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+          "rating": 4.8,
+          "category": "Mosques",
+          "lat": 30.0287,
+          "lng": 31.2611,
+          "governorate": "cairo"
+        },
+        {
+          "id": "al_gawhara_palace",
+          "name": "Al-Gawhara Palace",
+          "description": "A palace museum within Cairo Citadel.",
+          "image_url": "https://upload.wikimedia.org/wikipedia/commons/8/88/Kairo_Zitadelle_Al-Gawhara_02.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+          "rating": 4.5,
+          "category": "Historical",
+          "lat": 30.0291,
+          "lng": 31.2585,
+          "governorate": "cairo"
+        }
+      ]
+    },
+    {
+      "id": "cairo_coptic_cairo_heritage",
+      "title": "Coptic Cairo Heritage Walk",
+      "description": "Discover the Roman remains of Babylon Fortress and the neighboring Ben Ezra Synagogue in Old Cairo.",
+      "duration": "Half day",
+      "category": "Heritage",
+      "image_url": "https://upload.wikimedia.org/wikipedia/commons/a/a4/Ben_Ezra_Synagogue-1.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+      "status": "published",
+      "governorate": "cairo",
+      "is_premium": false,
+      "is_hidden_gem": false,
+      "places": [
+        {
+          "id": "babylon_fortress",
+          "name": "Babylon Fortress",
+          "description": "Roman-era fortification remains in Old Cairo.",
+          "image_url": "https://upload.wikimedia.org/wikipedia/commons/3/35/Babylon_Fortress_%28Roman_Tower%29%2C_Old_Cairo%2C_Egypt1.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+          "rating": 4.5,
+          "category": "Historical",
+          "lat": 30.0063,
+          "lng": 31.2316,
+          "governorate": "cairo"
+        },
+        {
+          "id": "ben_ezra_synagogue",
+          "name": "Ben Ezra Synagogue",
+          "description": "A historic synagogue in the Coptic Cairo district.",
+          "image_url": "https://upload.wikimedia.org/wikipedia/commons/a/a4/Ben_Ezra_Synagogue-1.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+          "rating": 4.5,
+          "category": "Historical",
+          "lat": 30.0061,
+          "lng": 31.2306,
+          "governorate": "cairo"
+        }
+      ]
+    },
+    {
+      "id": "cairo_nile_bridge_and_art",
+      "title": "Nile Bridge & Egyptian Sculpture",
+      "description": "Pair a walk across the landmark Qasr El Nil Bridge with a visit to the Mahmoud Mukhtar Museum.",
+      "duration": "Half day",
+      "category": "Culture",
+      "image_url": "https://upload.wikimedia.org/wikipedia/commons/d/de/Qasr_El_Nil_Bridge.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+      "status": "published",
+      "governorate": "cairo",
+      "is_premium": false,
+      "is_hidden_gem": false,
+      "places": [
+        {
+          "id": "qasr_el_nil_bridge",
+          "name": "Qasr El Nil Bridge",
+          "description": "A celebrated Nile crossing linking downtown Cairo with Gezira Island.",
+          "image_url": "https://upload.wikimedia.org/wikipedia/commons/d/de/Qasr_El_Nil_Bridge.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+          "rating": 4.6,
+          "category": "Historical",
+          "lat": 30.0432,
+          "lng": 31.2316,
+          "governorate": "cairo"
+        },
+        {
+          "id": "mahmoud_mukhtar_museum",
+          "name": "Mahmoud Mukhtar Museum",
+          "description": "A museum dedicated to Egyptian sculptor Mahmoud Mokhtar.",
+          "image_url": "https://upload.wikimedia.org/wikipedia/commons/3/33/Mahmoud_Mukhtar_Museum_001.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+          "rating": 4.5,
+          "category": "Culture",
+          "lat": 30.0415,
+          "lng": 31.2226,
+          "governorate": "cairo"
+        }
+      ]
+    },
+    {
+      "id": "cairo_mamluk_al_muizz_route",
+      "title": "Mamluk Cairo & Al-Muizz Street",
+      "description": "See the Sultan Al-Ghuri Complex before continuing to the Ottoman-era mosque at Cairo Citadel.",
+      "duration": "Full day",
+      "category": "Heritage",
+      "image_url": "https://upload.wikimedia.org/wikipedia/commons/5/58/Al-Ghuri_2019-11-02b.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+      "status": "published",
+      "governorate": "cairo",
+      "is_premium": false,
+      "is_hidden_gem": false,
+      "places": [
+        {
+          "id": "sultan_al_ghuri_complex",
+          "name": "Sultan Al-Ghuri Complex",
+          "description": "A late Mamluk complex on Al-Muizz Street.",
+          "image_url": "https://upload.wikimedia.org/wikipedia/commons/5/58/Al-Ghuri_2019-11-02b.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+          "rating": 4.6,
+          "category": "Historical",
+          "lat": 30.0478,
+          "lng": 31.2628,
+          "governorate": "cairo"
+        },
+        {
+          "id": "mosque_muhammad_ali",
+          "name": "Mosque of Muhammad Ali",
+          "description": "An Ottoman-era mosque inside Cairo Citadel.",
+          "image_url": "https://upload.wikimedia.org/wikipedia/commons/5/50/Mosque_of_Muhammad_Ali%2C_Cairo2026_4.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+          "rating": 4.8,
+          "category": "Mosques",
+          "lat": 30.0287,
+          "lng": 31.2611,
+          "governorate": "cairo"
+        }
+      ]
+    },
+    {
+      "id": "cairo_old_cairo_and_citadel",
+      "title": "Old Cairo & Citadel Landmarks",
+      "description": "Trace layers of Cairo history from Coptic Cairo to the Al-Gawhara Palace and the Citadel mosque.",
+      "duration": "Full day",
+      "category": "Heritage",
+      "image_url": "https://upload.wikimedia.org/wikipedia/commons/8/88/Kairo_Zitadelle_Al-Gawhara_02.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+      "status": "published",
+      "governorate": "cairo",
+      "is_premium": false,
+      "is_hidden_gem": false,
+      "places": [
+        {
+          "id": "ben_ezra_synagogue",
+          "name": "Ben Ezra Synagogue",
+          "description": "A historic synagogue in the Coptic Cairo district.",
+          "image_url": "https://upload.wikimedia.org/wikipedia/commons/a/a4/Ben_Ezra_Synagogue-1.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+          "rating": 4.5,
+          "category": "Historical",
+          "lat": 30.0061,
+          "lng": 31.2306,
+          "governorate": "cairo"
+        },
+        {
+          "id": "al_gawhara_palace",
+          "name": "Al-Gawhara Palace",
+          "description": "A palace museum within Cairo Citadel.",
+          "image_url": "https://upload.wikimedia.org/wikipedia/commons/8/88/Kairo_Zitadelle_Al-Gawhara_02.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+          "rating": 4.5,
+          "category": "Historical",
+          "lat": 30.0291,
+          "lng": 31.2585,
+          "governorate": "cairo"
         }
       ]
     }

@@ -132,7 +132,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
     );
     _priceLevel = p?.priceLevel ?? PriceLevel.free;
     _governorate = p == null
-        ? null
+        ? 'alexandria'
         : governoratesConfig.containsKey(p.governorate)
         ? p.governorate
         : 'alexandria';
@@ -400,10 +400,14 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
       _showValidationError('أدخل إحداثيات صحيحة لخط العرض والطول.');
       return;
     }
-    if (!isPointInGovernorate(point.latitude, point.longitude, governorateId)) {
+    if (!isPointInGovernorateOrExpandedBounds(
+      point.latitude,
+      point.longitude,
+      governorateId,
+    )) {
       _showValidationError(
-        'الإحداثيات تقع خارج حدود المحافظة المحددة. '
-        'اختر موقعاً داخل ${governoratesConfig[governorateId]!.nameAr}.',
+        'الإحداثيات بعيدة عن نطاق المحافظة المحددة. '
+        'اختر موقعاً أقرب إلى ${governoratesConfig[governorateId]!.nameAr}.',
       );
       return;
     }
@@ -863,6 +867,10 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                                 DropdownMenuItem(
                                   value: 'ATM',
                                   child: Text('ATM'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'ATMs',
+                                  child: Text('ATMs'),
                                 ),
                                 DropdownMenuItem(
                                   value: 'Hotel',

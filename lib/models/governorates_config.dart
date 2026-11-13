@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:latlong2/latlong.dart';
 
 class GovernorateConfig {
@@ -127,4 +129,51 @@ bool isPointInGovernorate(double lat, double lng, String governorateId) {
     }
   }
   return inside;
+}
+
+bool isPointInGovernorateOrExpandedBounds(
+  double lat,
+  double lng,
+  String governorateId, {
+  double expansionKm = 5,
+}) {
+  if (isPointInGovernorate(lat, lng, governorateId)) return true;
+  if (!lat.isFinite ||
+      !lng.isFinite ||
+      expansionKm < 0 ||
+      !expansionKm.isFinite) {
+    return false;
+  }
+  final polygon = governoratesConfig[governorateId]?.boundaryPolygon;
+  if (polygon == null || polygon.length < 3) return false;
+
+  const kilometersPerDegree = 111.32;
+  final longitudeScale = kilometersPerDegree * math.cos(lat * math.pi / 180);
+  final pointX = lng * longitudeScale;
+  final pointY = lat * kilometersPerDegree;
+  var nearestDistanceSquared = double.infinity;
+  for (var i = 0; i < polygon.length; i++) {
+    final start = polygon[i];
+    final end = polygon[(i + 1) % polygon.length];
+    final startX = start.longitude * longitudeScale;
+    final startY = start.latitude * kilometersPerDegree;
+    final endX = end.longitude * longitudeScale;
+    final endY = end.latitude * kilometersPerDegree;
+    final edgeX = endX - startX;
+    final edgeY = endY - startY;
+    final edgeLengthSquared = edgeX * edgeX + edgeY * edgeY;
+    final projection = edgeLengthSquared == 0
+        ? 0.0
+        : (((pointX - startX) * edgeX + (pointY - startY) * edgeY) /
+                  edgeLengthSquared)
+              .clamp(0.0, 1.0)
+              .toDouble();
+    final deltaX = pointX - (startX + projection * edgeX);
+    final deltaY = pointY - (startY + projection * edgeY);
+    nearestDistanceSquared = math.min(
+      nearestDistanceSquared,
+      deltaX * deltaX + deltaY * deltaY,
+    );
+  }
+  return nearestDistanceSquared <= expansionKm * expansionKm;
 }
