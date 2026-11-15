@@ -12,6 +12,7 @@ import 'users_list_screen.dart';
 import 'ai_chat_logs_screen.dart';
 import 'reports_screen.dart';
 import 'hidden_gem_suggestions_screen.dart';
+import 'atms_list_screen.dart';
 
 bool isAdminAnalyticsPermissionDenied(Object error) {
   if (error is PostgrestException) {
@@ -304,6 +305,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   if (!mounted) return;
                   if (result != null) _refreshCounts();
                 },
+              ),
+              const SizedBox(height: 10),
+              _ActionCard(
+                icon: Icons.atm_rounded,
+                color: AppTheme.primary,
+                title: 'ATMs (ماكينات الصراف الآلي)',
+                subtitle: 'Manage cash machines by governorate',
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AtmsListScreen()),
+                ),
               ),
               const SizedBox(height: 10),
               _ActionCard(

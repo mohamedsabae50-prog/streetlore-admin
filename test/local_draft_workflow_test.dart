@@ -19,7 +19,7 @@ void main() {
       final service = AdminService.instance;
       final initialPlaces = await service.fetchPlaces();
       final initialTours = await service.fetchTours();
-      expect(initialPlaces, hasLength(289));
+      expect(initialPlaces, hasLength(295));
       expect(initialTours, hasLength(26));
       expect(
         initialPlaces.map((place) => place.id),
@@ -134,6 +134,70 @@ void main() {
     await service.deletePlace(place.id);
     await service.deleteTour(tour.id);
   });
+
+  test(
+    'local preview separates visitable places from governorate ATMs',
+    () async {
+      final service = AdminService.instance;
+      final places = await service.fetchPlaces();
+      expect(visitEligiblePlaces(places), hasLength(263));
+      expect(atmPlaces(places), hasLength(32));
+      expect((await service.fetchDashboardCounts()).places, 263);
+
+      for (final (governorate, visitCount, atmCount) in [
+        ('alexandria', 52, 6),
+        ('cairo', 157, 20),
+        ('luxor', 54, 6),
+      ]) {
+        expect(
+          visitEligiblePlaces(
+            places,
+          ).where((place) => place.governorate == governorate),
+          hasLength(visitCount),
+        );
+        expect(
+          atmPlaces(places).where((place) => place.governorate == governorate),
+          hasLength(atmCount),
+        );
+      }
+    },
+  );
+
+  test(
+    'local ATM drafts remain editable and outside visitable places',
+    () async {
+      final service = AdminService.instance;
+      final atm = Place(
+        id: 'atm_draft_local_test',
+        name: 'Local Alexandria ATM',
+        nameAr: 'ماكينة صراف آلي محلية بالإسكندرية',
+        description: 'A local draft cash machine record.',
+        imageUrl: '',
+        rating: 0,
+        category: 'ATMs',
+        categoryAr: 'ماكينات الصراف الآلي',
+        lat: 31.2001,
+        lng: 29.9187,
+        address: 'Alexandria, Egypt',
+        openHours: '24 hours',
+        governorate: 'alexandria',
+        priceLevel: PriceLevel.free,
+        priceLocalEgp: 0,
+        priceForeignerEgp: 0,
+      );
+
+      expect((await service.createPlace(atm)).remoteSynced, isFalse);
+      await service.updatePlace(atm.copyWith(name: 'Edited Alexandria ATM'));
+      final savedAtm = (await service.fetchPlaces()).singleWhere(
+        (place) => place.id == atm.id,
+      );
+      expect(savedAtm.name, 'Edited Alexandria ATM');
+      expect(atmPlaces([savedAtm]), hasLength(1));
+      expect(visitEligiblePlaces([savedAtm]), isEmpty);
+
+      await service.deletePlace(atm.id);
+    },
+  );
 
   test('local mode rejects image uploads before contacting Supabase', () async {
     await expectLater(

@@ -102,7 +102,7 @@ void main() {
       );
       expect(
         seed.places.where((place) => place.governorate == 'alexandria'),
-        hasLength(52),
+        hasLength(58),
       );
       expect(
         seed.tours.where((tour) => tour.governorate == 'cairo'),
@@ -333,7 +333,39 @@ void main() {
           'cairo_new_capital_arts_culture_city',
         }),
       );
-      expect(seed.places.where((place) => place.isAtm), hasLength(26));
+      expect(seed.places.where((place) => place.isAtm), hasLength(32));
+      expect(
+        atmPlaces(
+          seed.places,
+        ).where((place) => place.governorate == 'alexandria'),
+        hasLength(6),
+      );
+      expect(
+        atmPlaces(seed.places).where((place) => place.governorate == 'cairo'),
+        hasLength(20),
+      );
+      expect(
+        atmPlaces(seed.places).where((place) => place.governorate == 'luxor'),
+        hasLength(6),
+      );
+      expect(
+        visitEligiblePlaces(
+          seed.places,
+        ).where((place) => place.governorate == 'alexandria'),
+        hasLength(52),
+      );
+      expect(
+        visitEligiblePlaces(
+          seed.places,
+        ).where((place) => place.governorate == 'cairo'),
+        hasLength(157),
+      );
+      expect(
+        visitEligiblePlaces(
+          seed.places,
+        ).where((place) => place.governorate == 'luxor'),
+        hasLength(54),
+      );
       expect(
         visitEligiblePlaces(seed.places).map((place) => place.id),
         isNot(
@@ -448,7 +480,7 @@ void main() {
     'the complete preview catalog has repaired descriptions, prices, and images',
     () async {
       final seed = await GovernoratePreviewSeed.load();
-      expect(seed.places, hasLength(289));
+      expect(seed.places, hasLength(295));
       expect(seed.tours, hasLength(26));
 
       final urls = <String>{};
@@ -539,7 +571,26 @@ void main() {
         }
       }
 
-      expect(urls, hasLength(289));
+      expect(urls, hasLength(295));
+      final luxorPlaces = seed.places
+          .where((place) => place.governorate == 'luxor')
+          .toList(growable: false);
+      final luxorTours = seed.tours
+          .where((tour) => tour.governorate == 'luxor')
+          .toList(growable: false);
+      final luxorUrls = luxorPlaces.map((place) => place.imageUrl).toSet();
+      final luxorTourUrls = luxorTours.map((tour) => tour.imageUrl).toSet();
+      expect(luxorUrls, hasLength(60));
+      expect(luxorTourUrls, hasLength(6));
+      expect(luxorUrls.intersection(luxorTourUrls), isEmpty);
+      expect(
+        [...luxorPlaces.map((place) => place.imageUrl), ...luxorTourUrls].every(
+          (url) =>
+              Uri.tryParse(url)?.scheme == 'https' &&
+              Uri.tryParse(url)?.host == 'upload.wikimedia.org',
+        ),
+        isTrue,
+      );
       final placesById = {for (final place in seed.places) place.id: place};
       for (final tour in seed.tours) {
         for (final snapshot in tour.places) {

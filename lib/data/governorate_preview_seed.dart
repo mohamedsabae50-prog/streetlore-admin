@@ -52,9 +52,20 @@ class GovernoratePreviewSeed {
         .toList(growable: false);
     final primaryImages = cairoPlaces.map((place) => place.imageUrl).toSet();
     final allPrimaryImages = places.map((place) => place.imageUrl).toSet();
-    if (places.length != 289 ||
+    final atms = atmPlaces(places);
+    final luxorTourImages = luxorTours.map((tour) => tour.imageUrl).toSet();
+    if (places.length != 295 ||
         tours.length != 26 ||
         allPrimaryImages.length != places.length ||
+        atms.length != 32 ||
+        atms.where((place) => place.governorate == 'alexandria').length != 6 ||
+        atms.where((place) => place.governorate == 'cairo').length != 20 ||
+        atms.where((place) => place.governorate == 'luxor').length != 6 ||
+        atms.any(
+          (place) =>
+              !_isCommonsImageUrl(place.imageUrl) ||
+              Uri.parse(place.imageUrl).host != 'upload.wikimedia.org',
+        ) ||
         cairoPlaces.length < 120 ||
         cairoTours.length < 5 ||
         luxorPlaces.length != 60 ||
@@ -81,17 +92,29 @@ class GovernoratePreviewSeed {
         luxorPlaces.any((place) {
           return !_isCommonsImageUrl(place.imageUrl) ||
               place.imageUrls.any((image) => !_isCommonsImageUrl(image)) ||
+              Uri.parse(place.imageUrl).host != 'upload.wikimedia.org' ||
               !isPointInGovernorate(place.lat, place.lng, place.governorate);
         }) ||
+        luxorPlaces.map((place) => place.imageUrl).toSet().length !=
+            luxorPlaces.length ||
+        luxorTours.any(
+          (tour) =>
+              !_isCommonsImageUrl(tour.imageUrl) ||
+              Uri.parse(tour.imageUrl).host != 'upload.wikimedia.org',
+        ) ||
+        luxorTourImages.length != luxorTours.length ||
+        luxorTourImages
+            .intersection(luxorPlaces.map((place) => place.imageUrl).toSet())
+            .isNotEmpty ||
         luxorTours.any(
           (tour) =>
               tour.places.isEmpty ||
               tour.places.any((place) => place.governorate != 'luxor'),
         )) {
       throw StateError(
-        'The preview seed must contain 289 places and 26 tours, including '
-        '60 in-boundary Luxor places and 6 Luxor tours with unique HTTPS '
-        'primary images.',
+        'The preview seed must contain 295 places and 26 tours, including '
+        '32 ATMs across the three governorates and 60 in-boundary Luxor '
+        'places plus 6 Luxor tours with unique HTTPS Commons images.',
       );
     }
     return (places: places, tours: tours);

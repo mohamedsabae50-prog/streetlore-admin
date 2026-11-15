@@ -95,7 +95,12 @@ Future<void> main() async {
   final decoded = jsonDecode(await seedFile.readAsString()) as Map;
   final places = (decoded['places'] as List)
       .map((row) => Map<String, dynamic>.from(row as Map))
-      .where((row) => {'cairo', 'luxor'}.contains(row['governorate']))
+      .where(
+        (row) =>
+            {'cairo', 'luxor'}.contains(row['governorate']) ||
+            (row['governorate'] == 'alexandria' &&
+                const {'ATM', 'ATMs'}.contains(row['category'])),
+      )
       .toList();
   final tours = (decoded['tours'] as List)
       .map((row) => Map<String, dynamic>.from(row as Map))
@@ -309,8 +314,9 @@ COMMIT;
   );
   await output.writeAsString(sql);
   stdout.writeln(
-    'Wrote local-only draft SQL with ${places.length} Cairo and Luxor places, '
-    '${tours.length} itineraries, and ${stopRows.length} ordered stops '
+    'Wrote local-only draft SQL with ${places.length} Cairo, Luxor, and '
+    'Alexandria ATM places, ${tours.length} itineraries, and '
+    '${stopRows.length} ordered stops '
     '(${luxorPlaces.length} Luxor places, ${luxorTours.length} Luxor tours).',
   );
 }

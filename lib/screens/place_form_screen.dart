@@ -12,7 +12,15 @@ import '../theme.dart';
 
 class PlaceFormScreen extends StatefulWidget {
   final Place? place;
-  const PlaceFormScreen({super.key, this.place});
+  final String? lockedCategory;
+  final String? initialGovernorate;
+
+  const PlaceFormScreen({
+    super.key,
+    this.place,
+    this.lockedCategory,
+    this.initialGovernorate,
+  });
   @override
   State<PlaceFormScreen> createState() => _PlaceFormScreenState();
 }
@@ -87,6 +95,9 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
   void initState() {
     super.initState();
     final p = widget.place;
+    final initialGovernorate = p == null
+        ? governoratesConfig[widget.initialGovernorate ?? 'alexandria']
+        : null;
     _id = TextEditingController(text: p?.id ?? _suggestId());
     _name = TextEditingController(text: p?.name ?? '');
     _nameAr = TextEditingController(text: p?.nameAr ?? '');
@@ -106,15 +117,30 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
     _imageUrls = initialUrls
         .map((u) => TextEditingController(text: u))
         .toList(growable: true);
-    _category = TextEditingController(text: p?.category ?? 'Historical');
-    _categoryAr = TextEditingController(text: p?.categoryAr ?? '');
-    _lat = TextEditingController(text: (p?.lat ?? 31.2001).toString());
-    _lng = TextEditingController(text: (p?.lng ?? 29.9187).toString());
+    _category = TextEditingController(
+      text: widget.lockedCategory ?? p?.category ?? 'Historical',
+    );
+    _categoryAr = TextEditingController(
+      text: widget.lockedCategory == 'ATMs'
+          ? 'ماكينات الصراف الآلي'
+          : p?.categoryAr ?? '',
+    );
+    _lat = TextEditingController(
+      text: (p?.lat ?? initialGovernorate?.centerLat ?? 31.2001).toString(),
+    );
+    _lng = TextEditingController(
+      text: (p?.lng ?? initialGovernorate?.centerLng ?? 29.9187).toString(),
+    );
     _selectedPoint = _coordinatesFromFields() ?? _selectedPoint;
-    _address = TextEditingController(text: p?.address ?? 'Alexandria, Egypt');
+    _address = TextEditingController(
+      text:
+          p?.address ?? '${initialGovernorate?.nameEn ?? 'Alexandria'}, Egypt',
+    );
     _addressAr = TextEditingController(text: p?.addressAr ?? '');
     _openHours = TextEditingController(
-      text: p?.openHours ?? '9:00 AM - 6:00 PM',
+      text:
+          p?.openHours ??
+          (widget.lockedCategory == 'ATMs' ? '24 hours' : '9:00 AM - 6:00 PM'),
     );
     _reviewCount = TextEditingController(
       text: (p?.reviewCount ?? 0).toString(),
@@ -132,7 +158,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
     );
     _priceLevel = p?.priceLevel ?? PriceLevel.free;
     _governorate = p == null
-        ? 'alexandria'
+        ? widget.initialGovernorate ?? 'alexandria'
         : governoratesConfig.containsKey(normalizeGovernorateId(p.governorate))
         ? normalizeGovernorateId(p.governorate)
         : 'alexandria';
@@ -466,7 +492,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
       imageUrl: finalImageUrl,
       imageUrls: orderedImageUrls,
       rating: double.tryParse(_rating.text) ?? 0,
-      category: _category.text.trim(),
+      category: widget.lockedCategory ?? _category.text.trim(),
       categoryAr: _nullable(_categoryAr),
       lat: double.tryParse(_lat.text) ?? 0,
       lng: double.tryParse(_lng.text) ?? 0,
@@ -893,11 +919,13 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                                   child: Text('Hotel'),
                                 ),
                               ],
-                              onChanged: (v) {
-                                if (v != null) {
-                                  setState(() => _category.text = v);
-                                }
-                              },
+                              onChanged: widget.lockedCategory == null
+                                  ? (v) {
+                                      if (v != null) {
+                                        setState(() => _category.text = v);
+                                      }
+                                    }
+                                  : null,
                               decoration: const InputDecoration(
                                 prefixIcon: Icon(Icons.category_rounded),
                                 hintText: 'Pick a category',
@@ -1056,6 +1084,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                             _labelBilingual('Category (AR)', isEn: false),
                             TextFormField(
                               controller: _categoryAr,
+                              readOnly: widget.lockedCategory != null,
                               textDirection: TextDirection.rtl,
                               textAlign: TextAlign.right,
                               decoration: const InputDecoration(

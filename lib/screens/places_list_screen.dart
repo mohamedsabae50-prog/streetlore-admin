@@ -33,7 +33,7 @@ class _PlacesListScreenState extends State<PlacesListScreen> {
       final list = await AdminService.instance.fetchPlaces();
       if (!mounted) return;
       setState(() {
-        _places = list;
+        _places = visitEligiblePlaces(list);
         _loading = false;
       });
     } catch (e) {

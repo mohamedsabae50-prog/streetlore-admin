@@ -139,17 +139,26 @@ class AdminService {
     if (isLocalDraftMode) {
       final places = await fetchPlaces();
       final tours = await fetchTours();
-      return (places: places.length, tours: tours.length);
+      return (places: visitEligiblePlaces(places).length, tours: tours.length);
     }
     final seed = await _previewSeed();
     final results = await Future.wait([
-      _client.from('places').select('id'),
+      _client.from('places').select('id,category'),
       _client.from('tours').select('id'),
     ]);
-    final placeIds = {for (final place in seed.places) place.id};
+    final placeIds = {
+      for (final place in visitEligiblePlaces(seed.places)) place.id,
+    };
     final tourIds = {for (final tour in seed.tours) tour.id};
     for (final row in results[0] as List<dynamic>) {
-      placeIds.add((row as Map<String, dynamic>)['id'] as String);
+      final place = row as Map<String, dynamic>;
+      final id = place['id'] as String;
+      final category = (place['category'] as String? ?? '')
+          .trim()
+          .toLowerCase();
+      if (!id.startsWith('atm_') && category != 'atm' && category != 'atms') {
+        placeIds.add(id);
+      }
     }
     for (final row in results[1] as List<dynamic>) {
       tourIds.add((row as Map<String, dynamic>)['id'] as String);
