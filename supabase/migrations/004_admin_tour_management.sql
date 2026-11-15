@@ -15,7 +15,7 @@
 --
 -- 2. Enables RLS + admin policies on `public.tours` and
 --    `public.tour_places`. Reads stay public (anon). Writes require
---    `authenticated` (the admin signs in with Supabase Auth).
+--    an authenticated administrator.
 --
 -- 3. Recreates `public.tours_with_places` so the view exposes every
 --    new column. The Flutter admin service reads this view.
@@ -34,6 +34,22 @@ create index if not exists idx_tours_category
   on public.tours (category);
 
 -- 2) RLS on tours -----------------------------------------------------------
+create or replace function public.is_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce(
+    (select is_admin from public.profiles where user_id = auth.uid()),
+    false
+  );
+$$;
+
+revoke all on function public.is_admin() from public, anon;
+grant execute on function public.is_admin() to authenticated;
+
 alter table public.tours enable row level security;
 
 drop policy if exists "tours_public_read"   on public.tours;
@@ -49,17 +65,17 @@ create policy "tours_public_read"
 create policy "tours_admin_insert"
   on public.tours for insert
   to authenticated
-  with check (true);
+  with check (public.is_admin());
 
 create policy "tours_admin_update"
   on public.tours for update
   to authenticated
-  using (true) with check (true);
+  using (public.is_admin()) with check (public.is_admin());
 
 create policy "tours_admin_delete"
   on public.tours for delete
   to authenticated
-  using (true);
+  using (public.is_admin());
 
 grant select on public.tours to anon;
 grant select, insert, update, delete on public.tours to authenticated;
@@ -80,17 +96,17 @@ create policy "tour_places_public_read"
 create policy "tour_places_admin_insert"
   on public.tour_places for insert
   to authenticated
-  with check (true);
+  with check (public.is_admin());
 
 create policy "tour_places_admin_update"
   on public.tour_places for update
   to authenticated
-  using (true) with check (true);
+  using (public.is_admin()) with check (public.is_admin());
 
 create policy "tour_places_admin_delete"
   on public.tour_places for delete
   to authenticated
-  using (true);
+  using (public.is_admin());
 
 grant select on public.tour_places to anon;
 grant select, insert, update, delete on public.tour_places to authenticated;

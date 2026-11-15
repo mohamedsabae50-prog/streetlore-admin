@@ -47,6 +47,8 @@ class AdminService {
   static final ValueNotifier<bool> localDraftMode = ValueNotifier(false);
   final LocalDraftStore _localDrafts = LocalDraftStore();
   Future<({List<Place> places, List<Tour> tours})>? _previewSeedFuture;
+  String? _verifiedAdminUserId;
+  bool? _verifiedAdmin;
 
   SupabaseClient get _client => Supabase.instance.client;
 
@@ -60,9 +62,10 @@ class AdminService {
     }
   }
 
-  Future<void> initializeLocalDraftMode() {
-    localDraftMode.value = false;
-    return Future<void>.value();
+  Future<void> initializeLocalDraftMode() async {
+    final preferences = await SharedPreferences.getInstance();
+    localDraftMode.value =
+        preferences.getBool(_draftModePreferenceKey) ?? false;
   }
 
   Future<void> setLocalDraftMode(bool enabled) async {
@@ -108,6 +111,35 @@ class AdminService {
     }
   }
 
+  Future<bool> verifyCurrentUserIsAdmin() async {
+    if (!isLoggedIn) {
+      _verifiedAdminUserId = null;
+      _verifiedAdmin = null;
+      return false;
+    }
+
+    final user = _client.auth.currentUser;
+    if (user == null) {
+      _verifiedAdminUserId = null;
+      _verifiedAdmin = null;
+      return false;
+    }
+    if (_verifiedAdminUserId == user.id && _verifiedAdmin != null) {
+      return _verifiedAdmin!;
+    }
+
+    final profile = await _client
+        .from('profiles')
+        .select('is_admin')
+        .eq('user_id', user.id)
+        .maybeSingle();
+    if (_client.auth.currentUser?.id != user.id) return false;
+
+    _verifiedAdminUserId = user.id;
+    _verifiedAdmin = profile?['is_admin'] == true;
+    return _verifiedAdmin!;
+  }
+
   static const _adminEmails = {
     'mohamedsabae50@gmail.com',
     'hackty65@gmail.com',
@@ -132,6 +164,8 @@ class AdminService {
   }
 
   Future<void> signOut() async {
+    _verifiedAdminUserId = null;
+    _verifiedAdmin = null;
     await _client.auth.signOut();
   }
 

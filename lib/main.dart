@@ -45,16 +45,71 @@ class StreetloreAdminApp extends StatelessWidget {
           Locale('en', 'US'),
           Locale('ar', 'EG'),
         ],
-        home: SelectionArea(
-          child: AdminService.instance.isLoggedIn
-              ? const DashboardScreen()
-              : const LoginScreen(),
-        ),
+        home: const SelectionArea(child: _AdminAuthGate()),
         routes: {
           '/login': (_) => const SelectionArea(child: LoginScreen()),
-          '/dashboard': (_) => const SelectionArea(child: DashboardScreen()),
+          '/dashboard': (_) => const SelectionArea(child: _AdminAuthGate()),
         },
       ),
+    );
+  }
+}
+
+class _AdminAuthGate extends StatefulWidget {
+  const _AdminAuthGate();
+
+  @override
+  State<_AdminAuthGate> createState() => _AdminAuthGateState();
+}
+
+class _AdminAuthGateState extends State<_AdminAuthGate> {
+  late final Future<bool> _adminAccess;
+
+  @override
+  void initState() {
+    super.initState();
+    _adminAccess = _checkAdminAccess();
+  }
+
+  Future<bool> _checkAdminAccess() async {
+    final adminService = AdminService.instance;
+    if (!adminService.isLoggedIn) return false;
+
+    try {
+      final isAdmin = await adminService.verifyCurrentUserIsAdmin();
+      if (!isAdmin && adminService.isLoggedIn) {
+        await adminService.signOut();
+      }
+      return isAdmin;
+    } catch (error, stackTrace) {
+      debugPrint('AdminAuthGate: administrator verification failed: $error');
+      debugPrint('$stackTrace');
+      if (adminService.isLoggedIn) {
+        try {
+          await adminService.signOut();
+        } catch (signOutError, signOutStackTrace) {
+          debugPrint('AdminAuthGate: sign-out failed: $signOutError');
+          debugPrint('$signOutStackTrace');
+        }
+      }
+      return false;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<bool>(
+      future: _adminAccess,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+        return snapshot.data == true
+            ? const DashboardScreen()
+            : const LoginScreen();
+      },
     );
   }
 }

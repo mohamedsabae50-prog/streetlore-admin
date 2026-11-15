@@ -26,14 +26,39 @@ class _LoginScreenState extends State<LoginScreen> {
       _error = null;
     });
     try {
-      await AdminService.instance.signIn(
-        _emailCtrl.text.trim(),
-        _passCtrl.text,
-      );
+      final adminService = AdminService.instance;
+      await adminService.signIn(_emailCtrl.text.trim(), _passCtrl.text);
+      if (!await adminService.verifyCurrentUserIsAdmin()) {
+        try {
+          await adminService.signOut();
+        } catch (error) {
+          if (!mounted) return;
+          setState(
+            () => _error =
+                'Access denied: Administrator privileges are required. '
+                'Sign-out failed: $error',
+          );
+          return;
+        }
+        if (!mounted) return;
+        setState(
+          () =>
+              _error = 'Access denied: Administrator privileges are required.',
+        );
+        return;
+      }
       if (!mounted) return;
       Navigator.pushReplacementNamed(context, '/dashboard');
     } catch (e) {
-      setState(() => _error = 'Sign-in failed: $e');
+      var errorMessage = 'Sign-in failed: $e';
+      if (AdminService.instance.isLoggedIn) {
+        try {
+          await AdminService.instance.signOut();
+        } catch (signOutError) {
+          errorMessage = '$errorMessage (sign-out also failed: $signOutError)';
+        }
+      }
+      if (mounted) setState(() => _error = errorMessage);
     } finally {
       if (mounted) setState(() => _loading = false);
     }

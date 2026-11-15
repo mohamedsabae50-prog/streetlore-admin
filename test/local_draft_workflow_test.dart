@@ -90,6 +90,27 @@ void main() {
     },
   );
 
+  test('initializes local draft mode from the saved preference', () async {
+    SharedPreferences.setMockInitialValues({
+      'streetlore-admin-local-draft-mode': true,
+    });
+    AdminService.localDraftMode.value = false;
+
+    await AdminService.instance.initializeLocalDraftMode();
+
+    expect(AdminService.instance.isLocalDraftMode, isTrue);
+  });
+
+  test('setLocalDraftMode persists the selected preference', () async {
+    final service = AdminService.instance;
+
+    await service.setLocalDraftMode(true);
+    final preferences = await SharedPreferences.getInstance();
+
+    expect(preferences.getBool('streetlore-admin-local-draft-mode'), isTrue);
+    expect(service.isLocalDraftMode, isTrue);
+  });
+
   test('local preview creates and edits Luxor place and tour drafts', () async {
     final service = AdminService.instance;
     final place = Place(

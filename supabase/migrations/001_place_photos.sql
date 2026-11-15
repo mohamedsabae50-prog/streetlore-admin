@@ -27,6 +27,21 @@ create trigger trg_place_photos_updated_at
 create index if not exists idx_place_photos_place_id
   on public.place_photos (place_id);
 
+create or replace function public.is_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce(
+    (select is_admin from public.profiles where user_id = auth.uid()),
+    false
+  );
+$$;
+
+revoke all on function public.is_admin() from public, anon;
+grant execute on function public.is_admin() to authenticated;
 
 alter table public.place_photos enable row level security;
 
@@ -40,19 +55,19 @@ drop policy if exists "place_photos_admin_insert" on public.place_photos;
 create policy "place_photos_admin_insert"
   on public.place_photos for insert
   to authenticated
-  with check (true);
+  with check (public.is_admin());
 
 drop policy if exists "place_photos_admin_update" on public.place_photos;
 create policy "place_photos_admin_update"
   on public.place_photos for update
   to authenticated
-  using (true) with check (true);
+  using (public.is_admin()) with check (public.is_admin());
 
 drop policy if exists "place_photos_admin_delete" on public.place_photos;
 create policy "place_photos_admin_delete"
   on public.place_photos for delete
   to authenticated
-  using (true);
+  using (public.is_admin());
 
 grant select on public.place_photos to anon;
 grant select, insert, update, delete on public.place_photos to authenticated;

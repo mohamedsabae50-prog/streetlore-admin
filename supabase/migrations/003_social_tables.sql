@@ -59,20 +59,27 @@ create policy "leaderboard_public_read"
   to anon, authenticated
   using (true);
 
--- the app upserts a user's own stats anonymously
+-- Authenticated users can write only their own row; admins can manage all rows.
 drop policy if exists "leaderboard_public_insert" on public.leaderboard;
 create policy "leaderboard_public_insert"
   on public.leaderboard for insert
-  to anon, authenticated
-  with check (true);
+  to authenticated
+  with check (
+    auth.uid()::text = user_id::text or public.is_admin()
+  );
 
 drop policy if exists "leaderboard_public_update" on public.leaderboard;
 create policy "leaderboard_public_update"
   on public.leaderboard for update
-  to anon, authenticated
-  using (true) with check (true);
+  to authenticated
+  using (
+    auth.uid()::text = user_id::text or public.is_admin()
+  )
+  with check (
+    auth.uid()::text = user_id::text or public.is_admin()
+  );
 
-grant select, insert, update on public.leaderboard to anon;
+grant select on public.leaderboard to anon;
 grant select, insert, update on public.leaderboard to authenticated;
 
 -- 3) Community routes -------------------------------------------------------
