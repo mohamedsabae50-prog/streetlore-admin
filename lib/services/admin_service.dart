@@ -111,6 +111,14 @@ class AdminService {
     }
   }
 
+  static const _adminEmails = {
+    'mohamedsabae50@gmail.com',
+    'hackty65@gmail.com',
+  };
+
+  static bool isConfiguredAdminEmail(String? email) =>
+      _adminEmails.contains(email?.trim().toLowerCase());
+
   Future<bool> verifyCurrentUserIsAdmin() async {
     if (!isLoggedIn) {
       _verifiedAdminUserId = null;
@@ -123,6 +131,11 @@ class AdminService {
       _verifiedAdminUserId = null;
       _verifiedAdmin = null;
       return false;
+    }
+    if (isConfiguredAdminEmail(user.email)) {
+      _verifiedAdminUserId = user.id;
+      _verifiedAdmin = true;
+      return true;
     }
     if (_verifiedAdminUserId == user.id && _verifiedAdmin != null) {
       return _verifiedAdmin!;
@@ -139,11 +152,6 @@ class AdminService {
     _verifiedAdmin = profile?['is_admin'] == true;
     return _verifiedAdmin!;
   }
-
-  static const _adminEmails = {
-    'mohamedsabae50@gmail.com',
-    'hackty65@gmail.com',
-  };
 
   String get currentUserEmail =>
       _client.auth.currentUser?.email ?? 'Unknown account';

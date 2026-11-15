@@ -7,79 +7,67 @@ import 'package:streetlore_admin/models/models.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test(
-    'config contains Alexandria, Cairo & Giza, Luxor, and Aswan boundaries',
-    () {
-      expect(governoratesConfig.keys.toSet(), {
-        'alexandria',
-        'cairo',
-        'luxor',
-        'aswan',
-      });
-      expect(alexandriaGovernorate.centerLat, 31.2001);
-      expect(alexandriaGovernorate.centerLng, 29.9187);
-      expect(alexandriaGovernorate.defaultZoom, 11);
-      expect(cairoGovernorate.centerLat, 30.0444);
-      expect(cairoGovernorate.centerLng, 31.2357);
-      expect(cairoGovernorate.nameEn, 'Cairo & Giza');
-      expect(cairoGovernorate.nameAr, 'القاهرة والجيزة');
-      expect(cairoGovernorate.defaultZoom, 11);
-      expect(luxorGovernorate.centerLat, 25.7050);
-      expect(luxorGovernorate.centerLng, 32.6391);
-      expect(luxorGovernorate.nameEn, 'Luxor');
-      expect(luxorGovernorate.nameAr, 'الأقصر');
-      expect(luxorGovernorate.defaultZoom, 12.0);
-      expect(aswanGovernorate.id, 'aswan');
-      expect(aswanGovernorate.nameEn, 'Aswan');
-      expect(aswanGovernorate.nameAr, 'أسوان');
-      expect(aswanGovernorate.centerLat, 24.0889);
-      expect(aswanGovernorate.centerLng, 32.8998);
-      expect(aswanGovernorate.defaultZoom, 12.0);
-      expect(alexandriaGovernorate.boundaryPolygon, hasLength(20));
-      expect(cairoGovernorate.boundaryPolygon, hasLength(16));
-      expect(luxorGovernorate.boundaryPolygon, hasLength(8));
-      expect(aswanGovernorate.boundaryPolygon, hasLength(10));
-      expect(
-        aswanGovernorate.boundaryPolygon
-            .map((point) => (point.latitude, point.longitude))
-            .toList(),
-        [
-          (25.0200, 32.8000),
-          (25.0200, 32.9600),
-          (24.5000, 33.0000),
-          (24.1500, 32.9600),
-          (23.9300, 32.9500),
-          (22.2800, 31.7000),
-          (22.2800, 31.5500),
-          (22.4200, 31.5500),
-          (24.1200, 32.8000),
-          (24.4500, 32.8400),
-        ],
-      );
-      expect(
-        luxorGovernorate.boundaryPolygon
-            .map((point) => (point.latitude, point.longitude))
-            .toList(),
-        [
-          (25.8200, 32.5200),
-          (25.8300, 32.7200),
-          (25.7500, 32.7800),
-          (25.6200, 32.7600),
-          (25.5200, 32.6800),
-          (25.5000, 32.5000),
-          (25.6000, 32.4500),
-          (25.7400, 32.5000),
-        ],
-      );
-      expect(AdminGovernorate.all, hasLength(4));
-      expect(
-        AdminGovernorate.all
-            .singleWhere((governorate) => governorate.id == 'cairo')
-            .boundaryPolygon,
-        cairoGovernorate.boundaryPolygon,
-      );
-    },
-  );
+  test('config contains the three unified governorate boundaries', () {
+    expect(governoratesConfig.keys.toSet(), {'alexandria', 'cairo', 'luxor'});
+    expect(alexandriaGovernorate.centerLat, 31.2001);
+    expect(alexandriaGovernorate.centerLng, 29.9187);
+    expect(alexandriaGovernorate.defaultZoom, 11);
+    expect(cairoGovernorate.centerLat, 30.0444);
+    expect(cairoGovernorate.centerLng, 31.2357);
+    expect(cairoGovernorate.nameEn, 'Cairo & Giza');
+    expect(cairoGovernorate.nameAr, 'القاهرة والجيزة');
+    expect(cairoGovernorate.defaultZoom, 11);
+    expect(luxorGovernorate.id, 'luxor');
+    expect(luxorGovernorate.centerLat, 24.9500);
+    expect(luxorGovernorate.centerLng, 32.7600);
+    expect(luxorGovernorate.nameEn, 'Luxor & Aswan');
+    expect(luxorGovernorate.nameAr, 'الأقصر وأسوان');
+    expect(luxorGovernorate.defaultZoom, 8.8);
+    expect(alexandriaGovernorate.boundaryPolygon, hasLength(20));
+    expect(cairoGovernorate.boundaryPolygon, hasLength(16));
+    expect(luxorGovernorate.boundaryPolygon, hasLength(12));
+    expect(
+      luxorGovernorate.boundaryPolygon
+          .map((point) => (point.latitude, point.longitude))
+          .toList(),
+      [
+        (25.8300, 32.5000),
+        (25.8300, 32.7800),
+        (25.5500, 32.7800),
+        (25.0200, 32.9600),
+        (24.5000, 33.0000),
+        (24.1500, 32.9600),
+        (23.9300, 32.9500),
+        (22.2800, 31.7000),
+        (22.2800, 31.5500),
+        (22.4200, 31.5500),
+        (24.1200, 32.8000),
+        (25.6000, 32.4500),
+      ],
+    );
+    expect(AdminGovernorate.all, hasLength(3));
+    expect(AdminGovernorate.all.map((governorate) => governorate.id), [
+      'alexandria',
+      'cairo',
+      'luxor',
+    ]);
+    expect(
+      AdminGovernorate.all.map(
+        (governorate) => (governorate.nameEn, governorate.nameAr),
+      ),
+      [
+        ('Alexandria', 'الإسكندرية'),
+        ('Cairo & Giza', 'القاهرة والجيزة'),
+        ('Luxor & Aswan', 'الأقصر وأسوان'),
+      ],
+    );
+    expect(
+      AdminGovernorate.all
+          .singleWhere((governorate) => governorate.id == 'cairo')
+          .boundaryPolygon,
+      cairoGovernorate.boundaryPolygon,
+    );
+  });
 
   test('unified boundary accepts Cairo and Giza and rejects Banha', () {
     expect(isPointInGovernorate(30.0444, 31.2357, 'cairo'), isTrue);
@@ -96,43 +84,45 @@ void main() {
     expect(isPointInGovernorate(0, 0, 'unknown'), isFalse);
   });
 
-  test('Luxor boundary contains Luxor and does not overlap other regions', () {
+  test('Luxor & Aswan boundary contains both cities', () {
     expect(isPointInGovernorate(25.7050, 32.6391, 'luxor'), isTrue);
     expect(isPointInGovernorate(25.8200, 32.5200, 'luxor'), isTrue);
+    expect(isPointInGovernorate(24.0889, 32.8998, 'luxor'), isTrue);
+    expect(isPointInGovernorate(24.0889, 32.8998, 'aswan'), isTrue);
     expect(isPointInGovernorate(25.7050, 32.6391, 'alexandria'), isFalse);
     expect(isPointInGovernorate(25.7050, 32.6391, 'cairo'), isFalse);
     expect(normalizeGovernorateId(' LUXOR '), 'luxor');
+    expect(normalizeGovernorateId('ASWAN'), 'luxor');
     expect(AdminGovernorate.byId(' luxor ')?.id, 'luxor');
+    expect(AdminGovernorate.byId('aswan')?.id, 'luxor');
     expect(Place.inferGovernorate(lat: 25.7050, lng: 32.6391), 'luxor');
+    expect(Place.inferGovernorate(lat: 24.0889, lng: 32.8998), 'luxor');
     expect(Place.inferGovernorate(lat: 31.2001, lng: 29.9187), 'alexandria');
     expect(Place.inferGovernorate(lat: 30.0444, lng: 31.2357), 'cairo');
   });
 
-  test(
-    'Aswan boundary contains its sites without overlapping other regions',
-    () {
-      const aswanSites = [
-        (24.0889, 32.8998),
-        (24.0254, 32.8842),
-        (23.9700, 32.8772),
-        (22.3372, 31.6258),
-        (24.4520, 32.9283),
-        (24.9780, 32.8733),
-      ];
-      for (final (lat, lng) in aswanSites) {
-        expect(isPointInGovernorate(lat, lng, 'aswan'), isTrue);
-        expect(isPointInGovernorate(lat, lng, 'luxor'), isFalse);
-        expect(isPointInGovernorate(lat, lng, 'cairo'), isFalse);
-        expect(isPointInGovernorate(lat, lng, 'alexandria'), isFalse);
-        expect(Place.inferGovernorate(lat: lat, lng: lng), 'aswan');
-      }
+  test('legacy Aswan values normalize to the unified boundary', () {
+    const aswanSites = [
+      (24.0889, 32.8998),
+      (24.0254, 32.8842),
+      (23.9700, 32.8772),
+      (22.3372, 31.6258),
+      (24.4520, 32.9283),
+      (24.9780, 32.8733),
+    ];
+    for (final (lat, lng) in aswanSites) {
+      expect(isPointInGovernorate(lat, lng, 'aswan'), isTrue);
+      expect(isPointInGovernorate(lat, lng, 'luxor'), isTrue);
+      expect(isPointInGovernorate(lat, lng, 'cairo'), isFalse);
+      expect(isPointInGovernorate(lat, lng, 'alexandria'), isFalse);
+      expect(Place.inferGovernorate(lat: lat, lng: lng), 'luxor');
+    }
 
-      expect(isPointInGovernorate(25.7050, 32.6391, 'aswan'), isFalse);
-      expect(isPointInGovernorate(25.0200, 32.8000, 'aswan'), isTrue);
-      expect(normalizeGovernorateId(' أسوان '), 'aswan');
-      expect(AdminGovernorate.byId('أسوان')?.id, 'aswan');
-    },
-  );
+    expect(isPointInGovernorate(25.7050, 32.6391, 'aswan'), isTrue);
+    expect(isPointInGovernorate(25.0200, 32.8000, 'aswan'), isTrue);
+    expect(normalizeGovernorateId(' أسوان '), 'luxor');
+    expect(AdminGovernorate.byId('أسوان')?.id, 'luxor');
+  });
 
   test(
     'expanded validation includes nearby edges but excludes distant areas',
@@ -149,7 +139,7 @@ void main() {
     },
   );
 
-  test('preview asset includes Cairo, Alexandria, Luxor, and Aswan', () async {
+  test('preview asset includes the three unified governorates', () async {
     final seed = await GovernoratePreviewSeed.load();
 
     expect(
@@ -174,16 +164,22 @@ void main() {
     final luxorTours = seed.tours
         .where((tour) => tour.governorate == 'luxor')
         .toList(growable: false);
-    expect(luxorPlaces, hasLength(60));
-    expect(luxorTours, hasLength(6));
-    expect(luxorPlaces.where((place) => !place.isAtm), hasLength(54));
-    expect(luxorPlaces.where((place) => place.isAtm), hasLength(6));
-    expect(visitEligiblePlaces(luxorPlaces), hasLength(54));
+    expect(luxorPlaces, hasLength(120));
+    expect(luxorTours, hasLength(12));
+    expect(luxorPlaces.where((place) => !place.isAtm), hasLength(108));
+    expect(luxorPlaces.where((place) => place.isAtm), hasLength(12));
+    expect(visitEligiblePlaces(luxorPlaces), hasLength(108));
     final aswanPlaces = seed.places
-        .where((place) => place.governorate == 'aswan')
+        .where(
+          (place) =>
+              place.id.startsWith('aswan_') ||
+              place.id.contains('aswan') ||
+              place.id == 'atm_nbe_kom_ombo_temple_plaza' ||
+              place.id == 'atm_banque_misr_edfu_temple_square',
+        )
         .toList(growable: false);
     final aswanTours = seed.tours
-        .where((tour) => tour.governorate == 'aswan')
+        .where((tour) => tour.id.startsWith('aswan_'))
         .toList(growable: false);
     expect(aswanPlaces, hasLength(60));
     expect(aswanTours, hasLength(6));
@@ -484,11 +480,15 @@ void main() {
       luxorTours.every(
         (tour) =>
             tour.places.isNotEmpty &&
-            tour.places.every((place) => place.governorate == 'luxor'),
+            tour.places.every(
+              (place) =>
+                  place.governorate == 'luxor' &&
+                  isPointInGovernorate(place.lat, place.lng, 'luxor'),
+            ),
       ),
       isTrue,
     );
-    expect(luxorPlaces.map((place) => place.imageUrl).toSet(), hasLength(60));
+    expect(luxorPlaces.map((place) => place.imageUrl).toSet(), hasLength(120));
     expect(
       seed.places
           .where((place) => place.governorate == 'cairo')
@@ -628,11 +628,7 @@ void main() {
     );
     expect(
       atmPlaces(seed.places).where((place) => place.governorate == 'luxor'),
-      hasLength(6),
-    );
-    expect(
-      atmPlaces(seed.places).where((place) => place.governorate == 'aswan'),
-      hasLength(6),
+      hasLength(12),
     );
     expect(
       visitEligiblePlaces(
@@ -650,13 +646,7 @@ void main() {
       visitEligiblePlaces(
         seed.places,
       ).where((place) => place.governorate == 'luxor'),
-      hasLength(54),
-    );
-    expect(
-      visitEligiblePlaces(
-        seed.places,
-      ).where((place) => place.governorate == 'aswan'),
-      hasLength(54),
+      hasLength(108),
     );
     expect(visitEligiblePlaces(seed.places), hasLength(317));
     expect(
@@ -858,8 +848,8 @@ void main() {
           .toList(growable: false);
       final luxorUrls = luxorPlaces.map((place) => place.imageUrl).toSet();
       final luxorTourUrls = luxorTours.map((tour) => tour.imageUrl).toSet();
-      expect(luxorUrls, hasLength(60));
-      expect(luxorTourUrls, hasLength(6));
+      expect(luxorUrls, hasLength(120));
+      expect(luxorTourUrls, hasLength(12));
       expect(luxorUrls.intersection(luxorTourUrls), isEmpty);
       expect(
         [...luxorPlaces.map((place) => place.imageUrl), ...luxorTourUrls].every(

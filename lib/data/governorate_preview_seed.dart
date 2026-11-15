@@ -45,12 +45,6 @@ class GovernoratePreviewSeed {
     final luxorTours = tours
         .where((tour) => tour.governorate == 'luxor')
         .toList(growable: false);
-    final aswanPlaces = places
-        .where((place) => place.governorate == 'aswan')
-        .toList(growable: false);
-    final aswanTours = tours
-        .where((tour) => tour.governorate == 'aswan')
-        .toList(growable: false);
     final alexandriaPlaces = places
         .where((place) => place.governorate == 'alexandria')
         .toList(growable: false);
@@ -61,7 +55,6 @@ class GovernoratePreviewSeed {
     final allPrimaryImages = places.map((place) => place.imageUrl).toSet();
     final atms = atmPlaces(places);
     final luxorTourImages = luxorTours.map((tour) => tour.imageUrl).toSet();
-    final aswanTourImages = aswanTours.map((tour) => tour.imageUrl).toSet();
     if (places.length != 355 ||
         tours.length != 32 ||
         allPrimaryImages.length != places.length ||
@@ -69,13 +62,12 @@ class GovernoratePreviewSeed {
         atms.length != 38 ||
         atms.where((place) => place.governorate == 'alexandria').length != 6 ||
         atms.where((place) => place.governorate == 'cairo').length != 20 ||
-        atms.where((place) => place.governorate == 'luxor').length != 6 ||
-        atms.where((place) => place.governorate == 'aswan').length != 6 ||
+        atms.where((place) => place.governorate == 'luxor').length != 12 ||
         atms.any((place) => !_isCommonsImageUrl(place.imageUrl)) ||
         cairoPlaces.length < 120 ||
         cairoTours.length < 5 ||
-        luxorPlaces.length != 60 ||
-        luxorTours.length != 6 ||
+        luxorPlaces.length != 120 ||
+        luxorTours.length != 12 ||
         primaryImages.length != cairoPlaces.length ||
         cairoPlaces.any(
           (place) =>
@@ -98,11 +90,15 @@ class GovernoratePreviewSeed {
         luxorPlaces.any((place) {
           return !_isCommonsImageUrl(place.imageUrl) ||
               place.imageUrls.any((image) => !_isCommonsImageUrl(image)) ||
+              !place.imageUrls.contains(place.imageUrl) ||
               Uri.parse(place.imageUrl).host != 'upload.wikimedia.org' ||
               !isPointInGovernorate(place.lat, place.lng, place.governorate);
         }) ||
         luxorPlaces.map((place) => place.imageUrl).toSet().length !=
             luxorPlaces.length ||
+        luxorPlaces.where((place) => !place.isAtm).length != 108 ||
+        luxorPlaces.where((place) => place.isAtm).length != 12 ||
+        visitEligiblePlaces(luxorPlaces).length != 108 ||
         luxorTours.any(
           (tour) =>
               !_isCommonsImageUrl(tour.imageUrl) ||
@@ -115,36 +111,24 @@ class GovernoratePreviewSeed {
         luxorTours.any(
           (tour) =>
               tour.places.isEmpty ||
-              tour.places.any((place) => place.governorate != 'luxor'),
+              tour.places.any(
+                (place) =>
+                    place.governorate != 'luxor' ||
+                    !isPointInGovernorate(
+                      place.lat,
+                      place.lng,
+                      place.governorate,
+                    ),
+              ),
         ) ||
-        aswanPlaces.length != 60 ||
-        aswanPlaces.where((place) => !place.isAtm).length != 54 ||
-        aswanPlaces.where((place) => place.isAtm).length != 6 ||
-        visitEligiblePlaces(aswanPlaces).length != 54 ||
-        aswanPlaces.any(
-          (place) =>
-              !_isCommonsImageUrl(place.imageUrl) ||
-              place.imageUrls.any((image) => !_isCommonsImageUrl(image)) ||
-              !place.imageUrls.contains(place.imageUrl) ||
-              !isPointInGovernorate(place.lat, place.lng, 'aswan'),
-        ) ||
-        aswanPlaces.map((place) => place.imageUrl).toSet().length !=
-            aswanPlaces.length ||
-        aswanTours.length != 6 ||
-        aswanTours.any(
-          (tour) =>
-              !_isCommonsImageUrl(tour.imageUrl) ||
-              tour.places.isEmpty ||
-              tour.places.any((place) => place.governorate != 'aswan'),
-        ) ||
-        aswanTourImages.length != aswanTours.length ||
-        aswanTourImages
-            .intersection(aswanPlaces.map((place) => place.imageUrl).toSet())
+        luxorTours.any((tour) => !_isCommonsImageUrl(tour.imageUrl)) ||
+        luxorTourImages
+            .intersection(luxorPlaces.map((place) => place.imageUrl).toSet())
             .isNotEmpty) {
       throw StateError(
         'The preview seed must contain 355 places and 32 tours, including '
-        '38 ATMs across four governorates and 60 in-boundary Aswan places '
-        'plus 6 Aswan tours with unique upload.wikimedia.org images.',
+        '38 ATMs across three governorates and 120 in-boundary Luxor & Aswan '
+        'places plus 12 tours with unique upload.wikimedia.org images.',
       );
     }
     return (places: places, tours: tours);

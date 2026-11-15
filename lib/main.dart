@@ -6,6 +6,12 @@ import 'screens/login_screen.dart';
 import 'services/admin_service.dart';
 import 'theme.dart';
 
+bool adminDashboardAccessAllowed({
+  required bool isLoggedIn,
+  required bool isAdmin,
+  required bool isLocalDraftMode,
+}) => isLocalDraftMode || (isLoggedIn && isAdmin);
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -73,6 +79,7 @@ class _AdminAuthGateState extends State<_AdminAuthGate> {
 
   Future<bool> _checkAdminAccess() async {
     final adminService = AdminService.instance;
+    if (adminService.isLocalDraftMode) return true;
     if (!adminService.isLoggedIn) return false;
 
     try {
@@ -80,7 +87,11 @@ class _AdminAuthGateState extends State<_AdminAuthGate> {
       if (!isAdmin && adminService.isLoggedIn) {
         await adminService.signOut();
       }
-      return isAdmin;
+      return adminDashboardAccessAllowed(
+        isLoggedIn: adminService.isLoggedIn,
+        isAdmin: isAdmin,
+        isLocalDraftMode: adminService.isLocalDraftMode,
+      );
     } catch (error, stackTrace) {
       debugPrint('AdminAuthGate: administrator verification failed: $error');
       debugPrint('$stackTrace');
@@ -92,7 +103,11 @@ class _AdminAuthGateState extends State<_AdminAuthGate> {
           debugPrint('$signOutStackTrace');
         }
       }
-      return false;
+      return adminDashboardAccessAllowed(
+        isLoggedIn: adminService.isLoggedIn,
+        isAdmin: false,
+        isLocalDraftMode: adminService.isLocalDraftMode,
+      );
     }
   }
 

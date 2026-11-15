@@ -119,34 +119,34 @@ void main() {
     );
   });
 
-  test('Aswan visit and badge counts exclude all six ATMs', () {
-    final aswanPlaces = [
-      for (var index = 0; index < 54; index++)
+  test('Luxor & Aswan visit counts exclude all twelve ATMs', () {
+    final luxorAndAswanPlaces = [
+      for (var index = 0; index < 108; index++)
         Place(
-          id: 'aswan_place_$index',
-          name: 'Aswan place $index',
+          id: 'luxor_aswan_place_$index',
+          name: 'Luxor & Aswan place $index',
           description: '',
           imageUrl: '',
           rating: 0,
           category: 'Historical',
-          lat: 24.0889,
-          lng: 32.8998,
-          governorate: 'aswan',
+          lat: index.isEven ? 25.7050 : 24.0889,
+          lng: index.isEven ? 32.6391 : 32.8998,
+          governorate: 'luxor',
         ),
-      for (var index = 0; index < 6; index++)
+      for (var index = 0; index < 12; index++)
         Place(
-          id: 'atm_aswan_$index',
-          name: 'Aswan ATM $index',
+          id: 'atm_luxor_aswan_$index',
+          name: 'Luxor & Aswan ATM $index',
           description: '',
           imageUrl: '',
           rating: 0,
           category: 'ATMs',
           lat: 24.0889,
           lng: 32.8998,
-          governorate: 'aswan',
+          governorate: 'luxor',
         ),
     ];
-    final eligible = visitEligiblePlaces(aswanPlaces);
+    final eligible = visitEligiblePlaces(luxorAndAswanPlaces);
     final progress = calculateVisitProgress(
       currentPoints: 0,
       previousPlaceCount: 0,
@@ -154,9 +154,13 @@ void main() {
       currentBadges: const [],
     );
 
-    expect(eligible, hasLength(54));
-    expect(atmPlaces(aswanPlaces), hasLength(6));
+    expect(eligible, hasLength(108));
+    expect(atmPlaces(luxorAndAswanPlaces), hasLength(12));
     expect(eligible.any((place) => place.isAtm), isFalse);
-    expect(progress.totalPoints, 54 * adminVisitXpPerPlace);
+    expect(progress.totalPoints, 108 * adminVisitXpPerPlace);
+    expect(
+      progress.badges.map((badge) => (badge as Map)['id']),
+      contains('visit_milestone_100'),
+    );
   });
 }

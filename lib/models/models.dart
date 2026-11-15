@@ -323,7 +323,7 @@ class Place {
   final bool enableChat;
   final bool enableGallery;
 
-  const Place({
+  Place({
     required this.id,
     required this.name,
     this.nameAr,
@@ -338,7 +338,7 @@ class Place {
     required this.lng,
     this.address = 'Alexandria, Egypt',
     this.addressAr,
-    this.governorate = 'alexandria',
+    String governorate = 'alexandria',
     this.openHours = '9:00 AM - 6:00 PM',
     this.reviewCount = 0,
     this.priceLevel = PriceLevel.free,
@@ -350,7 +350,7 @@ class Place {
     this.displayOrder = 999,
     this.enableChat = true,
     this.enableGallery = true,
-  });
+  }) : governorate = normalizeGovernorateId(governorate);
 
   bool get isAtm =>
       id.toLowerCase().startsWith('atm_') ||
@@ -551,7 +551,7 @@ class Tour {
   final bool isHiddenGem;
   final List<Place> places;
 
-  const Tour({
+  Tour({
     required this.id,
     required this.title,
     this.titleAr,
@@ -563,12 +563,12 @@ class Tour {
     this.categoryAr,
     required this.imageUrl,
     this.status = 'published',
-    this.governorate = 'alexandria',
+    String governorate = 'alexandria',
     this.viewCount = 0,
     this.isPremium = false,
     this.isHiddenGem = false,
     this.places = const [],
-  });
+  }) : governorate = normalizeGovernorateId(governorate);
 
   String? get coverImageUrl {
     String? validUrl(String candidate) {

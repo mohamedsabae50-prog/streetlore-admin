@@ -84,6 +84,24 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<void> _continueInLocalPreview() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      await AdminService.instance.setLocalDraftMode(true);
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(context, '/dashboard');
+    } catch (error) {
+      if (mounted) {
+        setState(() => _error = 'Could not start local preview: $error');
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -170,6 +188,14 @@ class _LoginScreenState extends State<LoginScreen> {
                   onPressed: _loading ? null : _signInWithGoogle,
                   icon: const Icon(Icons.g_mobiledata_rounded),
                   label: const Text('Sign in with Google'),
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton(
+                  key: const ValueKey('admin-local-preview-button'),
+                  onPressed: _loading ? null : _continueInLocalPreview,
+                  child: const Text(
+                    'Continue in Local Preview Mode (معاينة محلية)',
+                  ),
                 ),
               ],
             ),

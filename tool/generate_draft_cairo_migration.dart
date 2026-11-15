@@ -97,14 +97,14 @@ Future<void> main() async {
       .map((row) => Map<String, dynamic>.from(row as Map))
       .where(
         (row) =>
-            {'cairo', 'luxor', 'aswan'}.contains(row['governorate']) ||
+            {'cairo', 'luxor'}.contains(row['governorate']) ||
             (row['governorate'] == 'alexandria' &&
                 const {'ATM', 'ATMs'}.contains(row['category'])),
       )
       .toList();
   final tours = (decoded['tours'] as List)
       .map((row) => Map<String, dynamic>.from(row as Map))
-      .where((row) => {'cairo', 'luxor', 'aswan'}.contains(row['governorate']))
+      .where((row) => {'cairo', 'luxor'}.contains(row['governorate']))
       .toList();
 
   final luxorPlaces = places
@@ -113,21 +113,13 @@ Future<void> main() async {
   final luxorTours = tours
       .where((tour) => tour['governorate'] == 'luxor')
       .toList();
-  final aswanPlaces = places
-      .where((place) => place['governorate'] == 'aswan')
-      .toList();
-  final aswanTours = tours
-      .where((tour) => tour['governorate'] == 'aswan')
-      .toList();
   if (places.where((place) => place['governorate'] == 'cairo').length < 120 ||
       tours.where((tour) => tour['governorate'] == 'cairo').length < 5 ||
-      luxorPlaces.length != 60 ||
-      luxorTours.length != 6 ||
-      aswanPlaces.length != 60 ||
-      aswanTours.length != 6) {
+      luxorPlaces.length != 120 ||
+      luxorTours.length != 12) {
     throw StateError(
-      'Expected at least 120 Cairo places and 5 tours, plus 60 Luxor and '
-      '60 Aswan places with 6 tours each.',
+      'Expected at least 120 Cairo places and 5 tours, plus 120 Luxor & '
+      'Aswan places with 12 tours.',
     );
   }
   final ids = places.map((place) => place['id'] as String).toSet();
@@ -207,17 +199,20 @@ ALTER TABLE public.tours
   ALTER COLUMN governorate SET DEFAULT 'alexandria',
   ALTER COLUMN governorate SET NOT NULL;
 
+UPDATE public.places SET governorate = 'luxor' WHERE governorate = 'aswan';
+UPDATE public.tours SET governorate = 'luxor' WHERE governorate = 'aswan';
+
 ALTER TABLE public.places
   DROP CONSTRAINT IF EXISTS places_governorate_check;
 ALTER TABLE public.places
   ADD CONSTRAINT places_governorate_check
-  CHECK (governorate IN ('alexandria', 'cairo', 'luxor', 'aswan'));
+  CHECK (governorate IN ('alexandria', 'cairo', 'luxor'));
 
 ALTER TABLE public.tours
   DROP CONSTRAINT IF EXISTS tours_governorate_check;
 ALTER TABLE public.tours
   ADD CONSTRAINT tours_governorate_check
-  CHECK (governorate IN ('alexandria', 'cairo', 'luxor', 'aswan'));
+  CHECK (governorate IN ('alexandria', 'cairo', 'luxor'));
 
 ALTER TABLE public.places
   DROP CONSTRAINT IF EXISTS places_category_check;
@@ -322,10 +317,10 @@ COMMIT;
   );
   await output.writeAsString(sql);
   stdout.writeln(
-    'Wrote local-only draft SQL with ${places.length} Cairo, Luxor, and '
-    'Aswan places plus Alexandria ATMs, ${tours.length} itineraries, and '
+    'Wrote local-only draft SQL with ${places.length} Cairo and '
+    'Luxor & Aswan places plus Alexandria ATMs, ${tours.length} itineraries, and '
     '${stopRows.length} ordered stops '
-    '(${luxorPlaces.length} Luxor places, ${luxorTours.length} Luxor tours, '
-    '${aswanPlaces.length} Aswan places, ${aswanTours.length} Aswan tours).',
+    '(${luxorPlaces.length} Luxor & Aswan places, '
+    '${luxorTours.length} Luxor & Aswan tours).',
   );
 }

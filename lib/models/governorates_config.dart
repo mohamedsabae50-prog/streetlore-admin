@@ -25,7 +25,6 @@ class GovernorateConfig {
     alexandriaGovernorate,
     cairoGovernorate,
     luxorGovernorate,
-    aswanGovernorate,
   ];
 }
 
@@ -89,32 +88,15 @@ const cairoGovernorate = GovernorateConfig(
 
 const luxorGovernorate = GovernorateConfig(
   id: 'luxor',
-  nameEn: 'Luxor',
-  nameAr: 'الأقصر',
-  centerLat: 25.7050,
-  centerLng: 32.6391,
-  defaultZoom: 12.0,
+  nameEn: 'Luxor & Aswan',
+  nameAr: 'الأقصر وأسوان',
+  centerLat: 24.9500,
+  centerLng: 32.7600,
+  defaultZoom: 8.8,
   boundaryPolygon: [
-    LatLng(25.8200, 32.5200),
-    LatLng(25.8300, 32.7200),
-    LatLng(25.7500, 32.7800),
-    LatLng(25.6200, 32.7600),
-    LatLng(25.5200, 32.6800),
-    LatLng(25.5000, 32.5000),
-    LatLng(25.6000, 32.4500),
-    LatLng(25.7400, 32.5000),
-  ],
-);
-
-const aswanGovernorate = GovernorateConfig(
-  id: 'aswan',
-  nameEn: 'Aswan',
-  nameAr: 'أسوان',
-  centerLat: 24.0889,
-  centerLng: 32.8998,
-  defaultZoom: 12.0,
-  boundaryPolygon: [
-    LatLng(25.0200, 32.8000),
+    LatLng(25.8300, 32.5000),
+    LatLng(25.8300, 32.7800),
+    LatLng(25.5500, 32.7800),
     LatLng(25.0200, 32.9600),
     LatLng(24.5000, 33.0000),
     LatLng(24.1500, 32.9600),
@@ -123,7 +105,7 @@ const aswanGovernorate = GovernorateConfig(
     LatLng(22.2800, 31.5500),
     LatLng(22.4200, 31.5500),
     LatLng(24.1200, 32.8000),
-    LatLng(24.4500, 32.8400),
+    LatLng(25.6000, 32.4500),
   ],
 );
 
@@ -131,7 +113,7 @@ String normalizeGovernorateId(String governorateId) {
   final normalized = governorateId.trim().toLowerCase();
   return switch (normalized) {
     'giza' => 'cairo',
-    'أسوان' => 'aswan',
+    'aswan' || 'أسوان' => 'luxor',
     _ => normalized,
   };
 }
@@ -140,7 +122,6 @@ const Map<String, GovernorateConfig> governoratesConfig = {
   'alexandria': alexandriaGovernorate,
   'cairo': cairoGovernorate,
   'luxor': luxorGovernorate,
-  'aswan': aswanGovernorate,
 };
 
 bool isPointInGovernorate(double lat, double lng, String governorateId) {

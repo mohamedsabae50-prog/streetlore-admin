@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:streetlore_admin/main.dart';
 import 'package:streetlore_admin/models/models.dart';
 import 'package:streetlore_admin/services/admin_service.dart';
 
@@ -112,6 +113,41 @@ void main() {
     expect(service.isLocalDraftMode, isTrue);
   });
 
+  test('configured owner email is recognized as an administrator', () {
+    expect(
+      AdminService.isConfiguredAdminEmail('  MOHAMEDsabae50@gmail.com '),
+      isTrue,
+    );
+    expect(AdminService.isConfiguredAdminEmail('other@example.com'), isFalse);
+  });
+
+  test('dashboard gate accepts admins or local preview mode', () {
+    expect(
+      adminDashboardAccessAllowed(
+        isLoggedIn: true,
+        isAdmin: true,
+        isLocalDraftMode: false,
+      ),
+      isTrue,
+    );
+    expect(
+      adminDashboardAccessAllowed(
+        isLoggedIn: true,
+        isAdmin: false,
+        isLocalDraftMode: false,
+      ),
+      isFalse,
+    );
+    expect(
+      adminDashboardAccessAllowed(
+        isLoggedIn: false,
+        isAdmin: false,
+        isLocalDraftMode: true,
+      ),
+      isTrue,
+    );
+  });
+
   test('local preview creates and edits Luxor place and tour drafts', () async {
     final service = AdminService.instance;
     final place = Place(
@@ -178,7 +214,7 @@ void main() {
       (candidate) => candidate.id == place.id,
     );
     expect(savedPlace.name, 'Edited Aswan Draft');
-    expect(savedPlace.governorate, 'aswan');
+    expect(savedPlace.governorate, 'luxor');
 
     final tour = Tour(
       id: 'draft_aswan_test_tour',
@@ -193,8 +229,8 @@ void main() {
     final savedTour = (await service.fetchTours()).singleWhere(
       (candidate) => candidate.id == tour.id,
     );
-    expect(savedTour.governorate, 'aswan');
-    expect(savedTour.places.single.governorate, 'aswan');
+    expect(savedTour.governorate, 'luxor');
+    expect(savedTour.places.single.governorate, 'luxor');
 
     await service.deletePlace(place.id);
     await service.deleteTour(tour.id);
@@ -212,8 +248,7 @@ void main() {
       for (final (governorate, visitCount, atmCount) in [
         ('alexandria', 52, 6),
         ('cairo', 157, 20),
-        ('luxor', 54, 6),
-        ('aswan', 54, 6),
+        ('luxor', 108, 12),
       ]) {
         expect(
           visitEligiblePlaces(
@@ -226,6 +261,12 @@ void main() {
           hasLength(atmCount),
         );
       }
+      expect(
+        (await service.fetchTours()).where(
+          (tour) => tour.governorate == 'luxor',
+        ),
+        hasLength(12),
+      );
     },
   );
 
@@ -258,6 +299,7 @@ void main() {
         (place) => place.id == atm.id,
       );
       expect(savedAtm.name, 'Edited Aswan ATM');
+      expect(savedAtm.governorate, 'luxor');
       expect(atmPlaces([savedAtm]), hasLength(1));
       expect(visitEligiblePlaces([savedAtm]), isEmpty);
 
