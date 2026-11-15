@@ -316,4 +316,119 @@ void main() {
       expect(tour.toSupabaseUpdate()['governorate'], 'alexandria');
     },
   );
+
+  test(
+    'the complete preview catalog has repaired descriptions, prices, and images',
+    () async {
+      final seed = await GovernoratePreviewSeed.load();
+      expect(seed.places, hasLength(229));
+
+      final urls = <String>{};
+      const forbiddenText = [
+        'confirm current visitor information',
+        'is a culture destination in',
+        'a place to explore in',
+        'a landmark of the history and culture of',
+        'check current opening hours',
+        'check current prices and fees',
+      ];
+      const forbiddenImageTerms = [
+        'construction',
+        'britishmuseum',
+        'loc_matpc',
+        'sheikh_zayed_road',
+      ];
+      const existingHttpsHosts = {
+        'images.unsplash.com',
+        'tbivoxyxclwjjspwsgvc.supabase.co',
+        'thumb.wikimedia.org',
+        'upload.wikimedia.org',
+      };
+
+      for (final place in seed.places) {
+        final english = place.description.trim();
+        final arabic = place.descriptionAr?.trim() ?? '';
+        expect(english.length, greaterThanOrEqualTo(95), reason: place.id);
+        expect(arabic.length, greaterThanOrEqualTo(65), reason: place.id);
+        expect(
+          english.toLowerCase(),
+          contains(place.name.toLowerCase()),
+          reason: place.id,
+        );
+        expect(arabic, contains(place.nameAr ?? place.name), reason: place.id);
+        for (final phrase in forbiddenText) {
+          expect(
+            '${english.toLowerCase()} $arabic',
+            isNot(contains(phrase)),
+            reason: place.id,
+          );
+        }
+
+        expect(urls.add(place.imageUrl), isTrue, reason: place.id);
+        final imageUri = Uri.tryParse(place.imageUrl);
+        expect(imageUri?.scheme, 'https', reason: place.id);
+        expect(existingHttpsHosts, contains(imageUri?.host), reason: place.id);
+        for (final term in forbiddenImageTerms) {
+          expect(
+            place.imageUrl.toLowerCase(),
+            isNot(contains(term)),
+            reason: place.id,
+          );
+        }
+
+        final category = place.category.trim().toLowerCase();
+        final searchable = '${place.id} ${place.name}'.toLowerCase();
+        final freeCategory = {
+          'atm',
+          'atms',
+          'mosques',
+          'churches',
+          'shopping',
+          'streets',
+        }.contains(category);
+        final freePublicPlace =
+            searchable.contains('synagogue') ||
+            searchable.contains('street') ||
+            searchable.contains('promenade') ||
+            searchable.contains('corniche') ||
+            searchable.contains('bridge walk') ||
+            searchable.contains('square') ||
+            searchable.contains('shopping corridor');
+        if (freeCategory || freePublicPlace) {
+          expect(place.priceLevel, PriceLevel.free, reason: place.id);
+        } else {
+          expect(
+            place.priceLevel,
+            isIn({PriceLevel.moderate, PriceLevel.expensive}),
+            reason: place.id,
+          );
+          expect(place.priceLocalEgp, greaterThan(0), reason: place.id);
+          expect(place.priceForeignerEgp, greaterThan(0), reason: place.id);
+          expect(place.priceNote.trim(), isNotEmpty, reason: place.id);
+        }
+      }
+
+      expect(urls, hasLength(229));
+      final placesById = {for (final place in seed.places) place.id: place};
+      for (final tour in seed.tours) {
+        for (final snapshot in tour.places) {
+          final canonical = placesById[snapshot.id];
+          if (canonical == null) continue;
+          expect(snapshot.imageUrl, canonical.imageUrl, reason: tour.id);
+          expect(snapshot.description, canonical.description, reason: tour.id);
+          expect(snapshot.openHours, canonical.openHours, reason: tour.id);
+          expect(
+            snapshot.priceLocalEgp,
+            canonical.priceLocalEgp,
+            reason: tour.id,
+          );
+          expect(
+            snapshot.priceForeignerEgp,
+            canonical.priceForeignerEgp,
+            reason: tour.id,
+          );
+        }
+      }
+    },
+  );
 }
