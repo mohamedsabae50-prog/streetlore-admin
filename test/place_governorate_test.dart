@@ -35,6 +35,19 @@ void main() {
     expect(tour.toSupabaseUpdate()['governorate'], 'cairo');
   });
 
+  test('missing governorate is inferred from coordinates', () {
+    final luxorPlace = Place.fromJson(const {
+      'id': 'coordinate-luxor-place',
+      'name': 'Luxor place',
+      'lat': 25.7050,
+      'lng': 32.6391,
+    });
+
+    expect(Place.inferGovernorate(lat: 25.7050, lng: 32.6391), 'luxor');
+    expect(luxorPlace.governorate, 'luxor');
+    expect(luxorPlace.toJson()['governorate'], 'luxor');
+  });
+
   test('ATM places remain places but are not visit-eligible', () {
     final places = [
       Place(
@@ -78,10 +91,11 @@ void main() {
   });
 
   test('admin governorate choices match configured coverage', () {
-    expect(AdminGovernorate.all, hasLength(2));
+    expect(AdminGovernorate.all, hasLength(3));
     expect(AdminGovernorate.all.map((item) => item.id).toSet(), {
       'alexandria',
       'cairo',
+      'luxor',
     });
     expect(AdminGovernorate.all.first.nameEn, 'Alexandria');
     expect(AdminGovernorate.all.first.nameAr, 'الإسكندرية');

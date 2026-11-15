@@ -7,29 +7,47 @@ import 'package:streetlore_admin/models/models.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test(
-    'config contains the app-matched Alexandria and unified Cairo boundary',
-    () {
-      expect(governoratesConfig.keys.toSet(), {'alexandria', 'cairo'});
-      expect(alexandriaGovernorate.centerLat, 31.2001);
-      expect(alexandriaGovernorate.centerLng, 29.9187);
-      expect(alexandriaGovernorate.defaultZoom, 11);
-      expect(cairoGovernorate.centerLat, 30.0444);
-      expect(cairoGovernorate.centerLng, 31.2357);
-      expect(cairoGovernorate.nameEn, 'Cairo & Giza');
-      expect(cairoGovernorate.nameAr, 'القاهرة والجيزة');
-      expect(cairoGovernorate.defaultZoom, 11);
-      expect(alexandriaGovernorate.boundaryPolygon, hasLength(20));
-      expect(cairoGovernorate.boundaryPolygon, hasLength(16));
-      expect(AdminGovernorate.all, hasLength(2));
-      expect(
-        AdminGovernorate.all
-            .singleWhere((governorate) => governorate.id == 'cairo')
-            .boundaryPolygon,
-        cairoGovernorate.boundaryPolygon,
-      );
-    },
-  );
+  test('config contains Alexandria, Cairo & Giza, and Luxor boundaries', () {
+    expect(governoratesConfig.keys.toSet(), {'alexandria', 'cairo', 'luxor'});
+    expect(alexandriaGovernorate.centerLat, 31.2001);
+    expect(alexandriaGovernorate.centerLng, 29.9187);
+    expect(alexandriaGovernorate.defaultZoom, 11);
+    expect(cairoGovernorate.centerLat, 30.0444);
+    expect(cairoGovernorate.centerLng, 31.2357);
+    expect(cairoGovernorate.nameEn, 'Cairo & Giza');
+    expect(cairoGovernorate.nameAr, 'القاهرة والجيزة');
+    expect(cairoGovernorate.defaultZoom, 11);
+    expect(luxorGovernorate.centerLat, 25.7050);
+    expect(luxorGovernorate.centerLng, 32.6391);
+    expect(luxorGovernorate.nameEn, 'Luxor');
+    expect(luxorGovernorate.nameAr, 'الأقصر');
+    expect(luxorGovernorate.defaultZoom, 12.0);
+    expect(alexandriaGovernorate.boundaryPolygon, hasLength(20));
+    expect(cairoGovernorate.boundaryPolygon, hasLength(16));
+    expect(luxorGovernorate.boundaryPolygon, hasLength(8));
+    expect(
+      luxorGovernorate.boundaryPolygon
+          .map((point) => (point.latitude, point.longitude))
+          .toList(),
+      [
+        (25.8200, 32.5200),
+        (25.8300, 32.7200),
+        (25.7500, 32.7800),
+        (25.6200, 32.7600),
+        (25.5200, 32.6800),
+        (25.5000, 32.5000),
+        (25.6000, 32.4500),
+        (25.7400, 32.5000),
+      ],
+    );
+    expect(AdminGovernorate.all, hasLength(3));
+    expect(
+      AdminGovernorate.all
+          .singleWhere((governorate) => governorate.id == 'cairo')
+          .boundaryPolygon,
+      cairoGovernorate.boundaryPolygon,
+    );
+  });
 
   test('unified boundary accepts Cairo and Giza and rejects Banha', () {
     expect(isPointInGovernorate(30.0444, 31.2357, 'cairo'), isTrue);
@@ -44,6 +62,18 @@ void main() {
     expect(AdminGovernorate.normalizeId(' GIZA '), 'cairo');
     expect(AdminGovernorate.byId('giza')?.id, 'cairo');
     expect(isPointInGovernorate(0, 0, 'unknown'), isFalse);
+  });
+
+  test('Luxor boundary contains Luxor and does not overlap other regions', () {
+    expect(isPointInGovernorate(25.7050, 32.6391, 'luxor'), isTrue);
+    expect(isPointInGovernorate(25.8200, 32.5200, 'luxor'), isTrue);
+    expect(isPointInGovernorate(25.7050, 32.6391, 'alexandria'), isFalse);
+    expect(isPointInGovernorate(25.7050, 32.6391, 'cairo'), isFalse);
+    expect(normalizeGovernorateId(' LUXOR '), 'luxor');
+    expect(AdminGovernorate.byId(' luxor ')?.id, 'luxor');
+    expect(Place.inferGovernorate(lat: 25.7050, lng: 32.6391), 'luxor');
+    expect(Place.inferGovernorate(lat: 31.2001, lng: 29.9187), 'alexandria');
+    expect(Place.inferGovernorate(lat: 30.0444, lng: 31.2357), 'cairo');
   });
 
   test(
@@ -62,7 +92,7 @@ void main() {
   );
 
   test(
-    'preview asset includes all Cairo and Alexandria places and tours',
+    'preview asset includes Cairo, Alexandria, and Luxor places and tours',
     () async {
       final seed = await GovernoratePreviewSeed.load();
 
@@ -82,6 +112,103 @@ void main() {
         seed.tours.where((tour) => tour.governorate == 'alexandria'),
         hasLength(5),
       );
+      final luxorPlaces = seed.places
+          .where((place) => place.governorate == 'luxor')
+          .toList(growable: false);
+      final luxorTours = seed.tours
+          .where((tour) => tour.governorate == 'luxor')
+          .toList(growable: false);
+      expect(luxorPlaces, hasLength(60));
+      expect(luxorTours, hasLength(6));
+      expect(luxorPlaces.where((place) => !place.isAtm), hasLength(54));
+      expect(luxorPlaces.where((place) => place.isAtm), hasLength(6));
+      expect(visitEligiblePlaces(luxorPlaces), hasLength(54));
+      const ticketPrices = <String, (int, int)>{
+        'luxor_karnak_temple': (80, 600),
+        'luxor_temple': (80, 500),
+        'luxor_avenue_of_sphinxes': (80, 500),
+        'luxor_museum': (50, 400),
+        'luxor_mummification_museum': (40, 300),
+        'luxor_valley_of_the_kings': (100, 750),
+        'luxor_tomb_of_tutankhamun': (80, 700),
+        'luxor_tomb_of_ramesses_vi': (60, 220),
+        'luxor_valley_of_the_queens': (60, 220),
+        'luxor_tomb_of_nefertari': (600, 2000),
+        'luxor_hatshepsut_temple': (80, 440),
+        'luxor_medinet_habu': (60, 220),
+        'luxor_ramesseum': (60, 220),
+        'luxor_colossi_of_memnon': (0, 0),
+        'luxor_deir_el_medina': (60, 220),
+        'luxor_tombs_of_the_nobles': (60, 200),
+        'luxor_ramose_tomb': (40, 160),
+        'luxor_sennedjem_tomb': (40, 160),
+        'luxor_howard_carter_house': (60, 220),
+        'luxor_temple_of_seti_i_qurna': (40, 160),
+        'luxor_merenptah_mortuary_temple': (40, 140),
+        'luxor_assasif_necropolis': (40, 160),
+        'luxor_deir_el_shelwit': (30, 100),
+        'luxor_medamud_temple': (30, 100),
+        'luxor_tod_temple': (30, 100),
+        'luxor_armant_temple': (30, 100),
+      };
+      final luxorPlacesById = {
+        for (final place in luxorPlaces) place.id: place,
+      };
+      expect(ticketPrices.keys, hasLength(26));
+      for (final entry in ticketPrices.entries) {
+        final place = luxorPlacesById[entry.key]!;
+        expect(
+          (place.priceLocalEgp, place.priceForeignerEgp),
+          entry.value,
+          reason: place.id,
+        );
+      }
+      expect(
+        luxorPlaces
+            .where(
+              (place) =>
+                  (place.category == 'Historical' ||
+                      place.category == 'Culture') &&
+                  place.id != 'luxor_colossi_of_memnon',
+            )
+            .every(
+              (place) =>
+                  (place.priceLevel == PriceLevel.moderate ||
+                      place.priceLevel == PriceLevel.expensive) &&
+                  place.priceLocalEgp != null &&
+                  place.priceLocalEgp! > 0 &&
+                  place.priceForeignerEgp != null &&
+                  place.priceForeignerEgp! > 0,
+            ),
+        isTrue,
+      );
+      expect(
+        luxorPlaces
+            .singleWhere((place) => place.id == 'luxor_colossi_of_memnon')
+            .priceLevel,
+        PriceLevel.free,
+      );
+      expect(
+        luxorPlaces
+            .where((place) => place.category == 'Hotels' || place.isAtm)
+            .every((place) => place.openHours == '24 hours'),
+        isTrue,
+      );
+      expect(
+        luxorPlaces.every(
+          (place) => isPointInGovernorate(place.lat, place.lng, 'luxor'),
+        ),
+        isTrue,
+      );
+      expect(
+        luxorTours.every(
+          (tour) =>
+              tour.places.isNotEmpty &&
+              tour.places.every((place) => place.governorate == 'luxor'),
+        ),
+        isTrue,
+      );
+      expect(luxorPlaces.map((place) => place.imageUrl).toSet(), hasLength(60));
       expect(
         seed.places
             .where((place) => place.governorate == 'cairo')
@@ -206,7 +333,7 @@ void main() {
           'cairo_new_capital_arts_culture_city',
         }),
       );
-      expect(seed.places.where((place) => place.isAtm), hasLength(20));
+      expect(seed.places.where((place) => place.isAtm), hasLength(26));
       expect(
         visitEligiblePlaces(seed.places).map((place) => place.id),
         isNot(
@@ -321,7 +448,8 @@ void main() {
     'the complete preview catalog has repaired descriptions, prices, and images',
     () async {
       final seed = await GovernoratePreviewSeed.load();
-      expect(seed.places, hasLength(229));
+      expect(seed.places, hasLength(289));
+      expect(seed.tours, hasLength(26));
 
       final urls = <String>{};
       const forbiddenText = [
@@ -389,11 +517,14 @@ void main() {
         final freePublicPlace =
             searchable.contains('synagogue') ||
             searchable.contains('street') ||
-            searchable.contains('promenade') ||
-            searchable.contains('corniche') ||
-            searchable.contains('bridge walk') ||
-            searchable.contains('square') ||
-            searchable.contains('shopping corridor');
+            (category != 'food' &&
+                category != 'cafe' &&
+                (searchable.contains('promenade') ||
+                    searchable.contains('corniche') ||
+                    searchable.contains('bridge walk') ||
+                    searchable.contains('square') ||
+                    searchable.contains('shopping corridor') ||
+                    place.id == 'luxor_colossi_of_memnon'));
         if (freeCategory || freePublicPlace) {
           expect(place.priceLevel, PriceLevel.free, reason: place.id);
         } else {
@@ -408,7 +539,7 @@ void main() {
         }
       }
 
-      expect(urls, hasLength(229));
+      expect(urls, hasLength(289));
       final placesById = {for (final place in seed.places) place.id: place};
       for (final tour in seed.tours) {
         for (final snapshot in tour.places) {

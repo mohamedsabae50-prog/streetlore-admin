@@ -24,6 +24,7 @@ class GovernorateConfig {
   static const all = <GovernorateConfig>[
     alexandriaGovernorate,
     cairoGovernorate,
+    luxorGovernorate,
   ];
 }
 
@@ -85,6 +86,25 @@ const cairoGovernorate = GovernorateConfig(
   ],
 );
 
+const luxorGovernorate = GovernorateConfig(
+  id: 'luxor',
+  nameEn: 'Luxor',
+  nameAr: 'الأقصر',
+  centerLat: 25.7050,
+  centerLng: 32.6391,
+  defaultZoom: 12.0,
+  boundaryPolygon: [
+    LatLng(25.8200, 32.5200),
+    LatLng(25.8300, 32.7200),
+    LatLng(25.7500, 32.7800),
+    LatLng(25.6200, 32.7600),
+    LatLng(25.5200, 32.6800),
+    LatLng(25.5000, 32.5000),
+    LatLng(25.6000, 32.4500),
+    LatLng(25.7400, 32.5000),
+  ],
+);
+
 String normalizeGovernorateId(String governorateId) {
   final normalized = governorateId.trim().toLowerCase();
   return normalized == 'giza' ? 'cairo' : normalized;
@@ -93,6 +113,7 @@ String normalizeGovernorateId(String governorateId) {
 const Map<String, GovernorateConfig> governoratesConfig = {
   'alexandria': alexandriaGovernorate,
   'cairo': cairoGovernorate,
+  'luxor': luxorGovernorate,
 };
 
 bool isPointInGovernorate(double lat, double lng, String governorateId) {

@@ -401,10 +401,16 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
       return;
     }
     if (!isPointInGovernorateOrExpandedBounds(
-      point.latitude,
-      point.longitude,
-      governorateId,
-    )) {
+          point.latitude,
+          point.longitude,
+          governorateId,
+        ) ||
+        (governorateId == 'luxor' &&
+            !isPointInGovernorate(
+              point.latitude,
+              point.longitude,
+              governorateId,
+            ))) {
       _showValidationError(
         'الإحداثيات بعيدة عن نطاق المحافظة المحددة. '
         'اختر موقعاً أقرب إلى ${governoratesConfig[governorateId]!.nameAr}.',
@@ -1287,7 +1293,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
               initialValue: _governorate,
               decoration: const InputDecoration(
                 prefixIcon: Icon(Icons.map_outlined),
-                hintText: 'Select Alexandria or Cairo & Giza',
+                hintText: 'Select a governorate',
               ),
               items: [
                 for (final governorate in GovernorateConfig.all)
@@ -1933,6 +1939,18 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
                   urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                   userAgentPackageName: 'com.streetlore.admin',
                 ),
+                if (_governorate != null)
+                  PolygonLayer(
+                    polygons: [
+                      Polygon(
+                        points:
+                            governoratesConfig[_governorate]!.boundaryPolygon,
+                        color: AppTheme.primary.withValues(alpha: 0.12),
+                        borderColor: AppTheme.primary,
+                        borderStrokeWidth: 2,
+                      ),
+                    ],
+                  ),
                 MarkerLayer(
                   markers: [
                     Marker(

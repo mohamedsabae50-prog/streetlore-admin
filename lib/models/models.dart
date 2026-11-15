@@ -356,6 +356,15 @@ class Place {
       id.toLowerCase().startsWith('atm_') ||
       const {'atm', 'atms'}.contains(category.trim().toLowerCase());
 
+  static String? inferGovernorate({required double lat, required double lng}) {
+    for (final governorate in GovernorateConfig.all) {
+      if (isPointInGovernorate(lat, lng, governorate.id)) {
+        return governorate.id;
+      }
+    }
+    return null;
+  }
+
   factory Place.fromJson(Map<String, dynamic> json) {
     final urlsRaw = json['image_urls'] ?? json['imageUrls'];
     List<String> urls = const <String>[];
@@ -382,7 +391,11 @@ class Place {
       addressAr: json['address_ar'] as String?,
       governorate: (json['governorate'] as String?)?.trim().isNotEmpty == true
           ? normalizeGovernorateId(json['governorate'] as String)
-          : 'alexandria',
+          : Place.inferGovernorate(
+                  lat: (json['lat'] as num?)?.toDouble() ?? 0,
+                  lng: (json['lng'] as num?)?.toDouble() ?? 0,
+                ) ??
+                'alexandria',
       openHours: (json['open_hours'] as String?) ?? '9:00 AM - 6:00 PM',
       reviewCount: (json['review_count'] as int?) ?? 0,
       priceLevel: priceLevelFromString(json['price_level'] as String?),

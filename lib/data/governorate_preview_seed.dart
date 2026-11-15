@@ -38,6 +38,12 @@ class GovernoratePreviewSeed {
     final cairoTours = tours
         .where((tour) => tour.governorate == 'cairo')
         .toList(growable: false);
+    final luxorPlaces = places
+        .where((place) => place.governorate == 'luxor')
+        .toList(growable: false);
+    final luxorTours = tours
+        .where((tour) => tour.governorate == 'luxor')
+        .toList(growable: false);
     final alexandriaPlaces = places
         .where((place) => place.governorate == 'alexandria')
         .toList(growable: false);
@@ -45,8 +51,14 @@ class GovernoratePreviewSeed {
         .where((place) => place.id.startsWith('alexandria_'))
         .toList(growable: false);
     final primaryImages = cairoPlaces.map((place) => place.imageUrl).toSet();
-    if (cairoPlaces.length < 120 ||
+    final allPrimaryImages = places.map((place) => place.imageUrl).toSet();
+    if (places.length != 289 ||
+        tours.length != 26 ||
+        allPrimaryImages.length != places.length ||
+        cairoPlaces.length < 120 ||
         cairoTours.length < 5 ||
+        luxorPlaces.length != 60 ||
+        luxorTours.length != 6 ||
         primaryImages.length != cairoPlaces.length ||
         cairoPlaces.any(
           (place) =>
@@ -65,10 +77,21 @@ class GovernoratePreviewSeed {
         }) ||
         newAlexandriaPlaces.any((place) {
           return !_isCommonsImageUrl(place.imageUrl);
-        })) {
+        }) ||
+        luxorPlaces.any((place) {
+          return !_isCommonsImageUrl(place.imageUrl) ||
+              place.imageUrls.any((image) => !_isCommonsImageUrl(image)) ||
+              !isPointInGovernorate(place.lat, place.lng, place.governorate);
+        }) ||
+        luxorTours.any(
+          (tour) =>
+              tour.places.isEmpty ||
+              tour.places.any((place) => place.governorate != 'luxor'),
+        )) {
       throw StateError(
-        'The unified Cairo seed must contain at least 120 places and 5 tours, '
-        'with in-boundary coordinates and unique HTTPS Wikimedia images.',
+        'The preview seed must contain 289 places and 26 tours, including '
+        '60 in-boundary Luxor places and 6 Luxor tours with unique HTTPS '
+        'primary images.',
       );
     }
     return (places: places, tours: tours);

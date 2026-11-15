@@ -19,8 +19,8 @@ void main() {
       final service = AdminService.instance;
       final initialPlaces = await service.fetchPlaces();
       final initialTours = await service.fetchTours();
-      expect(initialPlaces, hasLength(229));
-      expect(initialTours, hasLength(20));
+      expect(initialPlaces, hasLength(289));
+      expect(initialTours, hasLength(26));
       expect(
         initialPlaces.map((place) => place.id),
         containsAll({
@@ -89,6 +89,51 @@ void main() {
       );
     },
   );
+
+  test('local preview creates and edits Luxor place and tour drafts', () async {
+    final service = AdminService.instance;
+    final place = Place(
+      id: 'draft_luxor_test_place',
+      name: 'Local Luxor Draft',
+      nameAr: 'مسودة محلية للأقصر',
+      description: 'Local-only Luxor preview record.',
+      imageUrl: '',
+      rating: 4.5,
+      category: 'Historical',
+      lat: 25.7050,
+      lng: 32.6391,
+      governorate: 'luxor',
+    );
+
+    expect((await service.createPlace(place)).remoteSynced, isFalse);
+    await service.updatePlace(place.copyWith(name: 'Edited Luxor Draft'));
+    expect(
+      (await service.fetchPlaces())
+          .singleWhere((candidate) => candidate.id == place.id)
+          .governorate,
+      'luxor',
+    );
+
+    final tour = Tour(
+      id: 'draft_luxor_test_tour',
+      title: 'Local Luxor Tour',
+      description: 'Local-only Luxor itinerary.',
+      duration: '2 Hours',
+      imageUrl: '',
+      governorate: 'luxor',
+      places: [place],
+    );
+    await service.createTour(tour);
+    expect(
+      (await service.fetchTours())
+          .singleWhere((candidate) => candidate.id == tour.id)
+          .governorate,
+      'luxor',
+    );
+
+    await service.deletePlace(place.id);
+    await service.deleteTour(tour.id);
+  });
 
   test('local mode rejects image uploads before contacting Supabase', () async {
     await expectLater(

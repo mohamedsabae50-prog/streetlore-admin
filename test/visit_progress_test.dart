@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:streetlore_admin/models/models.dart';
 import 'package:streetlore_admin/services/visit_progress.dart';
 
 void main() {
@@ -68,5 +69,53 @@ void main() {
       'visit_milestone_25',
       'visit_milestone_50',
     ]);
+  });
+
+  test('Luxor visit and badge counts exclude all six ATMs', () {
+    final luxorPlaces = [
+      for (var index = 0; index < 54; index++)
+        Place(
+          id: 'luxor_place_$index',
+          name: 'Luxor place $index',
+          description: '',
+          imageUrl: '',
+          rating: 0,
+          category: 'Historical',
+          lat: 25.7050,
+          lng: 32.6391,
+          governorate: 'luxor',
+        ),
+      for (var index = 0; index < 6; index++)
+        Place(
+          id: 'atm_luxor_$index',
+          name: 'Luxor ATM $index',
+          description: '',
+          imageUrl: '',
+          rating: 0,
+          category: 'ATMs',
+          lat: 25.7050,
+          lng: 32.6391,
+          governorate: 'luxor',
+        ),
+    ];
+    final eligible = visitEligiblePlaces(luxorPlaces);
+    final progress = calculateVisitProgress(
+      currentPoints: 0,
+      previousPlaceCount: 0,
+      placeCount: eligible.length,
+      currentBadges: const [],
+    );
+
+    expect(eligible, hasLength(54));
+    expect(eligible.any((place) => place.isAtm), isFalse);
+    expect(progress.totalPoints, 54 * adminVisitXpPerPlace);
+    expect(
+      progress.badges.map((badge) => (badge as Map)['id']),
+      contains('visit_milestone_50'),
+    );
+    expect(
+      progress.badges.map((badge) => (badge as Map)['id']),
+      isNot(contains('visit_milestone_100')),
+    );
   });
 }

@@ -806,7 +806,7 @@ class _TourFormScreenState extends State<TourFormScreen> {
               initialValue: _governorate,
               decoration: const InputDecoration(
                 prefixIcon: Icon(Icons.map_outlined),
-                hintText: 'Select Alexandria or Cairo & Giza',
+                hintText: 'Select a governorate',
               ),
               items: [
                 for (final governorate in GovernorateConfig.all)
