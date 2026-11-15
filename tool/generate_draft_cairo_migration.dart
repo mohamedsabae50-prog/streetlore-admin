@@ -97,14 +97,14 @@ Future<void> main() async {
       .map((row) => Map<String, dynamic>.from(row as Map))
       .where(
         (row) =>
-            {'cairo', 'luxor'}.contains(row['governorate']) ||
+            {'cairo', 'luxor', 'aswan'}.contains(row['governorate']) ||
             (row['governorate'] == 'alexandria' &&
                 const {'ATM', 'ATMs'}.contains(row['category'])),
       )
       .toList();
   final tours = (decoded['tours'] as List)
       .map((row) => Map<String, dynamic>.from(row as Map))
-      .where((row) => {'cairo', 'luxor'}.contains(row['governorate']))
+      .where((row) => {'cairo', 'luxor', 'aswan'}.contains(row['governorate']))
       .toList();
 
   final luxorPlaces = places
@@ -113,13 +113,21 @@ Future<void> main() async {
   final luxorTours = tours
       .where((tour) => tour['governorate'] == 'luxor')
       .toList();
+  final aswanPlaces = places
+      .where((place) => place['governorate'] == 'aswan')
+      .toList();
+  final aswanTours = tours
+      .where((tour) => tour['governorate'] == 'aswan')
+      .toList();
   if (places.where((place) => place['governorate'] == 'cairo').length < 120 ||
       tours.where((tour) => tour['governorate'] == 'cairo').length < 5 ||
       luxorPlaces.length != 60 ||
-      luxorTours.length != 6) {
+      luxorTours.length != 6 ||
+      aswanPlaces.length != 60 ||
+      aswanTours.length != 6) {
     throw StateError(
-      'Expected at least 120 Cairo places and 5 tours, plus 60 Luxor places '
-      'and 6 tours.',
+      'Expected at least 120 Cairo places and 5 tours, plus 60 Luxor and '
+      '60 Aswan places with 6 tours each.',
     );
   }
   final ids = places.map((place) => place['id'] as String).toSet();
@@ -131,7 +139,7 @@ Future<void> main() async {
           place['governorate'] as String,
         ),
       )) {
-    throw StateError('Cairo or Luxor seed IDs or boundary validation failed.');
+    throw StateError('Seed IDs or governorate boundary validation failed.');
   }
   for (final tour in tours) {
     final stops = tour['places'] as List;
@@ -178,7 +186,7 @@ Future<void> main() async {
   final deleteTourIds = tourIds.map(_sqlValue).join(', ');
   final sql =
       '''-- DRAFT ONLY: do not apply to production until the Play review is complete.
--- Generated from the verified local Alexandria/Cairo/Luxor preview seed.
+-- Generated from the verified local Alexandria/Cairo/Luxor/Aswan preview seed.
 BEGIN;
 
 ALTER TABLE public.places
@@ -203,13 +211,13 @@ ALTER TABLE public.places
   DROP CONSTRAINT IF EXISTS places_governorate_check;
 ALTER TABLE public.places
   ADD CONSTRAINT places_governorate_check
-  CHECK (governorate IN ('alexandria', 'cairo', 'luxor'));
+  CHECK (governorate IN ('alexandria', 'cairo', 'luxor', 'aswan'));
 
 ALTER TABLE public.tours
   DROP CONSTRAINT IF EXISTS tours_governorate_check;
 ALTER TABLE public.tours
   ADD CONSTRAINT tours_governorate_check
-  CHECK (governorate IN ('alexandria', 'cairo', 'luxor'));
+  CHECK (governorate IN ('alexandria', 'cairo', 'luxor', 'aswan'));
 
 ALTER TABLE public.places
   DROP CONSTRAINT IF EXISTS places_category_check;
@@ -315,8 +323,9 @@ COMMIT;
   await output.writeAsString(sql);
   stdout.writeln(
     'Wrote local-only draft SQL with ${places.length} Cairo, Luxor, and '
-    'Alexandria ATM places, ${tours.length} itineraries, and '
+    'Aswan places plus Alexandria ATMs, ${tours.length} itineraries, and '
     '${stopRows.length} ordered stops '
-    '(${luxorPlaces.length} Luxor places, ${luxorTours.length} Luxor tours).',
+    '(${luxorPlaces.length} Luxor places, ${luxorTours.length} Luxor tours, '
+    '${aswanPlaces.length} Aswan places, ${aswanTours.length} Aswan tours).',
   );
 }

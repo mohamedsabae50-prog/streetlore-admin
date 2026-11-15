@@ -19,14 +19,15 @@ void main() {
       final service = AdminService.instance;
       final initialPlaces = await service.fetchPlaces();
       final initialTours = await service.fetchTours();
-      expect(initialPlaces, hasLength(295));
-      expect(initialTours, hasLength(26));
+      expect(initialPlaces, hasLength(355));
+      expect(initialTours, hasLength(32));
       expect(
         initialPlaces.map((place) => place.id),
         containsAll({
           'giza_great_pyramid',
           'giza_grand_egyptian_museum',
           'alexandria_cavafy_museum',
+          'aswan_philae_temple',
         }),
       );
 
@@ -156,19 +157,63 @@ void main() {
     await service.deleteTour(tour.id);
   });
 
+  test('local preview creates and edits Aswan place and tour drafts', () async {
+    final service = AdminService.instance;
+    final place = Place(
+      id: 'draft_aswan_test_place',
+      name: 'Local Aswan Draft',
+      nameAr: 'مسودة محلية لأسوان',
+      description: 'Local-only Aswan preview record.',
+      imageUrl: '',
+      rating: 4.5,
+      category: 'Historical',
+      lat: 24.0254,
+      lng: 32.8842,
+      governorate: 'aswan',
+    );
+
+    expect((await service.createPlace(place)).remoteSynced, isFalse);
+    await service.updatePlace(place.copyWith(name: 'Edited Aswan Draft'));
+    final savedPlace = (await service.fetchPlaces()).singleWhere(
+      (candidate) => candidate.id == place.id,
+    );
+    expect(savedPlace.name, 'Edited Aswan Draft');
+    expect(savedPlace.governorate, 'aswan');
+
+    final tour = Tour(
+      id: 'draft_aswan_test_tour',
+      title: 'Local Aswan Tour',
+      description: 'Local-only Aswan itinerary.',
+      duration: '2 Hours',
+      imageUrl: '',
+      governorate: 'aswan',
+      places: [place],
+    );
+    await service.createTour(tour);
+    final savedTour = (await service.fetchTours()).singleWhere(
+      (candidate) => candidate.id == tour.id,
+    );
+    expect(savedTour.governorate, 'aswan');
+    expect(savedTour.places.single.governorate, 'aswan');
+
+    await service.deletePlace(place.id);
+    await service.deleteTour(tour.id);
+  });
+
   test(
     'local preview separates visitable places from governorate ATMs',
     () async {
       final service = AdminService.instance;
       final places = await service.fetchPlaces();
-      expect(visitEligiblePlaces(places), hasLength(263));
-      expect(atmPlaces(places), hasLength(32));
-      expect((await service.fetchDashboardCounts()).places, 263);
+      expect(visitEligiblePlaces(places), hasLength(317));
+      expect(atmPlaces(places), hasLength(38));
+      expect((await service.fetchDashboardCounts()).places, 317);
 
       for (final (governorate, visitCount, atmCount) in [
         ('alexandria', 52, 6),
         ('cairo', 157, 20),
         ('luxor', 54, 6),
+        ('aswan', 54, 6),
       ]) {
         expect(
           visitEligiblePlaces(
@@ -190,29 +235,29 @@ void main() {
       final service = AdminService.instance;
       final atm = Place(
         id: 'atm_draft_local_test',
-        name: 'Local Alexandria ATM',
-        nameAr: 'ماكينة صراف آلي محلية بالإسكندرية',
+        name: 'Local Aswan ATM',
+        nameAr: 'ماكينة صراف آلي محلية بأسوان',
         description: 'A local draft cash machine record.',
         imageUrl: '',
         rating: 0,
         category: 'ATMs',
         categoryAr: 'ماكينات الصراف الآلي',
-        lat: 31.2001,
-        lng: 29.9187,
-        address: 'Alexandria, Egypt',
+        lat: 24.0955,
+        lng: 32.9008,
+        address: 'Aswan, Egypt',
         openHours: '24 hours',
-        governorate: 'alexandria',
+        governorate: 'aswan',
         priceLevel: PriceLevel.free,
         priceLocalEgp: 0,
         priceForeignerEgp: 0,
       );
 
       expect((await service.createPlace(atm)).remoteSynced, isFalse);
-      await service.updatePlace(atm.copyWith(name: 'Edited Alexandria ATM'));
+      await service.updatePlace(atm.copyWith(name: 'Edited Aswan ATM'));
       final savedAtm = (await service.fetchPlaces()).singleWhere(
         (place) => place.id == atm.id,
       );
-      expect(savedAtm.name, 'Edited Alexandria ATM');
+      expect(savedAtm.name, 'Edited Aswan ATM');
       expect(atmPlaces([savedAtm]), hasLength(1));
       expect(visitEligiblePlaces([savedAtm]), isEmpty);
 

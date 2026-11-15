@@ -431,7 +431,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
           point.longitude,
           governorateId,
         ) ||
-        (governorateId == 'luxor' &&
+        ({'luxor', 'aswan'}.contains(governorateId) &&
             !isPointInGovernorate(
               point.latitude,
               point.longitude,

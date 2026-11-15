@@ -118,4 +118,45 @@ void main() {
       isNot(contains('visit_milestone_100')),
     );
   });
+
+  test('Aswan visit and badge counts exclude all six ATMs', () {
+    final aswanPlaces = [
+      for (var index = 0; index < 54; index++)
+        Place(
+          id: 'aswan_place_$index',
+          name: 'Aswan place $index',
+          description: '',
+          imageUrl: '',
+          rating: 0,
+          category: 'Historical',
+          lat: 24.0889,
+          lng: 32.8998,
+          governorate: 'aswan',
+        ),
+      for (var index = 0; index < 6; index++)
+        Place(
+          id: 'atm_aswan_$index',
+          name: 'Aswan ATM $index',
+          description: '',
+          imageUrl: '',
+          rating: 0,
+          category: 'ATMs',
+          lat: 24.0889,
+          lng: 32.8998,
+          governorate: 'aswan',
+        ),
+    ];
+    final eligible = visitEligiblePlaces(aswanPlaces);
+    final progress = calculateVisitProgress(
+      currentPoints: 0,
+      previousPlaceCount: 0,
+      placeCount: eligible.length,
+      currentBadges: const [],
+    );
+
+    expect(eligible, hasLength(54));
+    expect(atmPlaces(aswanPlaces), hasLength(6));
+    expect(eligible.any((place) => place.isAtm), isFalse);
+    expect(progress.totalPoints, 54 * adminVisitXpPerPlace);
+  });
 }

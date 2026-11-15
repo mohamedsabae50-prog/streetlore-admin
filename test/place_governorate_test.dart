@@ -48,6 +48,32 @@ void main() {
     expect(luxorPlace.toJson()['governorate'], 'luxor');
   });
 
+  test('Aswan governorate names normalize and infer from coordinates', () {
+    final place = Place.fromJson(const {
+      'id': 'coordinate-aswan-place',
+      'name': 'Philae Temple',
+      'lat': 24.0254,
+      'lng': 32.8842,
+      'governorate': ' أسوان ',
+    });
+    final tour = Tour.fromJson(const {
+      'id': 'aswan-tour',
+      'title': 'Aswan tour',
+      'description': '',
+      'duration': '',
+      'image_url': '',
+      'governorate': 'أسوان',
+    });
+
+    expect(Place.inferGovernorate(lat: 24.0254, lng: 32.8842), 'aswan');
+    expect(place.governorate, 'aswan');
+    expect(place.toJson()['governorate'], 'aswan');
+    expect(place.toSupabaseUpdate()['governorate'], 'aswan');
+    expect(tour.governorate, 'aswan');
+    expect(tour.toJson()['governorate'], 'aswan');
+    expect(tour.toSupabaseUpdate()['governorate'], 'aswan');
+  });
+
   test('ATM places remain places but are not visit-eligible', () {
     final places = [
       Place(
@@ -91,11 +117,12 @@ void main() {
   });
 
   test('admin governorate choices match configured coverage', () {
-    expect(AdminGovernorate.all, hasLength(3));
+    expect(AdminGovernorate.all, hasLength(4));
     expect(AdminGovernorate.all.map((item) => item.id).toSet(), {
       'alexandria',
       'cairo',
       'luxor',
+      'aswan',
     });
     expect(AdminGovernorate.all.first.nameEn, 'Alexandria');
     expect(AdminGovernorate.all.first.nameAr, 'الإسكندرية');

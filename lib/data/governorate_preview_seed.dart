@@ -9,7 +9,8 @@ bool _isCommonsImageUrl(String value) {
   final uri = Uri.tryParse(value);
   return uri != null &&
       uri.scheme == 'https' &&
-      const {'upload.wikimedia.org', 'thumb.wikimedia.org'}.contains(uri.host);
+      uri.host == 'upload.wikimedia.org' &&
+      uri.path.startsWith('/wikipedia/commons/');
 }
 
 class GovernoratePreviewSeed {
@@ -44,6 +45,12 @@ class GovernoratePreviewSeed {
     final luxorTours = tours
         .where((tour) => tour.governorate == 'luxor')
         .toList(growable: false);
+    final aswanPlaces = places
+        .where((place) => place.governorate == 'aswan')
+        .toList(growable: false);
+    final aswanTours = tours
+        .where((tour) => tour.governorate == 'aswan')
+        .toList(growable: false);
     final alexandriaPlaces = places
         .where((place) => place.governorate == 'alexandria')
         .toList(growable: false);
@@ -54,18 +61,17 @@ class GovernoratePreviewSeed {
     final allPrimaryImages = places.map((place) => place.imageUrl).toSet();
     final atms = atmPlaces(places);
     final luxorTourImages = luxorTours.map((tour) => tour.imageUrl).toSet();
-    if (places.length != 295 ||
-        tours.length != 26 ||
+    final aswanTourImages = aswanTours.map((tour) => tour.imageUrl).toSet();
+    if (places.length != 355 ||
+        tours.length != 32 ||
         allPrimaryImages.length != places.length ||
-        atms.length != 32 ||
+        places.any((place) => !_isCommonsImageUrl(place.imageUrl)) ||
+        atms.length != 38 ||
         atms.where((place) => place.governorate == 'alexandria').length != 6 ||
         atms.where((place) => place.governorate == 'cairo').length != 20 ||
         atms.where((place) => place.governorate == 'luxor').length != 6 ||
-        atms.any(
-          (place) =>
-              !_isCommonsImageUrl(place.imageUrl) ||
-              Uri.parse(place.imageUrl).host != 'upload.wikimedia.org',
-        ) ||
+        atms.where((place) => place.governorate == 'aswan').length != 6 ||
+        atms.any((place) => !_isCommonsImageUrl(place.imageUrl)) ||
         cairoPlaces.length < 120 ||
         cairoTours.length < 5 ||
         luxorPlaces.length != 60 ||
@@ -110,11 +116,35 @@ class GovernoratePreviewSeed {
           (tour) =>
               tour.places.isEmpty ||
               tour.places.any((place) => place.governorate != 'luxor'),
-        )) {
+        ) ||
+        aswanPlaces.length != 60 ||
+        aswanPlaces.where((place) => !place.isAtm).length != 54 ||
+        aswanPlaces.where((place) => place.isAtm).length != 6 ||
+        visitEligiblePlaces(aswanPlaces).length != 54 ||
+        aswanPlaces.any(
+          (place) =>
+              !_isCommonsImageUrl(place.imageUrl) ||
+              place.imageUrls.any((image) => !_isCommonsImageUrl(image)) ||
+              !place.imageUrls.contains(place.imageUrl) ||
+              !isPointInGovernorate(place.lat, place.lng, 'aswan'),
+        ) ||
+        aswanPlaces.map((place) => place.imageUrl).toSet().length !=
+            aswanPlaces.length ||
+        aswanTours.length != 6 ||
+        aswanTours.any(
+          (tour) =>
+              !_isCommonsImageUrl(tour.imageUrl) ||
+              tour.places.isEmpty ||
+              tour.places.any((place) => place.governorate != 'aswan'),
+        ) ||
+        aswanTourImages.length != aswanTours.length ||
+        aswanTourImages
+            .intersection(aswanPlaces.map((place) => place.imageUrl).toSet())
+            .isNotEmpty) {
       throw StateError(
-        'The preview seed must contain 295 places and 26 tours, including '
-        '32 ATMs across the three governorates and 60 in-boundary Luxor '
-        'places plus 6 Luxor tours with unique HTTPS Commons images.',
+        'The preview seed must contain 355 places and 32 tours, including '
+        '38 ATMs across four governorates and 60 in-boundary Aswan places '
+        'plus 6 Aswan tours with unique upload.wikimedia.org images.',
       );
     }
     return (places: places, tours: tours);
