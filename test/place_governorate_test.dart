@@ -118,13 +118,35 @@ void main() {
   });
 
   test('admin governorate choices match configured coverage', () {
-    expect(AdminGovernorate.all, hasLength(3));
+    expect(AdminGovernorate.all, hasLength(4));
     expect(AdminGovernorate.all.map((item) => item.id).toSet(), {
       'alexandria',
       'cairo',
       'luxor',
+      'red_sea',
     });
     expect(AdminGovernorate.all.first.nameEn, 'Alexandria');
     expect(AdminGovernorate.all.first.nameAr, 'الإسكندرية');
+  });
+
+  test('legacy Red Sea city values normalize on places and tours', () {
+    final hurghadaPlace = Place.fromJson(const {
+      'id': 'hurghada-place',
+      'name': 'Hurghada place',
+      'governorate': 'hurghada',
+    });
+    final marsaAlamTour = Tour.fromJson(const {
+      'id': 'marsa-alam-tour',
+      'title': 'Marsa Alam tour',
+      'description': '',
+      'duration': '',
+      'image_url': '',
+      'governorate': 'marsa_alam',
+    });
+
+    expect(hurghadaPlace.governorate, 'red_sea');
+    expect(hurghadaPlace.toJson()['governorate'], 'red_sea');
+    expect(marsaAlamTour.governorate, 'red_sea');
+    expect(marsaAlamTour.toSupabaseUpdate()['governorate'], 'red_sea');
   });
 }

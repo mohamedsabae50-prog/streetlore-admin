@@ -20,8 +20,8 @@ void main() {
       final service = AdminService.instance;
       final initialPlaces = await service.fetchPlaces();
       final initialTours = await service.fetchTours();
-      expect(initialPlaces, hasLength(367));
-      expect(initialTours, hasLength(32));
+      expect(initialPlaces, hasLength(427));
+      expect(initialTours, hasLength(38));
       expect(
         initialPlaces.map((place) => place.id),
         containsAll({
@@ -229,14 +229,15 @@ void main() {
     () async {
       final service = AdminService.instance;
       final places = await service.fetchPlaces();
-      expect(visitEligiblePlaces(places), hasLength(329));
-      expect(atmPlaces(places), hasLength(38));
-      expect((await service.fetchDashboardCounts()).places, 329);
+      expect(visitEligiblePlaces(places), hasLength(383));
+      expect(atmPlaces(places), hasLength(44));
+      expect((await service.fetchDashboardCounts()).places, 383);
 
       for (final (governorate, visitCount, atmCount) in [
         ('alexandria', 56, 6),
         ('cairo', 161, 20),
         ('luxor', 112, 12),
+        ('red_sea', 54, 6),
       ]) {
         expect(
           visitEligiblePlaces(
@@ -254,6 +255,12 @@ void main() {
           (tour) => tour.governorate == 'luxor',
         ),
         hasLength(12),
+      );
+      expect(
+        (await service.fetchTours()).where(
+          (tour) => tour.governorate == 'red_sea',
+        ),
+        hasLength(6),
       );
     },
   );

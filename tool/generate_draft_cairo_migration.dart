@@ -206,13 +206,13 @@ ALTER TABLE public.places
   DROP CONSTRAINT IF EXISTS places_governorate_check;
 ALTER TABLE public.places
   ADD CONSTRAINT places_governorate_check
-  CHECK (governorate IN ('alexandria', 'cairo', 'luxor'));
+  CHECK (governorate IN ('alexandria', 'cairo', 'luxor', 'red_sea'));
 
 ALTER TABLE public.tours
   DROP CONSTRAINT IF EXISTS tours_governorate_check;
 ALTER TABLE public.tours
   ADD CONSTRAINT tours_governorate_check
-  CHECK (governorate IN ('alexandria', 'cairo', 'luxor'));
+  CHECK (governorate IN ('alexandria', 'cairo', 'luxor', 'red_sea'));
 
 ALTER TABLE public.places
   DROP CONSTRAINT IF EXISTS places_category_check;

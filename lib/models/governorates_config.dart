@@ -25,6 +25,7 @@ class GovernorateConfig {
     alexandriaGovernorate,
     cairoGovernorate,
     luxorGovernorate,
+    redSeaGovernorate,
   ];
 }
 
@@ -90,11 +91,33 @@ const luxorGovernorate = GovernorateConfig(
   ],
 );
 
+const redSeaGovernorate = GovernorateConfig(
+  id: 'red_sea',
+  nameEn: 'Hurghada & Marsa Alam',
+  nameAr: 'الغردقة ومرسى علم',
+  centerLat: 26.8500,
+  centerLng: 33.9500,
+  defaultZoom: 8.8,
+  boundaryPolygon: [
+    LatLng(29.1000, 32.2500),
+    LatLng(29.1000, 33.1500),
+    LatLng(27.6000, 34.1500),
+    LatLng(26.2000, 34.6500),
+    LatLng(24.8000, 35.3500),
+    LatLng(24.0500, 35.6500),
+    LatLng(24.0500, 34.4500),
+    LatLng(25.2000, 34.1000),
+    LatLng(26.3500, 33.4000),
+    LatLng(27.5000, 33.0500),
+  ],
+);
+
 String normalizeGovernorateId(String governorateId) {
   final normalized = governorateId.trim().toLowerCase();
   return switch (normalized) {
     'giza' => 'cairo',
     'aswan' || 'أسوان' => 'luxor',
+    'hurghada' || 'marsa_alam' => 'red_sea',
     _ => normalized,
   };
 }
@@ -103,6 +126,7 @@ const Map<String, GovernorateConfig> governoratesConfig = {
   'alexandria': alexandriaGovernorate,
   'cairo': cairoGovernorate,
   'luxor': luxorGovernorate,
+  'red_sea': redSeaGovernorate,
 };
 
 bool isPointInGovernorate(double lat, double lng, String governorateId) {

@@ -48,6 +48,12 @@ class GovernoratePreviewSeed {
     final alexandriaPlaces = places
         .where((place) => place.governorate == 'alexandria')
         .toList(growable: false);
+    final redSeaPlaces = places
+        .where((place) => place.governorate == 'red_sea')
+        .toList(growable: false);
+    final redSeaTours = tours
+        .where((tour) => tour.governorate == 'red_sea')
+        .toList(growable: false);
     final newAlexandriaPlaces = alexandriaPlaces
         .where((place) => place.id.startsWith('alexandria_'))
         .toList(growable: false);
@@ -55,19 +61,43 @@ class GovernoratePreviewSeed {
     final allPrimaryImages = places.map((place) => place.imageUrl).toSet();
     final atms = atmPlaces(places);
     final luxorTourImages = luxorTours.map((tour) => tour.imageUrl).toSet();
-    if (places.length != 367 ||
-        tours.length != 32 ||
+    if (places.length != 427 ||
+        tours.length != 38 ||
+    visitEligiblePlaces(places).length != 383 ||
         allPrimaryImages.length != places.length ||
         places.any((place) => !_isCommonsImageUrl(place.imageUrl)) ||
-        atms.length != 38 ||
+        atms.length != 44 ||
         atms.where((place) => place.governorate == 'alexandria').length != 6 ||
         atms.where((place) => place.governorate == 'cairo').length != 20 ||
         atms.where((place) => place.governorate == 'luxor').length != 12 ||
+        atms.where((place) => place.governorate == 'red_sea').length != 6 ||
         atms.any((place) => !_isCommonsImageUrl(place.imageUrl)) ||
         cairoPlaces.length < 120 ||
         cairoTours.length < 5 ||
         luxorPlaces.length != 124 ||
         luxorTours.length != 12 ||
+        redSeaPlaces.length != 60 ||
+        visitEligiblePlaces(redSeaPlaces).length != 54 ||
+        redSeaTours.length != 6 ||
+        redSeaPlaces.map((place) => place.imageUrl).toSet().length != 60 ||
+        redSeaPlaces.any(
+          (place) =>
+              !place.imageUrls.contains(place.imageUrl) ||
+              !isPointInGovernorate(place.lat, place.lng, place.governorate),
+        ) ||
+        redSeaTours.any(
+          (tour) =>
+              tour.places.isEmpty ||
+              tour.places.any(
+                (place) =>
+                    place.governorate != 'red_sea' ||
+                    !isPointInGovernorate(
+                      place.lat,
+                      place.lng,
+                      place.governorate,
+                    ),
+              ),
+        ) ||
         primaryImages.length != cairoPlaces.length ||
         cairoPlaces.any(
           (place) =>
@@ -130,9 +160,10 @@ class GovernoratePreviewSeed {
             .intersection(luxorPlaces.map((place) => place.imageUrl).toSet())
             .isNotEmpty) {
       throw StateError(
-        'The preview seed must contain 367 places and 32 tours, including '
-        '38 ATMs across three governorates and 124 Luxor & Aswan places plus '
-        '12 tours with unique upload.wikimedia.org images.',
+        'The preview seed must contain 427 places and 38 tours, including '
+        '44 ATMs and 383 visitable places across four governorates, with 60 '
+        'Red Sea places, six Red Sea tours, and unique '
+        'upload.wikimedia.org place images.',
       );
     }
     return (places: places, tours: tours);

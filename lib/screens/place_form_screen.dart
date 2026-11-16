@@ -95,8 +95,11 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
   void initState() {
     super.initState();
     final p = widget.place;
+    final initialGovernorateId = normalizeGovernorateId(
+      widget.initialGovernorate ?? 'alexandria',
+    );
     final initialGovernorate = p == null
-        ? governoratesConfig[widget.initialGovernorate ?? 'alexandria']
+        ? governoratesConfig[initialGovernorateId]
         : null;
     _id = TextEditingController(text: p?.id ?? _suggestId());
     _name = TextEditingController(text: p?.name ?? '');
@@ -158,7 +161,7 @@ class _PlaceFormScreenState extends State<PlaceFormScreen> {
     );
     _priceLevel = p?.priceLevel ?? PriceLevel.free;
     _governorate = p == null
-        ? widget.initialGovernorate ?? 'alexandria'
+        ? initialGovernorate?.id ?? 'alexandria'
         : governoratesConfig.containsKey(normalizeGovernorateId(p.governorate))
         ? normalizeGovernorateId(p.governorate)
         : 'alexandria';

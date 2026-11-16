@@ -1,8 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:streetlore_admin/data/governorate_preview_seed.dart';
 import 'package:streetlore_admin/models/models.dart';
 import 'package:streetlore_admin/services/visit_progress.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   test('visit progress applies XP deltas and unlocks each milestone once', () {
     final progress = calculateVisitProgress(
       currentPoints: 45,
@@ -195,6 +198,37 @@ void main() {
     expect(
       progress.badges.map((badge) => (badge as Map)['id']),
       contains('visit_milestone_100'),
+    );
+  });
+
+  test('Red Sea preview visits exclude its six ATMs', () async {
+    final seed = await GovernoratePreviewSeed.load();
+    final redSeaPlaces = seed.places
+        .where((place) => place.governorate == 'red_sea')
+        .toList(growable: false);
+    final eligible = visitEligiblePlaces(redSeaPlaces);
+    final progress = calculateVisitProgress(
+      currentPoints: 0,
+      previousPlaceCount: 0,
+      placeCount: eligible.length,
+      currentBadges: const [],
+    );
+
+    expect(seed.places, hasLength(427));
+    expect(seed.tours, hasLength(38));
+    expect(visitEligiblePlaces(seed.places), hasLength(383));
+    expect(atmPlaces(seed.places), hasLength(44));
+    expect(redSeaPlaces, hasLength(60));
+    expect(eligible, hasLength(54));
+    expect(atmPlaces(redSeaPlaces), hasLength(6));
+    expect(progress.totalPoints, 54 * adminVisitXpPerPlace);
+    expect(
+      progress.badges.map((badge) => (badge as Map)['id']),
+      contains('visit_milestone_50'),
+    );
+    expect(
+      progress.badges.map((badge) => (badge as Map)['id']),
+      isNot(contains('visit_milestone_75')),
     );
   });
 }

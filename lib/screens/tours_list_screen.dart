@@ -127,7 +127,11 @@ class _ToursListScreenState extends State<ToursListScreen> {
     final filtered = _governorateFilter == 'all'
         ? _tours
         : _tours
-              .where((tour) => tour.governorate == _governorateFilter)
+              .where(
+                (tour) =>
+                    normalizeGovernorateId(tour.governorate) ==
+                    _governorateFilter,
+              )
               .toList(growable: false);
     return Scaffold(
       appBar: AppBar(

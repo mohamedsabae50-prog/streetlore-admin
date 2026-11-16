@@ -7,8 +7,13 @@ import 'package:streetlore_admin/models/models.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('config contains the three unified governorate boundaries', () {
-    expect(governoratesConfig.keys.toSet(), {'alexandria', 'cairo', 'luxor'});
+  test('config contains the unified governorate boundaries', () {
+    expect(governoratesConfig.keys.toSet(), {
+      'alexandria',
+      'cairo',
+      'luxor',
+      'red_sea',
+    });
     expect(alexandriaGovernorate.centerLat, 31.2001);
     expect(alexandriaGovernorate.centerLng, 29.9187);
     expect(alexandriaGovernorate.defaultZoom, 11);
@@ -23,9 +28,16 @@ void main() {
     expect(luxorGovernorate.nameEn, 'Luxor & Aswan');
     expect(luxorGovernorate.nameAr, 'الأقصر وأسوان');
     expect(luxorGovernorate.defaultZoom, 8.8);
+    expect(redSeaGovernorate.id, 'red_sea');
+    expect(redSeaGovernorate.centerLat, 26.8500);
+    expect(redSeaGovernorate.centerLng, 33.9500);
+    expect(redSeaGovernorate.nameEn, 'Hurghada & Marsa Alam');
+    expect(redSeaGovernorate.nameAr, 'الغردقة ومرسى علم');
+    expect(redSeaGovernorate.defaultZoom, 8.8);
     expect(alexandriaGovernorate.boundaryPolygon, hasLength(10));
     expect(cairoGovernorate.boundaryPolygon, hasLength(9));
     expect(luxorGovernorate.boundaryPolygon, hasLength(10));
+    expect(redSeaGovernorate.boundaryPolygon, hasLength(10));
     expect(
       alexandriaGovernorate.boundaryPolygon
           .map((point) => (point.latitude, point.longitude))
@@ -76,11 +88,29 @@ void main() {
         (25.2500, 32.2500),
       ],
     );
-    expect(AdminGovernorate.all, hasLength(3));
+    expect(
+      redSeaGovernorate.boundaryPolygon
+          .map((point) => (point.latitude, point.longitude))
+          .toList(),
+      [
+        (29.1000, 32.2500),
+        (29.1000, 33.1500),
+        (27.6000, 34.1500),
+        (26.2000, 34.6500),
+        (24.8000, 35.3500),
+        (24.0500, 35.6500),
+        (24.0500, 34.4500),
+        (25.2000, 34.1000),
+        (26.3500, 33.4000),
+        (27.5000, 33.0500),
+      ],
+    );
+    expect(AdminGovernorate.all, hasLength(4));
     expect(AdminGovernorate.all.map((governorate) => governorate.id), [
       'alexandria',
       'cairo',
       'luxor',
+      'red_sea',
     ]);
     expect(
       AdminGovernorate.all.map(
@@ -90,6 +120,7 @@ void main() {
         ('Alexandria', 'الإسكندرية'),
         ('Cairo & Giza', 'القاهرة والجيزة'),
         ('Luxor & Aswan', 'الأقصر وأسوان'),
+        ('Hurghada & Marsa Alam', 'الغردقة ومرسى علم'),
       ],
     );
     expect(
@@ -132,6 +163,17 @@ void main() {
     expect(Place.inferGovernorate(lat: 30.0444, lng: 31.2357), 'cairo');
   });
 
+  test('Red Sea boundary and aliases resolve to one governorate', () {
+    expect(isPointInGovernorate(26.8500, 33.9500, 'red_sea'), isTrue);
+    expect(isPointInGovernorate(26.8500, 33.9500, 'hurghada'), isTrue);
+    expect(isPointInGovernorate(26.8500, 33.9500, 'marsa_alam'), isTrue);
+    expect(normalizeGovernorateId(' HURGHADA '), 'red_sea');
+    expect(normalizeGovernorateId('MARSA_ALAM'), 'red_sea');
+    expect(AdminGovernorate.byId('hurghada')?.id, 'red_sea');
+    expect(AdminGovernorate.byId('marsa_alam')?.id, 'red_sea');
+    expect(Place.inferGovernorate(lat: 26.8500, lng: 33.9500), 'red_sea');
+  });
+
   test('legacy Aswan values normalize to the unified boundary', () {
     const aswanSites = [
       (24.0889, 32.8998),
@@ -156,6 +198,181 @@ void main() {
   });
 
   test(
+    'Red Sea preview records match requested coordinates and prices',
+    () async {
+      final seed = await GovernoratePreviewSeed.load();
+      final placesById = {for (final place in seed.places) place.id: place};
+      const expected = <String, (double, double, int, int)>{
+        'red_sea_el_quseir_ottoman_fortress': (26.1044, 34.2778, 40, 200),
+        'red_sea_hurghada_museum': (27.1456, 33.8225, 80, 300),
+        'red_sea_hurghada_grand_aquarium': (27.1292, 33.8247, 250, 1200),
+        'red_sea_sand_city_hurghada': (27.0925, 33.8285, 120, 450),
+        'red_sea_mini_egypt_park_makadi': (26.9885, 33.8895, 150, 500),
+        'red_sea_mons_claudianus_roman_quarry': (26.8092, 33.4869, 40, 200),
+        'red_sea_mons_porphyrites_quarry': (27.2510, 33.3015, 40, 200),
+        'red_sea_myos_hormos_quseir_qadim': (26.1565, 34.2435, 40, 180),
+        'red_sea_bir_umm_fawakhir_mines': (26.0085, 33.6085, 40, 180),
+        'red_sea_sikait_smaragdus_mines': (24.6510, 34.7890, 50, 220),
+        'red_sea_el_gouna_cultural_museum': (27.3975, 33.6752, 60, 220),
+        'red_sea_dolphin_world_makadi': (26.9795, 33.8840, 200, 750),
+        'red_sea_sahl_hasheesh_sunken_city': (27.0425, 33.8965, 50, 200),
+        'red_sea_safaga_old_port_citadel': (26.7385, 33.9395, 30, 120),
+        'red_sea_port_ghalib_khan_promenade': (25.5345, 34.6395, 50, 200),
+        'red_sea_ras_gharib_lighthouse_heritage': (28.3525, 33.0815, 30, 120),
+        'red_sea_giftun_island_orange_bay': (27.2045, 33.9315, 150, 600),
+        'red_sea_mahmya_island_reserve': (27.1815, 33.9525, 200, 800),
+        'red_sea_abu_dabbab_dugong_bay': (25.3385, 34.7395, 100, 450),
+        'red_sea_wadi_el_gemal_national_park': (24.5580, 35.1250, 60, 300),
+        'red_sea_sharm_el_luli_lagoon': (24.5515, 35.1545, 60, 300),
+        'red_sea_nayzak_natural_meteor_pool': (24.9915, 34.9455, 50, 200),
+        'red_sea_sataya_dolphin_house_reef': (24.1650, 35.6000, 150, 650),
+        'red_sea_samadai_dolphin_house_marsa': (24.9885, 35.0125, 150, 650),
+        'red_sea_qulaan_mangrove_lagoon': (24.3515, 35.2855, 50, 200),
+        'red_sea_el_fanadir_reef_hurghada': (27.2985, 33.8315, 100, 400),
+        'red_sea_soma_bay_ras_abu_soma': (26.8525, 33.9925, 100, 400),
+        'red_sea_zeytouna_beach_el_gouna': (27.4025, 33.6885, 120, 450),
+        'red_sea_makadi_bay_house_reef': (26.9925, 33.9025, 100, 400),
+        'red_sea_sharm_el_naga_coral_bay': (26.8995, 33.9635, 120, 500),
+        'red_sea_marsa_mubarak_turtle_bay': (25.5085, 34.6545, 120, 500),
+        'red_sea_hurghada_marina_boulevard_walk': (27.2245, 33.8415, 0, 0),
+        'red_sea_al_mina_masjid_hurghada': (27.2305, 33.8442, 0, 0),
+        'red_sea_st_shenouda_cathedral_hurghada': (27.2565, 33.8125, 0, 0),
+        'red_sea_st_anthony_monastery': (28.9244, 32.3497, 0, 0),
+        'red_sea_st_paul_anchorite_monastery': (28.8469, 32.5519, 0, 0),
+        'red_sea_shaykh_al_farran_mosque_quseir': (26.1068, 34.2802, 0, 0),
+        'red_sea_starfish_seafood_hurghada': (27.2215, 33.8375, 250, 900),
+        'red_sea_el_halaka_fish_restaurant': (27.2285, 33.8428, 180, 650),
+        'red_sea_moby_dick_steak_seafood': (27.2165, 33.8395, 350, 1200),
+        'red_sea_abu_tig_marina_bistro_gouna': (27.4095, 33.6795, 250, 900),
+        'red_sea_granada_panorama_terrace_hurghada': (
+          27.2115,
+          33.8425,
+          180,
+          650,
+        ),
+        'red_sea_marina_breeze_lounge_cafe': (27.2232, 33.8405, 150, 550),
+        'red_sea_tamr_henna_plaza_cafe_gouna': (27.3955, 33.6735, 120, 450),
+        'red_sea_el_dahar_old_bazaar_hurghada': (27.2525, 33.8185, 0, 0),
+        'red_sea_senzo_mall_hurghada': (27.0955, 33.8255, 0, 0),
+        'red_sea_sheraton_road_tourist_bazaar': (27.2185, 33.8385, 0, 0),
+        'red_sea_abu_tig_marina_boutiques_gouna': (27.4075, 33.6812, 0, 0),
+        'red_sea_steigenberger_aldau_hurghada': (27.1595, 33.8285, 7500, 14000),
+        'red_sea_oberoi_beach_resort_sahl_hasheesh': (
+          27.0685,
+          33.8905,
+          12000,
+          25000,
+        ),
+        'red_sea_kempinski_hotel_soma_bay': (26.8585, 33.9885, 6000, 12000),
+        'red_sea_sheraton_miramar_el_gouna': (27.3995, 33.6855, 7500, 15000),
+        'red_sea_hilton_marsa_alam_nubian_resort': (
+          25.3445,
+          34.7355,
+          5000,
+          9500,
+        ),
+        'red_sea_jaz_palace_port_ghalib_resort': (25.5385, 34.6435, 4500, 8500),
+        'atm_nbe_hurghada_new_marina': (27.2255, 33.8402, 0, 0),
+        'atm_banque_misr_sheraton_road_hurghada': (27.2145, 33.8398, 0, 0),
+        'atm_cib_abu_tig_marina_el_gouna': (27.4085, 33.6782, 0, 0),
+        'atm_qnb_senzo_mall_hurghada': (27.0968, 33.8262, 0, 0),
+        'atm_nbe_port_ghalib_marina_marsa_alam': (25.5332, 34.6382, 0, 0),
+        'atm_banque_misr_marsa_alam_town_center': (25.0695, 34.8965, 0, 0),
+      };
+      final redSeaPlaces = seed.places
+          .where((place) => place.governorate == 'red_sea')
+          .toList(growable: false);
+      final redSeaTours = seed.tours
+          .where((tour) => tour.governorate == 'red_sea')
+          .toList(growable: false);
+
+      expect(seed.places, hasLength(427));
+      expect(seed.tours, hasLength(38));
+      expect(redSeaPlaces, hasLength(60));
+      expect(redSeaTours, hasLength(6));
+      expect(
+        redSeaPlaces.map((place) => place.id).toSet(),
+        expected.keys.toSet(),
+      );
+      expect(redSeaPlaces.where((place) => !place.isAtm), hasLength(54));
+      expect(atmPlaces(redSeaPlaces), hasLength(6));
+      expect(
+        redSeaPlaces.map((place) => place.imageUrl).toSet(),
+        hasLength(60),
+      );
+      for (final entry in expected.entries) {
+        final place = placesById[entry.key]!;
+        expect(
+          (
+            place.lat,
+            place.lng,
+            place.priceLocalEgp ?? 0,
+            place.priceForeignerEgp ?? 0,
+          ),
+          entry.value,
+          reason: place.id,
+        );
+      }
+
+      expect(
+        redSeaPlaces.where(
+          (place) =>
+              place.category == 'Historical' || place.category == 'Culture',
+        ),
+        hasLength(16),
+      );
+      expect(
+        redSeaPlaces.where((place) => place.category == 'Nature'),
+        hasLength(16),
+      );
+      expect(
+        redSeaPlaces.where(
+          (place) =>
+              place.category == 'Mosques' || place.category == 'Churches',
+        ),
+        hasLength(5),
+      );
+      expect(
+        redSeaPlaces.where(
+          (place) => place.category == 'Food' || place.category == 'Cafe',
+        ),
+        hasLength(7),
+      );
+      expect(
+        redSeaPlaces.where((place) => place.category == 'Shopping'),
+        hasLength(4),
+      );
+      expect(
+        redSeaPlaces.where((place) => place.category == 'Hotels'),
+        hasLength(6),
+      );
+      expect(
+        redSeaTours.map((tour) => tour.id),
+        containsAll({
+          'red_sea_giftun_marina_al_mina_trail',
+          'red_sea_el_gouna_lagoons_marina_walk',
+          'red_sea_sahl_hasheesh_makadi_soma_bay_route',
+          'red_sea_marsa_alam_abu_dabbab_nayzak_expedition',
+          'red_sea_wadi_el_gemal_sharm_el_luli_eco_safari',
+          'red_sea_quseir_fortress_roman_quarries_heritage',
+        }),
+      );
+      expect(
+        redSeaTours.every(
+          (tour) =>
+              tour.places.isNotEmpty &&
+              tour.places.every(
+                (place) =>
+                    place.governorate == 'red_sea' &&
+                    isPointInGovernorate(place.lat, place.lng, 'red_sea'),
+              ),
+        ),
+        isTrue,
+      );
+    },
+  );
+
+  test(
     'expanded validation includes nearby edges but excludes distant areas',
     () {
       expect(
@@ -170,7 +387,7 @@ void main() {
     },
   );
 
-  test('preview asset includes the three unified governorates', () async {
+  test('preview asset includes the four configured governorates', () async {
     final seed = await GovernoratePreviewSeed.load();
 
     expect(
@@ -683,9 +900,9 @@ void main() {
         'cairo_new_capital_arts_culture_city',
       }),
     );
-    expect(seed.places, hasLength(367));
-    expect(seed.tours, hasLength(32));
-    expect(seed.places.where((place) => place.isAtm), hasLength(38));
+    expect(seed.places, hasLength(427));
+    expect(seed.tours, hasLength(38));
+    expect(seed.places.where((place) => place.isAtm), hasLength(44));
     expect(
       atmPlaces(
         seed.places,
@@ -699,6 +916,10 @@ void main() {
     expect(
       atmPlaces(seed.places).where((place) => place.governorate == 'luxor'),
       hasLength(12),
+    );
+    expect(
+      atmPlaces(seed.places).where((place) => place.governorate == 'red_sea'),
+      hasLength(6),
     );
     expect(
       visitEligiblePlaces(
@@ -718,7 +939,13 @@ void main() {
       ).where((place) => place.governorate == 'luxor'),
       hasLength(112),
     );
-    expect(visitEligiblePlaces(seed.places), hasLength(329));
+    expect(
+      visitEligiblePlaces(
+        seed.places,
+      ).where((place) => place.governorate == 'red_sea'),
+      hasLength(54),
+    );
+    expect(visitEligiblePlaces(seed.places), hasLength(383));
     expect(
       visitEligiblePlaces(seed.places).map((place) => place.id),
       isNot(
@@ -830,10 +1057,11 @@ void main() {
     'the complete preview catalog has repaired descriptions, prices, and images',
     () async {
       final seed = await GovernoratePreviewSeed.load();
-      expect(seed.places, hasLength(367));
-      expect(seed.tours, hasLength(32));
+      expect(seed.places, hasLength(427));
+      expect(seed.tours, hasLength(38));
 
       final urls = <String>{};
+      final decodedImagePaths = <String>{};
       const forbiddenText = [
         'confirm current visitor information',
         'is a culture destination in',
@@ -877,6 +1105,11 @@ void main() {
           reason: place.id,
         );
         expect(
+          decodedImagePaths.add(Uri.decodeComponent(imageUri!.path)),
+          isTrue,
+          reason: place.id,
+        );
+        expect(
           place.imageUrls.every((url) {
             final uri = Uri.tryParse(url);
             return uri?.scheme == 'https' &&
@@ -909,7 +1142,8 @@ void main() {
         }
       }
 
-      expect(urls, hasLength(367));
+      expect(urls, hasLength(427));
+      expect(decodedImagePaths, hasLength(427));
       final luxorPlaces = seed.places
           .where((place) => place.governorate == 'luxor')
           .toList(growable: false);
