@@ -23,26 +23,57 @@ void main() {
     expect(luxorGovernorate.nameEn, 'Luxor & Aswan');
     expect(luxorGovernorate.nameAr, 'الأقصر وأسوان');
     expect(luxorGovernorate.defaultZoom, 8.8);
-    expect(alexandriaGovernorate.boundaryPolygon, hasLength(20));
-    expect(cairoGovernorate.boundaryPolygon, hasLength(16));
-    expect(luxorGovernorate.boundaryPolygon, hasLength(12));
+    expect(alexandriaGovernorate.boundaryPolygon, hasLength(10));
+    expect(cairoGovernorate.boundaryPolygon, hasLength(9));
+    expect(luxorGovernorate.boundaryPolygon, hasLength(10));
+    expect(
+      alexandriaGovernorate.boundaryPolygon
+          .map((point) => (point.latitude, point.longitude))
+          .toList(),
+      [
+        (31.3350, 30.0950),
+        (31.2600, 30.1400),
+        (31.1200, 30.0800),
+        (30.9500, 29.9800),
+        (30.8000, 29.8500),
+        (30.7800, 29.5500),
+        (30.8800, 29.4800),
+        (31.0500, 29.6800),
+        (31.1600, 29.8200),
+        (31.2800, 29.9500),
+      ],
+    );
+    expect(
+      cairoGovernorate.boundaryPolygon
+          .map((point) => (point.latitude, point.longitude))
+          .toList(),
+      [
+        (30.2600, 30.7500),
+        (30.2800, 31.1500),
+        (30.2800, 31.5200),
+        (30.2200, 31.8800),
+        (29.9200, 31.8800),
+        (29.6000, 31.5000),
+        (29.5500, 31.1800),
+        (29.7800, 30.8200),
+        (30.0200, 30.7200),
+      ],
+    );
     expect(
       luxorGovernorate.boundaryPolygon
           .map((point) => (point.latitude, point.longitude))
           .toList(),
       [
-        (25.8300, 32.5000),
-        (25.8300, 32.7800),
-        (25.5500, 32.7800),
-        (25.0200, 32.9600),
-        (24.5000, 33.0000),
-        (24.1500, 32.9600),
-        (23.9300, 32.9500),
-        (22.2800, 31.7000),
-        (22.2800, 31.5500),
-        (22.4200, 31.5500),
-        (24.1200, 32.8000),
-        (25.6000, 32.4500),
+        (25.9000, 32.3000),
+        (25.9000, 33.1500),
+        (25.2000, 33.2500),
+        (24.5000, 33.4500),
+        (23.8000, 33.5500),
+        (22.1500, 32.1000),
+        (22.1500, 31.3500),
+        (23.1000, 31.4500),
+        (24.1500, 32.2500),
+        (25.2500, 32.2500),
       ],
     );
     expect(AdminGovernorate.all, hasLength(3));
@@ -148,7 +179,7 @@ void main() {
     );
     expect(
       seed.places.where((place) => place.governorate == 'alexandria'),
-      hasLength(58),
+      hasLength(62),
     );
     expect(
       seed.tours.where((tour) => tour.governorate == 'cairo'),
@@ -158,17 +189,49 @@ void main() {
       seed.tours.where((tour) => tour.governorate == 'alexandria'),
       hasLength(5),
     );
+    const newLandmarks = <String, (String, double, double, int, int)>{
+      'alex_abu_mena_unesco': ('alexandria', 30.8411, 29.6633, 40, 150),
+      'alex_el_max_venice_canal': ('alexandria', 31.1535, 29.8442, 0, 0),
+      'alex_taposiris_magna_temple': ('alexandria', 30.9461, 29.5186, 40, 150),
+      'alex_amreya_heritage_souq': ('alexandria', 30.9985, 29.7850, 0, 0),
+      'cairo_abusir_pyramids_necropolis': ('cairo', 29.8978, 31.2039, 60, 300),
+      'cairo_helwan_japanese_garden': ('cairo', 29.8489, 31.3408, 30, 100),
+      'cairo_helwan_wax_museum': ('cairo', 29.8525, 31.3342, 40, 150),
+      'cairo_wissa_wassef_art_center': ('cairo', 29.9615, 31.1785, 40, 150),
+      'luxor_esna_khnum_temple': ('luxor', 25.2933, 32.5561, 40, 300),
+      'aswan_el_kab_necropolis': ('luxor', 25.1189, 32.7981, 40, 200),
+      'aswan_wadi_el_sebua_temples': ('luxor', 22.7936, 32.5458, 40, 260),
+      'aswan_amada_pennut_temples': ('luxor', 22.7311, 32.2625, 40, 260),
+    };
+    final placesById = {for (final place in seed.places) place.id: place};
+    expect(newLandmarks, hasLength(12));
+    for (final entry in newLandmarks.entries) {
+      final place = placesById[entry.key]!;
+      expect(
+        (
+          place.governorate,
+          place.lat,
+          place.lng,
+          place.priceLocalEgp ?? -1,
+          place.priceForeignerEgp ?? -1,
+        ),
+        entry.value,
+        reason: place.id,
+      );
+      expect(place.isAtm, isFalse, reason: place.id);
+      expect(place.openHours, isNotEmpty, reason: place.id);
+    }
     final luxorPlaces = seed.places
         .where((place) => place.governorate == 'luxor')
         .toList(growable: false);
     final luxorTours = seed.tours
         .where((tour) => tour.governorate == 'luxor')
         .toList(growable: false);
-    expect(luxorPlaces, hasLength(120));
+    expect(luxorPlaces, hasLength(124));
     expect(luxorTours, hasLength(12));
-    expect(luxorPlaces.where((place) => !place.isAtm), hasLength(108));
+    expect(luxorPlaces.where((place) => !place.isAtm), hasLength(112));
     expect(luxorPlaces.where((place) => place.isAtm), hasLength(12));
-    expect(visitEligiblePlaces(luxorPlaces), hasLength(108));
+    expect(visitEligiblePlaces(luxorPlaces), hasLength(112));
     final aswanPlaces = seed.places
         .where(
           (place) =>
@@ -181,11 +244,11 @@ void main() {
     final aswanTours = seed.tours
         .where((tour) => tour.id.startsWith('aswan_'))
         .toList(growable: false);
-    expect(aswanPlaces, hasLength(60));
+    expect(aswanPlaces, hasLength(63));
     expect(aswanTours, hasLength(6));
-    expect(aswanPlaces.where((place) => !place.isAtm), hasLength(54));
+    expect(aswanPlaces.where((place) => !place.isAtm), hasLength(57));
     expect(aswanPlaces.where((place) => place.isAtm), hasLength(6));
-    expect(visitEligiblePlaces(aswanPlaces), hasLength(54));
+    expect(visitEligiblePlaces(aswanPlaces), hasLength(57));
     const aswanPlaceIds = {
       'aswan_philae_temple',
       'aswan_abu_simbel_great_temple',
@@ -247,10 +310,13 @@ void main() {
       'atm_qnb_nubian_museum_aswan',
       'atm_nbe_kom_ombo_temple_plaza',
       'atm_banque_misr_edfu_temple_square',
+      'aswan_el_kab_necropolis',
+      'aswan_wadi_el_sebua_temples',
+      'aswan_amada_pennut_temples',
     };
-    expect(aswanPlaceIds, hasLength(60));
+    expect(aswanPlaceIds, hasLength(63));
     expect(aswanPlaces.map((place) => place.id), containsAll(aswanPlaceIds));
-    expect(aswanPlaces.map((place) => place.id).toSet(), hasLength(60));
+    expect(aswanPlaces.map((place) => place.id).toSet(), hasLength(63));
     expect(
       aswanPlaces.every(
         (place) => isPointInGovernorate(place.lat, place.lng, 'aswan'),
@@ -488,7 +554,7 @@ void main() {
       ),
       isTrue,
     );
-    expect(luxorPlaces.map((place) => place.imageUrl).toSet(), hasLength(120));
+    expect(luxorPlaces.map((place) => place.imageUrl).toSet(), hasLength(124));
     expect(
       seed.places
           .where((place) => place.governorate == 'cairo')
@@ -502,8 +568,12 @@ void main() {
       seed.places
           .where((place) => place.governorate == 'alexandria')
           .every(
-            (place) =>
-                isPointInGovernorate(place.lat, place.lng, place.governorate),
+            (place) => isPointInGovernorateOrExpandedBounds(
+              place.lat,
+              place.lng,
+              place.governorate,
+              expansionKm: 6,
+            ),
           ),
       isTrue,
     );
@@ -613,7 +683,7 @@ void main() {
         'cairo_new_capital_arts_culture_city',
       }),
     );
-    expect(seed.places, hasLength(355));
+    expect(seed.places, hasLength(367));
     expect(seed.tours, hasLength(32));
     expect(seed.places.where((place) => place.isAtm), hasLength(38));
     expect(
@@ -634,21 +704,21 @@ void main() {
       visitEligiblePlaces(
         seed.places,
       ).where((place) => place.governorate == 'alexandria'),
-      hasLength(52),
+      hasLength(56),
     );
     expect(
       visitEligiblePlaces(
         seed.places,
       ).where((place) => place.governorate == 'cairo'),
-      hasLength(157),
+      hasLength(161),
     );
     expect(
       visitEligiblePlaces(
         seed.places,
       ).where((place) => place.governorate == 'luxor'),
-      hasLength(108),
+      hasLength(112),
     );
-    expect(visitEligiblePlaces(seed.places), hasLength(317));
+    expect(visitEligiblePlaces(seed.places), hasLength(329));
     expect(
       visitEligiblePlaces(seed.places).map((place) => place.id),
       isNot(
@@ -760,7 +830,7 @@ void main() {
     'the complete preview catalog has repaired descriptions, prices, and images',
     () async {
       final seed = await GovernoratePreviewSeed.load();
-      expect(seed.places, hasLength(355));
+      expect(seed.places, hasLength(367));
       expect(seed.tours, hasLength(32));
 
       final urls = <String>{};
@@ -839,7 +909,7 @@ void main() {
         }
       }
 
-      expect(urls, hasLength(355));
+      expect(urls, hasLength(367));
       final luxorPlaces = seed.places
           .where((place) => place.governorate == 'luxor')
           .toList(growable: false);
@@ -848,7 +918,7 @@ void main() {
           .toList(growable: false);
       final luxorUrls = luxorPlaces.map((place) => place.imageUrl).toSet();
       final luxorTourUrls = luxorTours.map((tour) => tour.imageUrl).toSet();
-      expect(luxorUrls, hasLength(120));
+      expect(luxorUrls, hasLength(124));
       expect(luxorTourUrls, hasLength(12));
       expect(luxorUrls.intersection(luxorTourUrls), isEmpty);
       expect(

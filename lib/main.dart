@@ -9,14 +9,12 @@ import 'theme.dart';
 bool adminDashboardAccessAllowed({
   required bool isLoggedIn,
   required bool isAdmin,
-  required bool isLocalDraftMode,
-}) => isLocalDraftMode || (isLoggedIn && isAdmin);
+}) => isLoggedIn && isAdmin;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await AppTheme.loadSavedMode();
-  await AdminService.instance.initializeLocalDraftMode();
   await Supabase.initialize(
     url: SupabaseConfig.url,
     publishableKey: SupabaseConfig.anonKey,
@@ -79,7 +77,6 @@ class _AdminAuthGateState extends State<_AdminAuthGate> {
 
   Future<bool> _checkAdminAccess() async {
     final adminService = AdminService.instance;
-    if (adminService.isLocalDraftMode) return true;
     if (!adminService.isLoggedIn) return false;
 
     try {
@@ -90,7 +87,6 @@ class _AdminAuthGateState extends State<_AdminAuthGate> {
       return adminDashboardAccessAllowed(
         isLoggedIn: adminService.isLoggedIn,
         isAdmin: isAdmin,
-        isLocalDraftMode: adminService.isLocalDraftMode,
       );
     } catch (error, stackTrace) {
       debugPrint('AdminAuthGate: administrator verification failed: $error');
@@ -106,7 +102,6 @@ class _AdminAuthGateState extends State<_AdminAuthGate> {
       return adminDashboardAccessAllowed(
         isLoggedIn: adminService.isLoggedIn,
         isAdmin: false,
-        isLocalDraftMode: adminService.isLocalDraftMode,
       );
     }
   }

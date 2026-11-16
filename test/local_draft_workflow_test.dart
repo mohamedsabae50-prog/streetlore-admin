@@ -20,7 +20,7 @@ void main() {
       final service = AdminService.instance;
       final initialPlaces = await service.fetchPlaces();
       final initialTours = await service.fetchTours();
-      expect(initialPlaces, hasLength(355));
+      expect(initialPlaces, hasLength(367));
       expect(initialTours, hasLength(32));
       expect(
         initialPlaces.map((place) => place.id),
@@ -121,30 +121,18 @@ void main() {
     expect(AdminService.isConfiguredAdminEmail('other@example.com'), isFalse);
   });
 
-  test('dashboard gate accepts admins or local preview mode', () {
+  test('dashboard gate requires an authenticated administrator', () {
     expect(
-      adminDashboardAccessAllowed(
-        isLoggedIn: true,
-        isAdmin: true,
-        isLocalDraftMode: false,
-      ),
+      adminDashboardAccessAllowed(isLoggedIn: true, isAdmin: true),
       isTrue,
     );
     expect(
-      adminDashboardAccessAllowed(
-        isLoggedIn: true,
-        isAdmin: false,
-        isLocalDraftMode: false,
-      ),
+      adminDashboardAccessAllowed(isLoggedIn: true, isAdmin: false),
       isFalse,
     );
     expect(
-      adminDashboardAccessAllowed(
-        isLoggedIn: false,
-        isAdmin: false,
-        isLocalDraftMode: true,
-      ),
-      isTrue,
+      adminDashboardAccessAllowed(isLoggedIn: false, isAdmin: false),
+      isFalse,
     );
   });
 
@@ -241,14 +229,14 @@ void main() {
     () async {
       final service = AdminService.instance;
       final places = await service.fetchPlaces();
-      expect(visitEligiblePlaces(places), hasLength(317));
+      expect(visitEligiblePlaces(places), hasLength(329));
       expect(atmPlaces(places), hasLength(38));
-      expect((await service.fetchDashboardCounts()).places, 317);
+      expect((await service.fetchDashboardCounts()).places, 329);
 
       for (final (governorate, visitCount, atmCount) in [
-        ('alexandria', 52, 6),
-        ('cairo', 157, 20),
-        ('luxor', 108, 12),
+        ('alexandria', 56, 6),
+        ('cairo', 161, 20),
+        ('luxor', 112, 12),
       ]) {
         expect(
           visitEligiblePlaces(

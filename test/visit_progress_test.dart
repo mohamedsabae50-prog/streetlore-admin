@@ -71,6 +71,40 @@ void main() {
     ]);
   });
 
+  test('visit milestone badges unlock at every configured threshold', () {
+    final progress = calculateVisitProgress(
+      currentPoints: 0,
+      previousPlaceCount: 0,
+      placeCount: 300,
+      currentBadges: const [],
+    );
+
+    expect(progress.newlyUnlocked.map((badge) => badge['id']), [
+      'visit_milestone_1',
+      'visit_milestone_5',
+      'visit_milestone_10',
+      'visit_milestone_25',
+      'visit_milestone_50',
+      'visit_milestone_75',
+      'visit_milestone_100',
+      'visit_milestone_150',
+      'visit_milestone_200',
+      'visit_milestone_250',
+      'visit_milestone_300',
+    ]);
+
+    final beforeFinalMilestone = calculateVisitProgress(
+      currentPoints: 0,
+      previousPlaceCount: 0,
+      placeCount: 299,
+      currentBadges: const [],
+    );
+    expect(
+      beforeFinalMilestone.newlyUnlocked.map((badge) => badge['id']),
+      isNot(contains('visit_milestone_300')),
+    );
+  });
+
   test('Luxor visit and badge counts exclude all six ATMs', () {
     final luxorPlaces = [
       for (var index = 0; index < 54; index++)

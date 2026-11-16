@@ -55,7 +55,7 @@ class GovernoratePreviewSeed {
     final allPrimaryImages = places.map((place) => place.imageUrl).toSet();
     final atms = atmPlaces(places);
     final luxorTourImages = luxorTours.map((tour) => tour.imageUrl).toSet();
-    if (places.length != 355 ||
+    if (places.length != 367 ||
         tours.length != 32 ||
         allPrimaryImages.length != places.length ||
         places.any((place) => !_isCommonsImageUrl(place.imageUrl)) ||
@@ -66,7 +66,7 @@ class GovernoratePreviewSeed {
         atms.any((place) => !_isCommonsImageUrl(place.imageUrl)) ||
         cairoPlaces.length < 120 ||
         cairoTours.length < 5 ||
-        luxorPlaces.length != 120 ||
+        luxorPlaces.length != 124 ||
         luxorTours.length != 12 ||
         primaryImages.length != cairoPlaces.length ||
         cairoPlaces.any(
@@ -74,8 +74,12 @@ class GovernoratePreviewSeed {
               !isPointInGovernorate(place.lat, place.lng, place.governorate),
         ) ||
         alexandriaPlaces.any(
-          (place) =>
-              !isPointInGovernorate(place.lat, place.lng, place.governorate),
+          (place) => !isPointInGovernorateOrExpandedBounds(
+            place.lat,
+            place.lng,
+            place.governorate,
+            expansionKm: 6,
+          ),
         ) ||
         newAlexandriaPlaces.length != 10 ||
         newAlexandriaPlaces.map((place) => place.imageUrl).toSet().length !=
@@ -96,9 +100,9 @@ class GovernoratePreviewSeed {
         }) ||
         luxorPlaces.map((place) => place.imageUrl).toSet().length !=
             luxorPlaces.length ||
-        luxorPlaces.where((place) => !place.isAtm).length != 108 ||
+        luxorPlaces.where((place) => !place.isAtm).length != 112 ||
         luxorPlaces.where((place) => place.isAtm).length != 12 ||
-        visitEligiblePlaces(luxorPlaces).length != 108 ||
+        visitEligiblePlaces(luxorPlaces).length != 112 ||
         luxorTours.any(
           (tour) =>
               !_isCommonsImageUrl(tour.imageUrl) ||
@@ -126,9 +130,9 @@ class GovernoratePreviewSeed {
             .intersection(luxorPlaces.map((place) => place.imageUrl).toSet())
             .isNotEmpty) {
       throw StateError(
-        'The preview seed must contain 355 places and 32 tours, including '
-        '38 ATMs across three governorates and 120 in-boundary Luxor & Aswan '
-        'places plus 12 tours with unique upload.wikimedia.org images.',
+        'The preview seed must contain 367 places and 32 tours, including '
+        '38 ATMs across three governorates and 124 Luxor & Aswan places plus '
+        '12 tours with unique upload.wikimedia.org images.',
       );
     }
     return (places: places, tours: tours);

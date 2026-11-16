@@ -7,7 +7,12 @@ const _visitMilestones = <({int threshold, String id, String name})>[
   (threshold: 10, id: 'visit_milestone_10', name: 'City Guide'),
   (threshold: 25, id: 'visit_milestone_25', name: 'Heritage Seeker'),
   (threshold: 50, id: 'visit_milestone_50', name: 'Pathfinder'),
+  (threshold: 75, id: 'visit_milestone_75', name: 'Regional Explorer'),
   (threshold: 100, id: 'visit_milestone_100', name: 'Landmark Collector'),
+  (threshold: 150, id: 'visit_milestone_150', name: 'Heritage Champion'),
+  (threshold: 200, id: 'visit_milestone_200', name: 'Master Explorer'),
+  (threshold: 250, id: 'visit_milestone_250', name: 'Cultural Ambassador'),
+  (threshold: 300, id: 'visit_milestone_300', name: 'Egypt Explorer'),
 ];
 
 class VisitProgress {
