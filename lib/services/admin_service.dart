@@ -241,29 +241,125 @@ class AdminService {
         .toList(growable: false);
   }
 
-  Future<List<Map<String, dynamic>>> fetchPendingHiddenGems() async {
+  Future<List<SuggestedPlace>> fetchPlaceSuggestions() async {
     final rows = await _client
         .from('suggested_places')
-        .select(
-          'id,user_id,title,name_ar,description,category,category_ar,'
-          'lat,lng,address,image_url,created_at',
-        )
-        .eq('status', 'pending')
+        .select()
         .order('created_at', ascending: false);
     return rows
-        .map((row) => Map<String, dynamic>.from(row))
+        .map((row) => SuggestedPlace.fromJson(Map<String, dynamic>.from(row)))
         .toList(growable: false);
   }
 
-  Future<void> moderateHiddenGem(String suggestionId, String action) async {
+  Future<void> moderatePlaceSuggestion(
+    SuggestedPlace suggestion,
+    String action, {
+    PlaceSuggestionType? approvedType,
+  }) async {
     _requireLiveWrites('Hidden-gem moderation');
     if (action != 'approve' && action != 'reject') {
       throw ArgumentError.value(action, 'action');
     }
-    await _client.rpc(
-      'moderate_hidden_gem',
-      params: {'p_suggestion_id': suggestionId, 'p_action': action},
-    );
+    if (action == 'reject') {
+      await _client.rpc(
+        'moderate_hidden_gem',
+        params: {'p_suggestion_id': suggestion.id, 'p_action': action},
+      );
+      return;
+    }
+
+    final type = approvedType ?? suggestion.type;
+    final isHiddenGem = type == PlaceSuggestionType.hiddenGem;
+    final rewardDays = isHiddenGem ? 30 : 7;
+    final place = suggestion.toPlace(isHiddenGem: isHiddenGem);
+    await _upsertPlace(place);
+    await _grantSuggestionProReward(suggestion.userId, rewardDays);
+
+    final updated = await _client
+        .from('suggested_places')
+        .update({
+          'status': 'approved',
+          'suggestion_type': isHiddenGem ? 'hidden_gem' : 'regular',
+          'is_hidden_gem': isHiddenGem,
+          'reward_days': rewardDays,
+        })
+        .eq('id', suggestion.id)
+        .eq('status', 'pending')
+        .select('id')
+        .maybeSingle();
+    if (updated == null) {
+      throw StateError(
+        'The place was published and its reward granted, but the suggestion '
+        'could not be marked approved.',
+      );
+    }
+  }
+
+  Future<void> _grantSuggestionProReward(String userId, int rewardDays) async {
+    Object? rewardError;
+    try {
+      await _client.rpc(
+        'grant_suggestion_pro_reward',
+        params: {'target_user_id': userId, 'reward_days': rewardDays},
+      );
+      return;
+    } catch (error) {
+      rewardError = error;
+    }
+
+    Object? planError;
+    try {
+      await _client.rpc(
+        'admin_update_user_plan',
+        params: {
+          'p_user_id': userId,
+          'p_tier': rewardDays == 30 ? 'monthly' : 'weekly',
+          'p_duration_days': rewardDays,
+        },
+      );
+      return;
+    } catch (error) {
+      planError = error;
+    }
+
+    try {
+      final profile = await _client
+          .from('profiles')
+          .select('subscription_end_date')
+          .eq('user_id', userId)
+          .maybeSingle();
+      if (profile == null) {
+        throw StateError('No profile exists for submitting user $userId.');
+      }
+      final currentEndDate = DateTime.tryParse(
+        (profile['subscription_end_date'] ?? '').toString(),
+      );
+      final now = DateTime.now().toUtc();
+      final extensionBase =
+          currentEndDate != null && currentEndDate.isAfter(now)
+          ? currentEndDate
+          : now;
+      final result = await _client
+          .from('profiles')
+          .update({
+            'is_pro': true,
+            'subscription_end_date': extensionBase
+                .add(Duration(days: rewardDays))
+                .toIso8601String(),
+          })
+          .eq('user_id', userId)
+          .select('user_id')
+          .maybeSingle();
+      if (result == null) {
+        throw StateError('Could not update the profile for user $userId.');
+      }
+    } catch (profileError) {
+      throw StateError(
+        'Could not grant $rewardDays days of Free Pro. '
+        'Reward RPC: $rewardError. Plan RPC: $planError. '
+        'Profile update: $profileError',
+      );
+    }
   }
 
   Future<void> dismissReport(String reportId) async {

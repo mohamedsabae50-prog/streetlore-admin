@@ -295,6 +295,121 @@ PriceLevel priceLevelFromString(String? s) {
 
 String priceLevelToString(PriceLevel p) => p.name;
 
+enum PlaceSuggestionType { regular, hiddenGem }
+
+class SuggestedPlace {
+  final String id;
+  final String userId;
+  final String title;
+  final String? nameAr;
+  final String description;
+  final String category;
+  final String? categoryAr;
+  final double lat;
+  final double lng;
+  final String? address;
+  final String? imageUrl;
+  final String status;
+  final PlaceSuggestionType type;
+  final int rewardDays;
+  final DateTime? createdAt;
+
+  const SuggestedPlace({
+    required this.id,
+    required this.userId,
+    required this.title,
+    this.nameAr,
+    required this.description,
+    required this.category,
+    this.categoryAr,
+    required this.lat,
+    required this.lng,
+    this.address,
+    this.imageUrl,
+    this.status = 'pending',
+    required this.type,
+    required this.rewardDays,
+    this.createdAt,
+  });
+
+  bool get isHiddenGem => type == PlaceSuggestionType.hiddenGem;
+
+  String get typeLabel =>
+      isHiddenGem ? 'Hidden Gem · جوهرة مخفية' : 'Regular Place · مكان عادي';
+
+  String get rewardLabel => isHiddenGem
+      ? 'Reward: 30 Days Free Pro (شهر Pro مجاناً)'
+      : 'Reward: 7 Days Free Pro (أسبوع Pro مجاناً)';
+
+  SuggestedPlace copyWith({String? status, PlaceSuggestionType? type}) =>
+      SuggestedPlace(
+        id: id,
+        userId: userId,
+        title: title,
+        nameAr: nameAr,
+        description: description,
+        category: category,
+        categoryAr: categoryAr,
+        lat: lat,
+        lng: lng,
+        address: address,
+        imageUrl: imageUrl,
+        status: status ?? this.status,
+        type: type ?? this.type,
+        rewardDays: type == null ? rewardDays : _rewardDaysFor(type),
+        createdAt: createdAt,
+      );
+
+  Place toPlace({required bool isHiddenGem}) => Place(
+    id: id,
+    name: title,
+    nameAr: nameAr,
+    description: description,
+    imageUrl: imageUrl ?? '',
+    rating: 0,
+    category: category,
+    categoryAr: categoryAr,
+    lat: lat,
+    lng: lng,
+    address: address ?? 'Alexandria, Egypt',
+    isHiddenGem: isHiddenGem,
+  );
+
+  factory SuggestedPlace.fromJson(Map<String, dynamic> json) {
+    final rawType = json['suggestion_type']?.toString().toLowerCase().trim();
+    final rawHiddenGem = json['is_hidden_gem'] == true;
+    final rawRewardDays = (json['reward_days'] as num?)?.toInt();
+    final type = switch (rawType) {
+      'hidden_gem' => PlaceSuggestionType.hiddenGem,
+      'regular' => PlaceSuggestionType.regular,
+      _ =>
+        rawHiddenGem || rawRewardDays == 30
+            ? PlaceSuggestionType.hiddenGem
+            : PlaceSuggestionType.regular,
+    };
+    return SuggestedPlace(
+      id: (json['id'] ?? '').toString(),
+      userId: (json['user_id'] ?? '').toString(),
+      title: (json['title'] ?? '').toString(),
+      nameAr: json['name_ar']?.toString(),
+      description: (json['description'] ?? '').toString(),
+      category: (json['category'] ?? 'Other').toString(),
+      categoryAr: json['category_ar']?.toString(),
+      lat: (json['lat'] as num?)?.toDouble() ?? 0,
+      lng: (json['lng'] as num?)?.toDouble() ?? 0,
+      address: json['address']?.toString(),
+      imageUrl: json['image_url']?.toString(),
+      status: (json['status'] ?? 'pending').toString(),
+      type: type,
+      rewardDays: _rewardDaysFor(type),
+      createdAt: DateTime.tryParse((json['created_at'] ?? '').toString()),
+    );
+  }
+
+  static int _rewardDaysFor(PlaceSuggestionType type) =>
+      type == PlaceSuggestionType.hiddenGem ? 30 : 7;
+}
+
 class Place {
   final String id;
   final String name;
