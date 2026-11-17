@@ -214,9 +214,9 @@ void main() {
       currentBadges: const [],
     );
 
-    expect(seed.places, hasLength(427));
-    expect(seed.tours, hasLength(38));
-    expect(visitEligiblePlaces(seed.places), hasLength(383));
+    expect(seed.places, hasLength(442));
+    expect(seed.tours, hasLength(39));
+    expect(visitEligiblePlaces(seed.places), hasLength(398));
     expect(atmPlaces(seed.places), hasLength(44));
     expect(redSeaPlaces, hasLength(60));
     expect(eligible, hasLength(54));

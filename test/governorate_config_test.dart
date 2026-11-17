@@ -34,25 +34,22 @@ void main() {
     expect(redSeaGovernorate.nameEn, 'Hurghada & Marsa Alam');
     expect(redSeaGovernorate.nameAr, 'الغردقة ومرسى علم');
     expect(redSeaGovernorate.defaultZoom, 8.8);
-    expect(alexandriaGovernorate.boundaryPolygon, hasLength(10));
+    expect(alexandriaGovernorate.boundaryPolygon, hasLength(7));
     expect(cairoGovernorate.boundaryPolygon, hasLength(9));
     expect(luxorGovernorate.boundaryPolygon, hasLength(10));
-    expect(redSeaGovernorate.boundaryPolygon, hasLength(10));
+    expect(redSeaGovernorate.boundaryPolygon, hasLength(14));
     expect(
       alexandriaGovernorate.boundaryPolygon
           .map((point) => (point.latitude, point.longitude))
           .toList(),
       [
-        (31.3350, 30.0950),
+        (30.7800, 29.5500),
+        (30.8800, 29.3500),
+        (31.2800, 29.9500),
+        (31.3800, 30.1150),
         (31.2600, 30.1400),
         (31.1200, 30.0800),
-        (30.9500, 29.9800),
-        (30.8000, 29.8500),
-        (30.7800, 29.5500),
-        (30.8800, 29.4800),
-        (31.0500, 29.6800),
-        (31.1600, 29.8200),
-        (31.2800, 29.9500),
+        (30.8400, 29.6800),
       ],
     );
     expect(
@@ -94,11 +91,15 @@ void main() {
           .toList(),
       [
         (29.1000, 32.2500),
+        (29.1500, 32.2500),
+        (29.1500, 33.1500),
         (29.1000, 33.1500),
         (27.6000, 34.1500),
         (26.2000, 34.6500),
         (24.8000, 35.3500),
         (24.0500, 35.6500),
+        (23.7500, 35.6500),
+        (23.7500, 34.4500),
         (24.0500, 34.4500),
         (25.2000, 34.1000),
         (26.3500, 33.4000),
@@ -146,6 +147,44 @@ void main() {
     expect(isPointInGovernorate(0, 0, 'unknown'), isFalse);
   });
 
+  test(
+    'Alexandria boundary includes Agami and all western coast additions',
+    () async {
+      expect(isPointInGovernorate(31.0959, 29.7604, 'alexandria'), isTrue);
+
+      const westernAlexandriaPlaceIds = {
+        'alex_bitash_palm_beach_promenade',
+        'alex_hannoville_coral_bay_beach',
+        'alex_abu_talat_seafront_lagoon',
+        'alex_sidi_kreir_white_dunes_beach',
+        'alex_dekheila_harbour_seafood_terrace',
+        'alex_agami_marina_specialty_cafe',
+        'alex_lake_mariout_west_bird_sanctuary',
+        'alex_marea_ancient_lakeport_ruins',
+        'alex_amreya_heritage_bedouin_souq',
+        'alex_king_mariout_palm_country_club',
+        'alex_king_mariout_bedouin_mandi_house',
+        'alex_borg_el_arab_international_stadium_park',
+        'alex_new_borg_el_arab_central_park',
+        'alex_new_borg_el_arab_city_center_mall',
+        'alex_new_borg_el_arab_grand_mosque',
+      };
+      final seed = await GovernoratePreviewSeed.load();
+      final westernPlaces = seed.places
+          .where((place) => westernAlexandriaPlaceIds.contains(place.id))
+          .toList(growable: false);
+
+      expect(westernPlaces, hasLength(15));
+      for (final place in westernPlaces) {
+        expect(
+          isPointInGovernorate(place.lat, place.lng, 'alexandria'),
+          isTrue,
+          reason: place.id,
+        );
+      }
+    },
+  );
+
   test('Luxor & Aswan boundary contains both cities', () {
     expect(isPointInGovernorate(25.7050, 32.6391, 'luxor'), isTrue);
     expect(isPointInGovernorate(25.8200, 32.5200, 'luxor'), isTrue);
@@ -165,6 +204,8 @@ void main() {
 
   test('Red Sea boundary and aliases resolve to one governorate', () {
     expect(isPointInGovernorate(26.8500, 33.9500, 'red_sea'), isTrue);
+    expect(isPointInGovernorate(29.111667, 32.665278, 'red_sea'), isTrue);
+    expect(isPointInGovernorate(23.9109505, 35.4759377, 'red_sea'), isTrue);
     expect(isPointInGovernorate(26.8500, 33.9500, 'hurghada'), isTrue);
     expect(isPointInGovernorate(26.8500, 33.9500, 'marsa_alam'), isTrue);
     expect(normalizeGovernorateId(' HURGHADA '), 'red_sea');
@@ -286,8 +327,8 @@ void main() {
           .where((tour) => tour.governorate == 'red_sea')
           .toList(growable: false);
 
-      expect(seed.places, hasLength(427));
-      expect(seed.tours, hasLength(38));
+      expect(seed.places, hasLength(442));
+      expect(seed.tours, hasLength(39));
       expect(redSeaPlaces, hasLength(60));
       expect(redSeaTours, hasLength(6));
       expect(
@@ -396,7 +437,7 @@ void main() {
     );
     expect(
       seed.places.where((place) => place.governorate == 'alexandria'),
-      hasLength(62),
+      hasLength(77),
     );
     expect(
       seed.tours.where((tour) => tour.governorate == 'cairo'),
@@ -404,7 +445,7 @@ void main() {
     );
     expect(
       seed.tours.where((tour) => tour.governorate == 'alexandria'),
-      hasLength(5),
+      hasLength(6),
     );
     const newLandmarks = <String, (String, double, double, int, int)>{
       'alex_abu_mena_unesco': ('alexandria', 30.8411, 29.6633, 40, 150),
@@ -900,8 +941,8 @@ void main() {
         'cairo_new_capital_arts_culture_city',
       }),
     );
-    expect(seed.places, hasLength(427));
-    expect(seed.tours, hasLength(38));
+    expect(seed.places, hasLength(442));
+    expect(seed.tours, hasLength(39));
     expect(seed.places.where((place) => place.isAtm), hasLength(44));
     expect(
       atmPlaces(
@@ -925,7 +966,7 @@ void main() {
       visitEligiblePlaces(
         seed.places,
       ).where((place) => place.governorate == 'alexandria'),
-      hasLength(56),
+      hasLength(71),
     );
     expect(
       visitEligiblePlaces(
@@ -945,7 +986,7 @@ void main() {
       ).where((place) => place.governorate == 'red_sea'),
       hasLength(54),
     );
-    expect(visitEligiblePlaces(seed.places), hasLength(383));
+    expect(visitEligiblePlaces(seed.places), hasLength(398));
     expect(
       visitEligiblePlaces(seed.places).map((place) => place.id),
       isNot(
@@ -1057,8 +1098,8 @@ void main() {
     'the complete preview catalog has repaired descriptions, prices, and images',
     () async {
       final seed = await GovernoratePreviewSeed.load();
-      expect(seed.places, hasLength(427));
-      expect(seed.tours, hasLength(38));
+      expect(seed.places, hasLength(442));
+      expect(seed.tours, hasLength(39));
 
       final urls = <String>{};
       final decodedImagePaths = <String>{};
@@ -1133,7 +1174,7 @@ void main() {
         } else {
           expect(
             place.priceLevel,
-            isIn({PriceLevel.moderate, PriceLevel.expensive}),
+            isIn({PriceLevel.cheap, PriceLevel.moderate, PriceLevel.expensive}),
             reason: place.id,
           );
           expect(place.priceLocalEgp, greaterThan(0), reason: place.id);
@@ -1142,8 +1183,8 @@ void main() {
         }
       }
 
-      expect(urls, hasLength(427));
-      expect(decodedImagePaths, hasLength(427));
+      expect(urls, hasLength(442));
+      expect(decodedImagePaths, hasLength(442));
       final luxorPlaces = seed.places
           .where((place) => place.governorate == 'luxor')
           .toList(growable: false);
